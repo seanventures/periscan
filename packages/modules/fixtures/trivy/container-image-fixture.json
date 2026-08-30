@@ -1,0 +1,24 @@
+{
+  "SchemaVersion": 2,
+  "ArtifactName": "registry.example.com/periscan/demo-api:1.0.0",
+  "ArtifactType": "container_image",
+  "Results": [
+    {
+      "Target": "alpine:3.18",
+      "Class": "os-pkgs",
+      "Type": "alpine",
+      "Vulnerabilities": [
+        {
+          "VulnerabilityID": "CVE-2024-22222",
+          "PkgName": "openssl",
+          "InstalledVersion": "3.1.0-r0",
+          "FixedVersion": "3.1.4-r0",
+          "Severity": "CRITICAL",
+          "Title": "Demo OpenSSL container package exposure",
+          "Description": "Fixture container vulnerability used to validate Periscan image evidence normalization.",
+          "PrimaryURL": "https://avd.aquasec.com/nvd/cve-2024-22222"
+        }
+      ]
+    }
+  ]
+}

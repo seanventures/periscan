@@ -1,0 +1,43 @@
+# Keep GitHub-launch CI and JS deps from rotting. Groups reduce PR noise.
+# Not a LICENSE flip. Product remains proprietary until founder + counsel.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 8
+    labels:
+      - community
+      - github-launch
+    groups:
+      eslint:
+        patterns:
+          - "eslint*"
+          - "@eslint/*"
+      typescript-eslint:
+        patterns:
+          - "typescript"
+          - "@types/*"
+      testing:
+        patterns:
+          - "vitest*"
+          - "@playwright/*"
+          - "@testing-library/*"
+          - "jsdom"
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 4
+    labels:
+      - github-launch
+  - package-ecosystem: docker
+    directory: "/infra/docker-compose"
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 4
+    labels:
+      - github-launch

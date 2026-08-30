@@ -1,0 +1,18 @@
+# Minimal namespace + NetworkPolicy placeholder for lab K8s probes.
+# Apply only after: kind create cluster --name periscan-lab --config kind-config.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: periscan-lab
+  labels:
+    periscan.lab/profile: dogfood
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: periscan-lab
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress

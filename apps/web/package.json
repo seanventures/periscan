@@ -1,0 +1,44 @@
+{
+  "name": "@periscan/web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "next build",
+    "dev": "next dev --port ${PERISCAN_WEB_PORT:-3000}",
+    "lint": "eslint .",
+    "start": "next start --port ${PERISCAN_WEB_PORT:-3000}",
+    "test": "vitest run",
+    "test:a11y": "vitest run src/components/a11y-smoke.test.tsx src/lib/first-proof-resume.test.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@nivo/bar": "^0.99.0",
+    "@nivo/core": "^0.99.0",
+    "@nivo/pie": "^0.99.0",
+    "@periscan/connectors": "workspace:^",
+    "@periscan/modules": "workspace:^",
+    "@periscan/operators": "workspace:^",
+    "@periscan/policy": "workspace:^",
+    "@periscan/reports": "workspace:^",
+    "@periscan/shared": "workspace:^",
+    "@radix-ui/react-tabs": "^1.1.14",
+    "@radix-ui/react-toast": "^1.2.16",
+    "@tanstack/react-query": "^5.101.2",
+    "clsx": "^2.1.1",
+    "cytoscape": "^3.34.0",
+    "next": "^16.2.12",
+    "qrcode": "^1.5.4",
+    "react": "^19.2.7",
+    "react-cytoscapejs": "^2.0.0",
+    "react-dom": "^19.2.7",
+    "tailwind-merge": "^3.6.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/cytoscape": "^3.31.0",
+    "@types/qrcode": "^1.5.5",
+    "axe-core": "^4.11.4",
+    "tailwindcss": "^4"
+  }
+}

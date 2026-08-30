@@ -1,0 +1,10 @@
+start_utc=2026-07-30T02:50:12.383260+00:00
+deadline_utc=2026-07-30T11:50:12.383260+00:00
+interval_minutes=45
+max_product_hours=9
+workspace=/Users/sean/.grok/worktrees/test-periscan/overnight-loop
+branch=overnight-loop
+remote=origin/main merge target=main
+status=STOPPED_BY_USER
+note=User ended overnight loop
+closed_utc=2026-07-30T12:00:21+00:00

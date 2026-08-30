@@ -1,0 +1,67 @@
+# Reference production topology for the Periscan control plane.
+#
+# This compose file runs the API and worker as separate processes and expects
+# managed Postgres, Redis, and S3-compatible evidence storage to be supplied
+# through environment variables (see .env.production.example).
+#
+# Run database migrations before starting:
+#   pnpm --filter @periscan/db db:migrate:deploy
+#
+# Usage:
+#   docker compose -f infra/production/docker-compose.prod.yml --env-file infra/production/.env.production up -d --build
+services:
+  api:
+    build:
+      context: ../..
+      dockerfile: apps/api/Dockerfile
+    environment:
+      NODE_ENV: production
+      PERISCAN_DEPLOYMENT_ENVIRONMENT: production
+      PERISCAN_API_HOST: 0.0.0.0
+      PERISCAN_API_PORT: "3001"
+      PERISCAN_DEV_MODE: "false"
+      # Required production runner posture: mTLS fingerprint enforcement.
+      # Code defaults on when NODE_ENV=production unless set to "false".
+      PERISCAN_RUNNER_REQUIRE_MTLS: ${PERISCAN_RUNNER_REQUIRE_MTLS:-true}
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      PERISCAN_JWT_SECRET: ${PERISCAN_JWT_SECRET}
+      PERISCAN_DATA_REGION: ${PERISCAN_DATA_REGION:-us-east-1}
+      PERISCAN_EVIDENCE_S3_ENDPOINT: ${PERISCAN_EVIDENCE_S3_ENDPOINT}
+      PERISCAN_EVIDENCE_S3_BUCKET: ${PERISCAN_EVIDENCE_S3_BUCKET}
+      PERISCAN_EVIDENCE_S3_ACCESS_KEY_ID: ${PERISCAN_EVIDENCE_S3_ACCESS_KEY_ID}
+      PERISCAN_EVIDENCE_S3_SECRET_ACCESS_KEY: ${PERISCAN_EVIDENCE_S3_SECRET_ACCESS_KEY}
+      PERISCAN_EVIDENCE_S3_REGION: ${PERISCAN_EVIDENCE_S3_REGION:-us-east-1}
+      PERISCAN_CORS_ORIGINS: ${PERISCAN_CORS_ORIGINS:-}
+      PERISCAN_LOG_AGGREGATION_TARGET: ${PERISCAN_LOG_AGGREGATION_TARGET:-}
+      PERISCAN_ALERT_ROUTING_TARGET: ${PERISCAN_ALERT_ROUTING_TARGET:-}
+      PERISCAN_INCIDENT_CONTACT: ${PERISCAN_INCIDENT_CONTACT:-}
+    ports:
+      - "3001:3001"
+    restart: unless-stopped
+    healthcheck:
+      test:
+        - "CMD-SHELL"
+        - 'node -e "fetch(''http://127.0.0.1:3001/api/v1/health/ready'').then(r=>process.exit(r.status===200?0:1)).catch(()=>process.exit(1))"'
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  worker:
+    build:
+      context: ../..
+      dockerfile: apps/worker/Dockerfile
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      PERISCAN_WORKER_CONCURRENCY: ${PERISCAN_WORKER_CONCURRENCY:-4}
+      PERISCAN_EVIDENCE_S3_ENDPOINT: ${PERISCAN_EVIDENCE_S3_ENDPOINT}
+      PERISCAN_EVIDENCE_S3_BUCKET: ${PERISCAN_EVIDENCE_S3_BUCKET}
+      PERISCAN_EVIDENCE_S3_ACCESS_KEY_ID: ${PERISCAN_EVIDENCE_S3_ACCESS_KEY_ID}
+      PERISCAN_EVIDENCE_S3_SECRET_ACCESS_KEY: ${PERISCAN_EVIDENCE_S3_SECRET_ACCESS_KEY}
+      PERISCAN_EVIDENCE_S3_REGION: ${PERISCAN_EVIDENCE_S3_REGION:-us-east-1}
+    restart: unless-stopped
+    depends_on:
+      - api

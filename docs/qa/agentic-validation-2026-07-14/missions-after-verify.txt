@@ -1,0 +1,225 @@
+- link "Skip to content":
+  - /url: "#main-content"
+- complementary:
+  - link "Periscan — Dashboard":
+    - /url: /dashboard
+    - img "Periscan"
+  - link "New validation":
+    - /url: /missions
+    - text: New validation
+  - navigation "Primary":
+    - button "Prove" [expanded]:
+      - text: Prove
+    - list:
+      - link "Dashboard":
+        - /url: /dashboard
+        - text: Dashboard
+      - link "Executive":
+        - /url: /executive
+        - text: Executive
+      - link "Validation Snapshot":
+        - /url: /missions
+        - text: Validation Snapshot
+      - link "Compliance":
+        - /url: /compliance
+        - text: Compliance
+      - link "Reports":
+        - /url: /reports
+        - text: Reports
+    - button "Investigate" [expanded]:
+      - text: Investigate
+    - list:
+      - link "Attack Paths":
+        - /url: /attack-paths
+        - text: Attack Paths
+      - link "Findings":
+        - /url: /findings
+        - text: Findings
+      - link "Controls":
+        - /url: /controls
+        - text: Controls
+      - link "AI Apps":
+        - /url: /ai-apps
+        - text: AI Apps
+      - link "External Validation":
+        - /url: /external-validation
+        - text: External Validation
+      - link "Evidence":
+        - /url: /evidence
+        - text: Evidence
+    - button "Remediate" [expanded]:
+      - text: Remediate
+    - list:
+      - link "Remediation":
+        - /url: /remediation
+        - text: Remediation
+      - link "Schedules":
+        - /url: /schedules
+        - text: Schedules
+    - button "Autonomous":
+      - text: Autonomous
+    - button "Operate" [expanded]:
+      - text: Operate
+    - list:
+      - link "Integrations":
+        - /url: /integrations
+        - text: Integrations
+      - link "Proof-loop Packs":
+        - /url: /packs
+        - text: Proof-loop Packs
+      - link "Runners":
+        - /url: /runners
+        - text: Runners
+      - link "Tool Governance":
+        - /url: /registries
+        - text: Tool Governance
+      - link "Validation Ops":
+        - /url: /validation-ops
+        - text: Validation Ops
+      - link "Signal Activity":
+        - /url: /signal-activity
+        - text: Signal Activity
+    - button "Intel":
+      - text: Intel
+    - button "Govern":
+      - text: Govern
+  - text: The Hacker On Your Side
+  - text: Prove your defenses work.
+- banner:
+  - link "Periscan Demo Tenant":
+    - /url: /mssp
+    - generic: Periscan Demo Tenant
+  - button "Jump to a page… ⌘K":
+    - generic: Jump to a page…
+    - generic: ⌘K
+  - button "Open product help":
+    - generic: Help
+  - 'generic "Status: ok"': systems nominal
+  - button "Account menu": P
+- main:
+  - navigation "Breadcrumb":
+    - list:
+      - link "Dashboard":
+        - /url: /
+      - listitem: / Prove
+      - listitem: / Validation Snapshot
+  - paragraph: Measured validation
+  - heading "Validation Snapshot" [level=1]
+  - paragraph: Run measured, non-invasive checks on an authorized scope, then compile the results with existing tenant evidence into a reviewable posture snapshot.
+  - list:
+    - generic: "1"
+    - generic: Scope
+    - generic: "2"
+    - generic: Verify
+    - generic: "3"
+    - generic: Readiness
+    - generic: "4"
+    - generic: Run
+    - generic: "5"
+    - generic: Results
+  - heading "1 · Scope readiness" [level=3]
+  - list:
+    - radio "demo.example.com Domain · Other · Moderate max BASLite Verified"
+    - generic: demo.example.com
+    - generic: Domain · Other · Moderate
+    - generic: max BASLite
+    - generic: Verified
+  - textbox "Domain to add as a scope":
+    - /placeholder: example.com
+  - button "Add domain" [disabled]
+  - heading "2 · Signal & tool readiness" [level=3]
+  - generic: Verified scope
+  - paragraph: not verified
+  - link "Integrations 4 connected":
+    - /url: /integrations
+    - generic: Integrations
+    - paragraph: 4 connected
+  - link "Governed tools 31 enabled":
+    - /url: /registries
+    - generic: Governed tools
+    - paragraph: 31 enabled
+  - 'heading "3 · Policy gate & run More information: policy gate Preview binds an allow, deny, or approval-required decision to this scope and safety envelope. Changing either requires a new preview; denied work is never queued." [level=3]':
+    - text: 3 · Policy gate & run
+    - 'button "More information: policy gate"': i
+    - tooltip "Preview binds an allow, deny, or approval-required decision to this scope and safety envelope. Changing either requires a new preview; denied work is never queued."
+  - generic: Requires verified scope
+  - paragraph: A verified scope is required before any validation can run. Verify a scope above to clear the gate.
+  - button "Executive"
+  - button "Technical"
+  - button "Run measured snapshot" [disabled]
+  - heading "Recent missions & runs" [level=3]
+  - list:
+    - button "ValidationSnapshot":
+      - generic: ›
+      - generic: ValidationSnapshot
+    - generic: Completed
+    - generic: ActiveNonInvasive
+    - generic: blast radius 1 scope
+    - generic: started 2h ago
+    - link "Details":
+      - /url: /missions/b57c33bb-1744-4e19-a6d9-460917e60600
+    - button "ExposureValidation":
+      - generic: ›
+      - generic: ExposureValidation
+    - generic: Completed
+    - generic: PassiveReadOnly
+    - generic: blast radius 1 scope
+    - generic: started 2h ago
+    - link "Details":
+      - /url: /missions/3606e821-ef77-4541-b8bd-b8748a93566e
+    - button "ExposureValidation":
+      - generic: ›
+      - generic: ExposureValidation
+    - generic: Completed
+    - generic: PassiveReadOnly
+    - generic: blast radius 1 scope
+    - generic: started 2h ago
+    - link "Details":
+      - /url: /missions/68b8d9eb-2083-4a79-bc86-82eaf1cc900f
+    - button "ExposureValidation":
+      - generic: ›
+      - generic: ExposureValidation
+    - generic: Completed
+    - generic: PassiveReadOnly
+    - generic: blast radius 1 scope
+    - generic: started 2h ago
+    - link "Details":
+      - /url: /missions/f6e09d03-0a09-4b03-a1ff-9a9e70110a59
+    - button "ExposureValidation":
+      - generic: ›
+      - generic: ExposureValidation
+    - generic: Completed
+    - generic: PassiveReadOnly
+    - generic: blast radius 1 scope
+    - generic: started 2h ago
+    - link "Details":
+      - /url: /missions/8ba4c065-09e7-4725-9bef-a9429e847303
+    - button "ExposureValidation":
+      - generic: ›
+      - generic: ExposureValidation
+    - generic: Completed
+    - generic: ActiveNonInvasive
+    - generic: blast radius 1 scope
+    - generic: started 2h ago
+    - link "Details":
+      - /url: /missions/7b921e49-0b49-40d7-af87-be6316b6863c
+    - button "ExposureValidation":
+      - generic: ›
+      - generic: ExposureValidation
+    - generic: Completed
+    - generic: ActiveNonInvasive
+    - generic: blast radius 1 scope
+    - generic: started 2h ago
+    - link "Details":
+      - /url: /missions/3916970a-8186-453a-83f7-c3e6d87d5943
+    - button "ExposureValidation":
+      - generic: ›
+      - generic: ExposureValidation
+    - generic: Completed
+    - generic: ActiveNonInvasive
+    - generic: blast radius 1 scope
+    - generic: started 2h ago
+    - link "Details":
+      - /url: /missions/bb96f402-6582-4550-bd72-818079a80983
+- button "Open Next.js Dev Tools":
+- alert

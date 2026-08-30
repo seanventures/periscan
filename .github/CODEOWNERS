@@ -1,0 +1,14 @@
+# Required reviewers for policy, Fixed-verification, claim language, safety
+# boundaries, product LICENSE, runner transport, and Prisma schema.
+# GitHub user with merge rights on this repo: @seanheiney
+# Not a LICENSE flip. GitHub enforces these reviews only when branch
+# protection includes "Require review from Code Owners."
+
+/packages/policy/ @seanheiney
+/packages/shared/src/fix-verification.ts @seanheiney
+/packages/shared/src/claim-deny-list.ts @seanheiney
+/SECURITY_BOUNDARIES.md @seanheiney
+/docs/SECURITY_BOUNDARIES.md @seanheiney
+/LICENSE @seanheiney
+/apps/runner/ @seanheiney
+/packages/db/prisma/ @seanheiney

@@ -1,0 +1,62 @@
+# Periscan Measured Test Range
+# See docs/MEASURED_TEST_RANGE.md and ./README.md
+#
+# Bring up the exposed profile (default):   docker compose up -d
+# Flip to hardened (closed-loop remediation): RANGE_PROFILE=hardened docker compose up -d
+#
+# RANGE_PROFILE selects which mounted config/zone/cert set nginx and CoreDNS serve.
+# Everything is self-contained: standard public images + mounted config, a local
+# test CA generated at start, no secrets, no cloud, no internet dependency.
+
+name: periscan-test-range
+
+x-profile: &profile ${RANGE_PROFILE:-exposed}
+
+services:
+  # One-shot: generate a local test CA + leaf certs into the shared `certs`
+  # volume. Idempotent — skips regeneration if the CA already exists.
+  init-certs:
+    image: alpine:3.20
+    command: ["/bin/sh", "/gen-certs.sh"]
+    volumes:
+      - ./gen-certs.sh:/gen-certs.sh:ro
+      - certs:/certs
+    restart: "no"
+
+  # HTTP + TLS targets. Serves app.range.test and cert.range.test vhosts by
+  # server_name. The mounted config dir and certs decide exposed vs hardened.
+  nginx:
+    image: nginx:1.27
+    depends_on:
+      init-certs:
+        condition: service_completed_successfully
+    environment:
+      # Lower OpenSSL security level so the exposed vhost can negotiate the
+      # deprecated TLS 1.0/1.1 protocols that tls_protocol_audit probes for.
+      OPENSSL_CONF: /etc/nginx/openssl-legacy.cnf
+    volumes:
+      - ./nginx/${RANGE_PROFILE:-exposed}:/etc/nginx/conf.d:ro
+      - ./nginx/openssl-legacy.cnf:/etc/nginx/openssl-legacy.cnf:ro
+      - ./nginx/security.txt:/usr/share/nginx/security.txt:ro
+      - certs:/etc/nginx/certs:ro
+    ports:
+      - "80:80"
+      - "443:443"
+    restart: unless-stopped
+
+  # Authoritative DNS for the range.test zone (A/CNAME/CAA/TXT). The API points
+  # node:dns/promises resolve* at this (127.0.0.1:5354) via dns-preload.mjs.
+  # Non-range.test queries are forwarded upstream so real DNS still works.
+  coredns:
+    image: coredns/coredns:1.11.3
+    command: ["-conf", "/etc/coredns/Corefile"]
+    volumes:
+      - ./coredns/Corefile:/etc/coredns/Corefile:ro
+      - ./coredns/${RANGE_PROFILE:-exposed}:/etc/coredns/zones:ro
+    ports:
+      - "5354:53/udp"
+      - "5354:53/tcp"
+    restart: unless-stopped
+
+volumes:
+  certs:

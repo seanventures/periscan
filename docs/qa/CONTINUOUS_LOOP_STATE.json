@@ -1,0 +1,64 @@
+{
+  "date": "2026-08-03",
+  "slice": "F",
+  "points": 1490,
+  "score": 79.3,
+  "strictFloorRows": 80,
+  "strongOrLeading": 81,
+  "dims": {
+    "product": 374,
+    "function": 374,
+    "ux": 372,
+    "operations": 370
+  },
+  "targetPoints": 1802,
+  "doneFloorPoints": 1786,
+  "progress": {
+    "start": 71.6,
+    "sliceA": 73.6,
+    "sliceB": 75.1,
+    "sliceC": 76.8,
+    "sliceD": 78.2,
+    "sliceE": 78.9,
+    "sliceF": 79.2,
+    "hybridPlantPartial": 79.3
+  },
+  "rowsAt5": 2,
+  "rowsAt4": 80,
+  "icpPanelAfterD": "~4.9 pilot",
+  "icpPanelAfterE": "rolled into F panel 2026-08-03",
+  "icpPanelAfterF": "~4.9 pilot hold; A11y 4.7 pre-fix, 4.8 post-contrast (ux-validation + QA_FIX_PASS)",
+  "qaFixPass": {
+    "date": "2026-08-03",
+    "memo": "docs/qa/QA_FIX_PASS_2026-08-03.md",
+    "playwright": "73/73",
+    "acceptanceKey": "19/19 isolation+security+antifab"
+  },
+  "labDemoSite": {
+    "status": "engineering_closed",
+    "closeout": "docs/qa/LAB_DEMO_SITE_CLOSEOUT_2026-08-02.md",
+    "fullyMeasuredProven": true,
+    "waveSpineApi": "17/17",
+    "sliceE": "docs/qa/SLICE_E_RESCORE_2026-08-03.md",
+    "sliceF": "docs/qa/SLICE_F_RESCORE_2026-08-03.md"
+  },
+  "nextEngineering": [
+    "Phase 3 LocalStack/kind when modules need cloud targets",
+    "Weekly dogfood full demo-up + walk-spine",
+    "OSS: founder license decision A/B/C; CODE_OF_CONDUCT; package LICENSE matrix"
+  ],
+  "honestyCeiling": "Partner/inject/market still cap path to 95; do not invent 5.0 floors or MQ",
+  "hybridPlant": {
+    "date": "2026-08-03",
+    "compileQueue": "docs/qa/lab-runs/20260803-175632-hybrid-plant.json",
+    "complete": "docs/qa/lab-runs/20260803-180815-hybrid-plant.json",
+    "memoPartial": "docs/qa/HYBRID_PLANT_PARTIAL_2026-08-03.md",
+    "memoComplete": "docs/qa/HYBRID_PLANT_COMPLETE_2026-08-03.md",
+    "row30": "Partial 3.75 ops=4 \u2014 plant signed complete; not Strong",
+    "fixes": [
+      "result-signing enroll/patch",
+      "runner control plane URL",
+      "periscan.* module alias on Go runner"
+    ]
+  }
+}

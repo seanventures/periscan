@@ -1,0 +1,2220 @@
+{
+  "schemaVersion": 2,
+  "benchmark": "ASV/CTEM 94-requirement core matrix",
+  "assessedAt": "2026-08-03",
+  "currentScore": 79.3,
+  "targetScore": 95.9,
+  "requirements": [
+    {
+      "id": 1,
+      "requirement": "External Attack Surface Management",
+      "current": {
+        "product": 4,
+        "function": 5,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.25,
+      "verdict": "Strong",
+      "targetScore": 5,
+      "accountableOwnerRole": "CTEM and BAS squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "ANALYST_EXECUTION_WAVE1_2026-07-15.md",
+        "E2E_SWARM_S5_ASV_CSV_CONNECTORS.md",
+        "E2E_FEATURE_SWARM_2026-07-31.md",
+        "E2E_SWARM_S1_MULTI_HOP_FFV.md"
+      ]
+    },
+    {
+      "id": 2,
+      "requirement": "Dark Web & Credential Monitoring",
+      "current": {
+        "product": 3,
+        "function": 2,
+        "ux": 3,
+        "operations": 3
+      },
+      "currentScore": 2.75,
+      "verdict": "Scaffold/gated",
+      "targetScore": 4,
+      "accountableOwnerRole": "CTEM and BAS squad",
+      "dependency": "Partner",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "SLICE_C_PARTIALS.md",
+        "SLICE_D_COMPLIANCE_CHOKE_PARTNER.md"
+      ]
+    },
+    {
+      "id": 3,
+      "requirement": "Attack Path Validation",
+      "current": {
+        "product": 4,
+        "function": 5,
+        "ux": 4,
+        "operations": 5
+      },
+      "currentScore": 4.5,
+      "verdict": "Strong",
+      "targetScore": 5,
+      "accountableOwnerRole": "CTEM and BAS squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "E2E_SWARM_S1_MULTI_HOP_FFV.md",
+        "E2E_FEATURE_SWARM_2026-07-31.md",
+        "LAB_DEMO_SITE_CLOSEOUT_2026-08-02.md",
+        "../DEMO_LAB_SITE.md",
+        "../LAB_DESIGN_CONTINUOUS_LOOP.md",
+        "SLICE_E_RESCORE_2026-08-03.md"
+      ]
+    },
+    {
+      "id": 4,
+      "requirement": "Choke Point Analysis",
+      "current": {
+        "product": 4,
+        "function": 3,
+        "ux": 4,
+        "operations": 3
+      },
+      "currentScore": 3.5,
+      "verdict": "Partial",
+      "targetScore": 5,
+      "accountableOwnerRole": "CTEM and BAS squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "SLICE_B_DYNAMIC_CHOKE.md",
+        "SLICE_D_COMPLIANCE_CHOKE_PARTNER.md"
+      ],
+      "honestyNote": "P12-12: pathBreakers pattern-attached greedy hitting-set, not graph-wide min-cut/dominator; external language: prioritized breakers (pattern + evidence)"
+    },
+    {
+      "id": 5,
+      "requirement": "Exposure Graphs",
+      "current": {
+        "product": 4,
+        "function": 5,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.25,
+      "verdict": "Strong",
+      "targetScore": 5,
+      "accountableOwnerRole": "CTEM and BAS squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "LAB_DEMO_SITE_CLOSEOUT_2026-08-02.md",
+        "../DEMO_LAB_SITE.md",
+        "../LAB_DESIGN_CONTINUOUS_LOOP.md",
+        "SLICE_E_RESCORE_2026-08-03.md"
+      ],
+      "honestyNote": "P12-3/P19-r1: Exposure graphs are real UI+model; path edges remain mostly Heuristic (matrix APV Partial). Not Fully-E2E Leading."
+    },
+    {
+      "id": 6,
+      "requirement": "Security Control Validation",
+      "current": {
+        "product": 4,
+        "function": 3,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 3.75,
+      "verdict": "Partial",
+      "targetScore": 5,
+      "accountableOwnerRole": "CTEM and BAS squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "E2E_SWARM_S2_CONTROLS.md",
+        "E2E_FEATURE_SWARM_2026-07-31.md",
+        "E2E_SWARM_S1_MULTI_HOP_FFV.md",
+        "SLICE_D_SCV_WL_COMMERCIAL.md"
+      ],
+      "honestyNote": "P05-11/P13-4: Security Control Validation is observe/telemetry only; closed inject\u2192measure hard-disabled (matrix SCV Partial). Not Strong until signed inject\u2192observe demo."
+    },
+    {
+      "id": 7,
+      "requirement": "URL Filtering Validation",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 5,
+      "accountableOwnerRole": "CTEM and BAS squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "E2E_FEATURE_SWARM_2026-07-31.md",
+        "E2E_SWARM_S1_MULTI_HOP_FFV.md"
+      ]
+    },
+    {
+      "id": 8,
+      "requirement": "Detection Rule Validation",
+      "current": {
+        "product": 4,
+        "function": 5,
+        "ux": 4,
+        "operations": 5
+      },
+      "currentScore": 4.5,
+      "verdict": "Strong",
+      "targetScore": 5,
+      "accountableOwnerRole": "CTEM and BAS squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "E2E_SWARM_S2_CONTROLS.md",
+        "E2E_FEATURE_SWARM_2026-07-31.md",
+        "E2E_SWARM_S1_MULTI_HOP_FFV.md",
+        "LAB_DEMO_SITE_CLOSEOUT_2026-08-02.md",
+        "../DEMO_LAB_SITE.md",
+        "../LAB_DESIGN_CONTINUOUS_LOOP.md",
+        "SLICE_E_RESCORE_2026-08-03.md"
+      ]
+    },
+    {
+      "id": 9,
+      "requirement": "Cloud Security Validation",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 5,
+      "accountableOwnerRole": "CTEM and BAS squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "E2E_FEATURE_SWARM_2026-07-31.md",
+        "E2E_SWARM_S1_MULTI_HOP_FFV.md"
+      ]
+    },
+    {
+      "id": 10,
+      "requirement": "Kubernetes & Container Validation",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 5,
+      "accountableOwnerRole": "CTEM and BAS squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "E2E_FEATURE_SWARM_2026-07-31.md",
+        "E2E_SWARM_S1_MULTI_HOP_FFV.md"
+      ]
+    },
+    {
+      "id": 11,
+      "requirement": "Exposure Validation",
+      "current": {
+        "product": 5,
+        "function": 5,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.5,
+      "verdict": "Leading",
+      "targetScore": 5,
+      "accountableOwnerRole": "CTEM and BAS squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md"
+      ],
+      "honestyNote": "Matrix Fully-E2E-aligned (or equivalent EXV/schedule/revalidate/MSSP). Internal Leading only \u2014 not MQ placement (P12-16)."
+    },
+    {
+      "id": 12,
+      "requirement": "Business Impact Scoring",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 5,
+      "accountableOwnerRole": "CTEM and BAS squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "../BUSINESS_IMPACT_OPERATIONS_RUNBOOK.md",
+        "../../tests/acceptance/business-impact-governance-flow.test.ts"
+      ]
+    },
+    {
+      "id": 13,
+      "requirement": "Dynamic Risk Dashboards",
+      "current": {
+        "product": 5,
+        "function": 5,
+        "ux": 5,
+        "operations": 4
+      },
+      "currentScore": 4.75,
+      "verdict": "Leading",
+      "targetScore": 5,
+      "accountableOwnerRole": "CTEM and BAS squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "E2E_SWARM_S6_PLATFORM.md",
+        "E2E_FEATURE_SWARM_2026-07-31.md",
+        "E2E_SWARM_S1_MULTI_HOP_FFV.md"
+      ],
+      "honestyNote": "Matrix Fully-E2E-aligned (or equivalent EXV/schedule/revalidate/MSSP). Internal Leading only \u2014 not MQ placement (P12-16)."
+    },
+    {
+      "id": 14,
+      "requirement": "macOS Detection Analytics",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 4.5,
+      "accountableOwnerRole": "CTEM and BAS squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "E2E_FEATURE_SWARM_2026-07-31.md",
+        "E2E_SWARM_S1_MULTI_HOP_FFV.md"
+      ],
+      "honestyNote": "P12-3: OS detection analytics real but not matrix Fully-E2E; demoted from Leading export inventory."
+    },
+    {
+      "id": 15,
+      "requirement": "Linux Detection Analytics",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 4.5,
+      "accountableOwnerRole": "CTEM and BAS squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "E2E_FEATURE_SWARM_2026-07-31.md",
+        "E2E_SWARM_S1_MULTI_HOP_FFV.md"
+      ],
+      "honestyNote": "P12-3: OS detection analytics real but not matrix Fully-E2E; demoted from Leading export inventory."
+    },
+    {
+      "id": 16,
+      "requirement": "Agentless APT Execution",
+      "current": {
+        "product": 4,
+        "function": 3,
+        "ux": 3,
+        "operations": 3
+      },
+      "currentScore": 3.25,
+      "verdict": "Partial",
+      "targetScore": 4,
+      "accountableOwnerRole": "CTEM and BAS squad",
+      "dependency": "SafetyEquivalent",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "SAFETY_CANARY_RESIDUAL_2026-07-31.md",
+        "E2E_FEATURE_SWARM_2026-07-31.md",
+        "E2E_SWARM_S1_MULTI_HOP_FFV.md",
+        "SLICE_D_SAFETY_AI.md"
+      ]
+    },
+    {
+      "id": 17,
+      "requirement": "Agent-Based Execution",
+      "current": {
+        "product": 4,
+        "function": 5,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.25,
+      "verdict": "Strong",
+      "targetScore": 5,
+      "accountableOwnerRole": "CTEM and BAS squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "LAB_DEMO_SITE_CLOSEOUT_2026-08-02.md",
+        "../DEMO_LAB_SITE.md",
+        "SLICE_E_RESCORE_2026-08-03.md",
+        "SLICE_F_RESCORE_2026-08-03.md"
+      ]
+    },
+    {
+      "id": 18,
+      "requirement": "Agentless Web App Simulator",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 4,
+      "accountableOwnerRole": "CTEM and BAS squad",
+      "dependency": "SafetyEquivalent",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "ANALYST_EXECUTION_PUBLIC_SPEC_WAVE_2026-07-15.md"
+      ]
+    },
+    {
+      "id": 19,
+      "requirement": "Data Exfiltration over DNS",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 5
+      },
+      "currentScore": 4.25,
+      "verdict": "Strong",
+      "targetScore": 4,
+      "accountableOwnerRole": "CTEM and BAS squad",
+      "dependency": "SafetyEquivalent",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "E2E_SWARM_S2_CONTROLS.md",
+        "E2E_FEATURE_SWARM_2026-07-31.md",
+        "E2E_SWARM_S1_MULTI_HOP_FFV.md",
+        "LAB_DEMO_SITE_CLOSEOUT_2026-08-02.md",
+        "../DEMO_LAB_SITE.md",
+        "../LAB_DESIGN_CONTINUOUS_LOOP.md",
+        "SLICE_E_RESCORE_2026-08-03.md"
+      ]
+    },
+    {
+      "id": 20,
+      "requirement": "Continually Updated Threat Library",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 5,
+      "accountableOwnerRole": "CTEM and BAS squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "ANALYST_EXECUTION_WAVE1_2026-07-15.md",
+        "E2E_FEATURE_SWARM_2026-07-31.md",
+        "E2E_SWARM_S1_MULTI_HOP_FFV.md"
+      ]
+    },
+    {
+      "id": 21,
+      "requirement": "Ransomware Emulation",
+      "current": {
+        "product": 3,
+        "function": 2,
+        "ux": 4,
+        "operations": 2
+      },
+      "currentScore": 2.75,
+      "verdict": "Scaffold/gated",
+      "targetScore": 4,
+      "accountableOwnerRole": "CTEM and BAS squad",
+      "dependency": "SafetyEquivalent",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "SAFETY_CANARY_RESIDUAL_2026-07-31.md",
+        "E2E_FEATURE_SWARM_2026-07-31.md",
+        "E2E_SWARM_S1_MULTI_HOP_FFV.md",
+        "SLICE_D_SAFETY_AI.md"
+      ]
+    },
+    {
+      "id": 22,
+      "requirement": "Identity Abuse & Credential Harvesting",
+      "current": {
+        "product": 4,
+        "function": 3,
+        "ux": 3,
+        "operations": 3
+      },
+      "currentScore": 3.25,
+      "verdict": "Partial",
+      "targetScore": 4,
+      "accountableOwnerRole": "CTEM and BAS squad",
+      "dependency": "SafetyEquivalent",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "SAFETY_CANARY_RESIDUAL_2026-07-31.md",
+        "E2E_FEATURE_SWARM_2026-07-31.md",
+        "E2E_SWARM_S1_MULTI_HOP_FFV.md",
+        "SLICE_D_SAFETY_AI.md"
+      ]
+    },
+    {
+      "id": 23,
+      "requirement": "Dynamic Attack Paths",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 5,
+      "accountableOwnerRole": "CTEM and BAS squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "SLICE_B_DYNAMIC_CHOKE.md",
+        "SLICE_D_SCV_WL_COMMERCIAL.md",
+        "LAB_DEMO_SITE_CLOSEOUT_2026-08-02.md",
+        "../DEMO_LAB_SITE.md",
+        "../LAB_DESIGN_CONTINUOUS_LOOP.md",
+        "SLICE_E_RESCORE_2026-08-03.md"
+      ]
+    },
+    {
+      "id": 24,
+      "requirement": "Automated Unattended Scheduling",
+      "current": {
+        "product": 5,
+        "function": 5,
+        "ux": 5,
+        "operations": 5
+      },
+      "currentScore": 5.0,
+      "verdict": "Leading",
+      "targetScore": 5,
+      "accountableOwnerRole": "CTEM and BAS squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "E2E_SWARM_S6_PLATFORM.md",
+        "E2E_FEATURE_SWARM_2026-07-31.md",
+        "E2E_SWARM_S1_MULTI_HOP_FFV.md",
+        "LAB_DEMO_SITE_CLOSEOUT_2026-08-02.md",
+        "../DEMO_LAB_SITE.md",
+        "../LAB_DESIGN_CONTINUOUS_LOOP.md",
+        "SLICE_E_RESCORE_2026-08-03.md"
+      ],
+      "honestyNote": "Matrix Fully-E2E-aligned (or equivalent EXV/schedule/revalidate/MSSP). Internal Leading only \u2014 not MQ placement (P12-16)."
+    },
+    {
+      "id": 25,
+      "requirement": "Software Supply Chain Security",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 5,
+      "accountableOwnerRole": "CTEM and BAS squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "ANALYST_EXECUTION_PUBLIC_SPEC_WAVE_2026-07-15.md",
+        "E2E_FEATURE_SWARM_2026-07-31.md",
+        "E2E_SWARM_S1_MULTI_HOP_FFV.md"
+      ],
+      "honestyNote": "P19-r1: matrix SSCS Partial (dependency+code scanning, not full CI/CD pipeline security). Not Leading."
+    },
+    {
+      "id": 26,
+      "requirement": "OT/ICS Attack Packs",
+      "current": {
+        "product": 3,
+        "function": 2,
+        "ux": 3,
+        "operations": 3
+      },
+      "currentScore": 2.75,
+      "verdict": "Scaffold/gated",
+      "targetScore": 4,
+      "accountableOwnerRole": "CTEM and BAS squad",
+      "dependency": "Partner",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "SLICE_C_PARTIALS.md",
+        "SLICE_D_COMPLIANCE_CHOKE_PARTNER.md"
+      ]
+    },
+    {
+      "id": 27,
+      "requirement": "SSPM / SaaS Validation",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 5,
+      "accountableOwnerRole": "CTEM and BAS squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "E2E_FEATURE_SWARM_2026-07-31.md",
+        "E2E_SWARM_S1_MULTI_HOP_FFV.md"
+      ]
+    },
+    {
+      "id": 28,
+      "requirement": "Crowdsourced Human-in-the-Loop",
+      "current": {
+        "product": 3,
+        "function": 2,
+        "ux": 3,
+        "operations": 3
+      },
+      "currentScore": 2.75,
+      "verdict": "Scaffold/gated",
+      "targetScore": 4,
+      "accountableOwnerRole": "CTEM and BAS squad",
+      "dependency": "Partner",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "SLICE_C_PARTIALS.md",
+        "SLICE_D_COMPLIANCE_CHOKE_PARTNER.md"
+      ]
+    },
+    {
+      "id": 29,
+      "requirement": "Multi-Agent Orchestration Engine",
+      "current": {
+        "product": 3,
+        "function": 3,
+        "ux": 3,
+        "operations": 3
+      },
+      "currentScore": 3.0,
+      "verdict": "Partial",
+      "targetScore": 5,
+      "accountableOwnerRole": "Agent and AI security squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "SLICE_B_AGENT_COMPILER.md",
+        "SLICE_D_AGENT_COMPILER.md"
+      ],
+      "honestyNote": "P12-8: Multi-agent orchestration UX \u2260 measured mission assembly; not AEV Leading. Swarm/fixture cleaned; engagement engine is real passive path only."
+    },
+    {
+      "id": 30,
+      "requirement": "Hybrid Execution Compiler",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 3,
+        "operations": 4
+      },
+      "currentScore": 3.75,
+      "verdict": "Partial",
+      "targetScore": 5,
+      "accountableOwnerRole": "Agent and AI security squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "SLICE_B_AGENT_COMPILER.md",
+        "SLICE_D_AGENT_COMPILER.md",
+        "SLICE_F_RESCORE_2026-08-03.md",
+        "docs/qa/lab-runs/20260803-175632-hybrid-plant.json",
+        "docs/qa/HYBRID_PLANT_PARTIAL_2026-08-03.md",
+        "docs/qa/lab-runs/20260803-180815-hybrid-plant.json",
+        "docs/qa/HYBRID_PLANT_COMPLETE_2026-08-03.md"
+      ],
+      "honestyNote": "Plant hybrid compile\u2192poll\u2192signed Completed (2026-08-03-180815); passive dns module only. fullyE2EMeasuredSurface=false \u2014 Partial, not Strong BAS hybrid."
+    },
+    {
+      "id": 31,
+      "requirement": "Dynamic Routing",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 5,
+      "accountableOwnerRole": "Agent and AI security squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "SLICE_C_OPS_FLOORS.md"
+      ]
+    },
+    {
+      "id": 32,
+      "requirement": "Virtual Security Analyst",
+      "current": {
+        "product": 4,
+        "function": 5,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.25,
+      "verdict": "Strong",
+      "targetScore": 5,
+      "accountableOwnerRole": "Agent and AI security squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "ANALYST_EXECUTION_WAVE1_2026-07-15.md",
+        "E2E_FEATURE_SWARM_2026-07-31.md",
+        "E2E_SWARM_S1_MULTI_HOP_FFV.md"
+      ]
+    },
+    {
+      "id": 33,
+      "requirement": "Conversational Threat Builder",
+      "current": {
+        "product": 3,
+        "function": 3,
+        "ux": 3,
+        "operations": 3
+      },
+      "currentScore": 3.0,
+      "verdict": "Partial",
+      "targetScore": 5,
+      "accountableOwnerRole": "Agent and AI security squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "SLICE_B_AGENT_COMPILER.md",
+        "SLICE_D_AGENT_COMPILER.md"
+      ],
+      "honestyNote": "P12-8: UI prompt prefills only; no executable scenario generation"
+    },
+    {
+      "id": 34,
+      "requirement": "MCP Host/Client",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 5,
+      "accountableOwnerRole": "Agent and AI security squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "SLICE_C_OPS_FLOORS.md"
+      ],
+      "honestyNote": "P12-8: MCP host/client present but Labs-demoted; not Fully-E2E proof loop"
+    },
+    {
+      "id": 35,
+      "requirement": "Agent-to-Agent Protocol",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 4.5,
+      "accountableOwnerRole": "Agent and AI security squad",
+      "dependency": "Partner",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "ANALYST_EXECUTION_PUBLIC_SPEC_WAVE_2026-07-15.md"
+      ]
+    },
+    {
+      "id": 36,
+      "requirement": "A2A Agent Cards",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 4.5,
+      "accountableOwnerRole": "Agent and AI security squad",
+      "dependency": "Partner",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "ANALYST_EXECUTION_PUBLIC_SPEC_WAVE_2026-07-15.md"
+      ]
+    },
+    {
+      "id": 37,
+      "requirement": "A2A Task & Message Objects",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 4.5,
+      "accountableOwnerRole": "Agent and AI security squad",
+      "dependency": "Partner",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "ANALYST_EXECUTION_PUBLIC_SPEC_WAVE_2026-07-15.md"
+      ]
+    },
+    {
+      "id": 38,
+      "requirement": "A2A Artifact Exchange",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 3
+      },
+      "currentScore": 3.75,
+      "verdict": "Strong",
+      "targetScore": 4.5,
+      "accountableOwnerRole": "Agent and AI security squad",
+      "dependency": "Partner",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "SLICE_D_COMPLIANCE_CHOKE_PARTNER.md"
+      ],
+      "honestyNote": "P12-7: partner-gated A2A artifact; never Leading without joint customer proof"
+    },
+    {
+      "id": 39,
+      "requirement": "Immutable Event-Sourced Ledger",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 5,
+      "accountableOwnerRole": "Agent and AI security squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md"
+      ],
+      "honestyNote": "P04-12/P12-3: event ledger real; reserved Leading only for matrix Fully-E2E AEV claims."
+    },
+    {
+      "id": 40,
+      "requirement": "Time-Travel Debugging",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 5,
+      "accountableOwnerRole": "Agent and AI security squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "SLICE_C_OPS_FLOORS.md"
+      ],
+      "honestyNote": "P04-12/P12-3: time-travel debugging not matrix Fully-E2E; demoted from Leading."
+    },
+    {
+      "id": 41,
+      "requirement": "Historical Variable Analysis",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 5,
+      "accountableOwnerRole": "Agent and AI security squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "../WORKFLOW_VARIABLE_ANALYSIS_RUNBOOK.md"
+      ]
+    },
+    {
+      "id": 42,
+      "requirement": "Programmatic HITL Interrupts",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 5,
+      "accountableOwnerRole": "Agent and AI security squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "../MODEL_TOOL_INTERVENTION_RUNBOOK.md"
+      ]
+    },
+    {
+      "id": 43,
+      "requirement": "Continuous Feedback Loops",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 5,
+      "accountableOwnerRole": "Agent and AI security squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "../SCENARIO_FEEDBACK_OPERATIONS_RUNBOOK.md"
+      ]
+    },
+    {
+      "id": 44,
+      "requirement": "Hardware-Rooted TEE Execution",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 4,
+      "accountableOwnerRole": "Trust, NHI, and scale squad",
+      "dependency": "Hardware",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "ANALYST_EXECUTION_PUBLIC_SPEC_WAVE_2026-07-15.md",
+        "../CONFIDENTIAL_COMPUTE_ASSURANCE_RUNBOOK.md"
+      ]
+    },
+    {
+      "id": 47,
+      "requirement": "Execution Integrity",
+      "current": {
+        "product": 4,
+        "function": 5,
+        "ux": 4,
+        "operations": 5
+      },
+      "currentScore": 4.5,
+      "verdict": "Strong",
+      "targetScore": 4,
+      "accountableOwnerRole": "Trust, NHI, and scale squad",
+      "dependency": "Hardware",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "ANALYST_EXECUTION_PUBLIC_SPEC_WAVE_2026-07-15.md",
+        "E2E_SWARM_S6_PLATFORM.md",
+        "E2E_FEATURE_SWARM_2026-07-31.md",
+        "E2E_SWARM_S1_MULTI_HOP_FFV.md",
+        "SLICE_C_PARTIALS.md",
+        "LAB_DEMO_SITE_CLOSEOUT_2026-08-02.md",
+        "../DEMO_LAB_SITE.md",
+        "../LAB_DESIGN_CONTINUOUS_LOOP.md",
+        "SLICE_E_RESCORE_2026-08-03.md"
+      ]
+    },
+    {
+      "id": 48,
+      "requirement": "Tool-Call Integrity",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 5,
+      "accountableOwnerRole": "Trust, NHI, and scale squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md"
+      ],
+      "honestyNote": "P12-3: tool-call integrity real; not competitive Fully-E2E pillar \u2014 Strong not Leading."
+    },
+    {
+      "id": 49,
+      "requirement": "Message Authenticity & Provenance",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 5,
+      "accountableOwnerRole": "Trust, NHI, and scale squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md"
+      ],
+      "honestyNote": "P12-3: message authenticity real; not competitive Fully-E2E pillar \u2014 Strong not Leading."
+    },
+    {
+      "id": 50,
+      "requirement": "Freshness Attestation",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 5,
+      "accountableOwnerRole": "Trust, NHI, and scale squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "E2E_FEATURE_SWARM_2026-07-31.md",
+        "E2E_SWARM_S1_MULTI_HOP_FFV.md"
+      ],
+      "honestyNote": "P12-3: freshness attestation real; demoted from Leading export inventory."
+    },
+    {
+      "id": 51,
+      "requirement": "AgentDID Integration",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 4,
+      "accountableOwnerRole": "Trust, NHI, and scale squad",
+      "dependency": "Partner",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "../../tests/acceptance/agent-did-verifiable-credential-flow.test.ts",
+        "../OSS_PROOF_ENGINE_RUNBOOK.md",
+        "SLICE_D_COMPLIANCE_CHOKE_PARTNER.md"
+      ]
+    },
+    {
+      "id": 52,
+      "requirement": "Short-Lived Credential Issuance",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 5,
+      "accountableOwnerRole": "Trust, NHI, and scale squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "SLICE_C_OPS_FLOORS.md"
+      ],
+      "honestyNote": "P12-3: short-lived credentials real; demoted from Leading export inventory."
+    },
+    {
+      "id": 53,
+      "requirement": "NHI Sprawl Discovery",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 4.5,
+      "accountableOwnerRole": "Trust, NHI, and scale squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "SLICE_C_OPS_FLOORS.md"
+      ]
+    },
+    {
+      "id": 54,
+      "requirement": "Agent Behavior Analytics",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 5,
+      "accountableOwnerRole": "Trust, NHI, and scale squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "SLICE_C_OPS_FLOORS.md"
+      ]
+    },
+    {
+      "id": 57,
+      "requirement": "Priority Lanes for Validation",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 5,
+      "accountableOwnerRole": "Trust, NHI, and scale squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "SLICE_C_OPS_FLOORS.md"
+      ],
+      "honestyNote": "P12-3: priority lanes real; demoted from Leading export inventory."
+    },
+    {
+      "id": 59,
+      "requirement": "AI Control Validation",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 5,
+      "accountableOwnerRole": "Agent and AI security squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "SLICE_B_AI_CONTROLS.md",
+        "SLICE_D_SAFETY_AI.md"
+      ],
+      "honestyNote": "P19-r1/P12-3: matrix AI control validation Partial \u2014 safe/benign suites only; not Leading."
+    },
+    {
+      "id": 60,
+      "requirement": "Model-Aware Threat Simulation",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 5,
+      "accountableOwnerRole": "Agent and AI security squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "SLICE_C_OPS_FLOORS.md"
+      ]
+    },
+    {
+      "id": 61,
+      "requirement": "Prompt Injection Emulation",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 5,
+      "accountableOwnerRole": "Agent and AI security squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "SLICE_B_AI_CONTROLS.md",
+        "SLICE_D_SAFETY_AI.md"
+      ],
+      "honestyNote": "P19-r1: Prompt injection emulation is bounded safe canaries; AI-powered BAS remains Scaffold. Not Leading."
+    },
+    {
+      "id": 62,
+      "requirement": "Jailbreak Validation",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 4.5,
+      "accountableOwnerRole": "Agent and AI security squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "SLICE_C_OPS_FLOORS.md"
+      ]
+    },
+    {
+      "id": 63,
+      "requirement": "RAG Poisoning Emulation",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 4.5,
+      "accountableOwnerRole": "Agent and AI security squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "SLICE_C_OPS_FLOORS.md"
+      ]
+    },
+    {
+      "id": 64,
+      "requirement": "Model Weight Extraction Tests",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 4,
+      "accountableOwnerRole": "Agent and AI security squad",
+      "dependency": "SafetyEquivalent",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "SLICE_C_PARTIALS.md",
+        "SLICE_D_SAFETY_AI.md"
+      ]
+    },
+    {
+      "id": 65,
+      "requirement": "AI Kill-Switch Validation",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 5,
+      "accountableOwnerRole": "Agent and AI security squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "SLICE_B_AI_CONTROLS.md"
+      ],
+      "honestyNote": "P12-3/P12-21: AI kill-switch validation is not matrix Fully-E2E; advanced safety stubs residual. Partial."
+    },
+    {
+      "id": 66,
+      "requirement": "Unified Data Fabric",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 5,
+      "accountableOwnerRole": "RemOps and integrations squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "E2E_FEATURE_SWARM_2026-07-31.md",
+        "E2E_SWARM_S1_MULTI_HOP_FFV.md"
+      ],
+      "honestyNote": "P19-r1/P12-3: matrix Unified data fabric Partial (live API per connector; import UX residual). Strong not Leading."
+    },
+    {
+      "id": 67,
+      "requirement": "Auto-revalidate (legacy: Auto-Mitigate)",
+      "current": {
+        "product": 4,
+        "function": 5,
+        "ux": 4,
+        "operations": 5
+      },
+      "currentScore": 4.5,
+      "verdict": "Strong",
+      "targetScore": 5,
+      "accountableOwnerRole": "RemOps and integrations squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "E2E_SWARM_S1_MULTI_HOP_FFV.md",
+        "E2E_FEATURE_SWARM_2026-07-31.md",
+        "LAB_DEMO_SITE_CLOSEOUT_2026-08-02.md",
+        "../DEMO_LAB_SITE.md",
+        "../LAB_DESIGN_CONTINUOUS_LOOP.md",
+        "SLICE_E_RESCORE_2026-08-03.md"
+      ],
+      "honestyNote": "Wave E: product language is auto-revalidate; no config push (actionApplied always false). Legacy /auto-mitigate is a deprecated API alias only."
+    },
+    {
+      "id": 68,
+      "requirement": "Prescriptive Mitigation Planner",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 5,
+      "accountableOwnerRole": "RemOps and integrations squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "E2E_FEATURE_SWARM_2026-07-31.md",
+        "E2E_SWARM_S1_MULTI_HOP_FFV.md"
+      ]
+    },
+    {
+      "id": 69,
+      "requirement": "Automated Revalidation",
+      "current": {
+        "product": 5,
+        "function": 5,
+        "ux": 5,
+        "operations": 5
+      },
+      "currentScore": 5.0,
+      "verdict": "Leading",
+      "targetScore": 5,
+      "accountableOwnerRole": "RemOps and integrations squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "E2E_SWARM_S1_MULTI_HOP_FFV.md",
+        "E2E_FEATURE_SWARM_2026-07-31.md",
+        "LAB_DEMO_SITE_CLOSEOUT_2026-08-02.md",
+        "../DEMO_LAB_SITE.md",
+        "../LAB_DESIGN_CONTINUOUS_LOOP.md",
+        "SLICE_E_RESCORE_2026-08-03.md"
+      ],
+      "honestyNote": "Matrix Fully-E2E-aligned (or equivalent EXV/schedule/revalidate/MSSP). Internal Leading only \u2014 not MQ placement (P12-16)."
+    },
+    {
+      "id": 70,
+      "requirement": "Infrastructure-as-Code Updates",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 5,
+      "accountableOwnerRole": "RemOps and integrations squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "SLICE_B_IAC_COMPLIANCE.md",
+        "SLICE_F_RESCORE_2026-08-03.md"
+      ],
+      "honestyNote": "P19-r1: matrix ITSM/SOAR/IaC Partial with IaC push absent (static hint only). Not Leading."
+    },
+    {
+      "id": 71,
+      "requirement": "ITSM/SOAR Automation",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 5,
+      "accountableOwnerRole": "RemOps and integrations squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "E2E_SWARM_S6_PLATFORM.md",
+        "E2E_FEATURE_SWARM_2026-07-31.md",
+        "E2E_SWARM_S1_MULTI_HOP_FFV.md"
+      ]
+    },
+    {
+      "id": 72,
+      "requirement": "CrowdStrike Integration",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 4.5,
+      "accountableOwnerRole": "RemOps and integrations squad",
+      "dependency": "CustomerQualification",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "SLICE_C_OPS_FLOORS.md"
+      ]
+    },
+    {
+      "id": 73,
+      "requirement": "Palo Alto XSIAM Integration",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 5,
+      "accountableOwnerRole": "RemOps and integrations squad",
+      "dependency": "CustomerQualification",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "ANALYST_EXECUTION_WAVE1_2026-07-15.md",
+        "SLICE_C_OPS_FLOORS.md"
+      ]
+    },
+    {
+      "id": 74,
+      "requirement": "Wiz / CSPM Integration",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 4.5,
+      "accountableOwnerRole": "RemOps and integrations squad",
+      "dependency": "CustomerQualification",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "SLICE_C_OPS_FLOORS.md"
+      ]
+    },
+    {
+      "id": 75,
+      "requirement": "Datadog Integration",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 4.5,
+      "accountableOwnerRole": "RemOps and integrations squad",
+      "dependency": "CustomerQualification",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "SLICE_C_OPS_FLOORS.md"
+      ]
+    },
+    {
+      "id": 76,
+      "requirement": "Tenable / RBVM Integration",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 4.5,
+      "accountableOwnerRole": "RemOps and integrations squad",
+      "dependency": "CustomerQualification",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "SLICE_C_OPS_FLOORS.md"
+      ]
+    },
+    {
+      "id": 77,
+      "requirement": "IBM QRadar Integration",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 4.5,
+      "accountableOwnerRole": "RemOps and integrations squad",
+      "dependency": "CustomerQualification",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "SLICE_C_OPS_FLOORS.md"
+      ]
+    },
+    {
+      "id": 78,
+      "requirement": "VMware vCenter Integration",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 4.5,
+      "accountableOwnerRole": "RemOps and integrations squad",
+      "dependency": "CustomerQualification",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "SLICE_C_OPS_FLOORS.md"
+      ],
+      "honestyNote": "P19-r1: read-only vmware-vcenter connector + tests exist; live customer vSphere still CustomerQualification. Matrix refreshed to Partial \u2014 not Missing theater, not Leading."
+    },
+    {
+      "id": 79,
+      "requirement": "Continuous Intelligence Feed",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 5,
+      "accountableOwnerRole": "RemOps and integrations squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "E2E_FEATURE_SWARM_2026-07-31.md",
+        "E2E_SWARM_S1_MULTI_HOP_FFV.md",
+        "SLICE_C_OPS_FLOORS.md"
+      ],
+      "honestyNote": "P12-3: continuous intel is primarily CISA KEV + technique scrape (matrix threat library Partial). Not Leading."
+    },
+    {
+      "id": 80,
+      "requirement": "Automated Compliance Attestations",
+      "current": {
+        "product": 3,
+        "function": 3,
+        "ux": 4,
+        "operations": 3
+      },
+      "currentScore": 3.25,
+      "verdict": "Scaffold/gated",
+      "targetScore": 5,
+      "accountableOwnerRole": "Experience and enterprise squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "E2E_SWARM_S3_COMPLIANCE.md",
+        "E2E_FEATURE_SWARM_2026-07-31.md",
+        "E2E_SWARM_S1_MULTI_HOP_FFV.md",
+        "SLICE_B_IAC_COMPLIANCE.md",
+        "SLICE_D_COMPLIANCE_CHOKE_PARTNER.md"
+      ],
+      "honestyNote": "P12-13: representative partial catalog + evidence support, not regulated program attestation"
+    },
+    {
+      "id": 81,
+      "requirement": "EU AI Act Alignment",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 5,
+      "accountableOwnerRole": "Experience and enterprise squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "SLICE_B_IAC_COMPLIANCE.md"
+      ]
+    },
+    {
+      "id": 82,
+      "requirement": "ISO 42001 Mapping",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 5,
+      "accountableOwnerRole": "Experience and enterprise squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "SLICE_B_IAC_COMPLIANCE.md"
+      ]
+    },
+    {
+      "id": 83,
+      "requirement": "DORA Evidence Generation",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 5,
+      "accountableOwnerRole": "Experience and enterprise squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "E2E_SWARM_S3_COMPLIANCE.md",
+        "E2E_FEATURE_SWARM_2026-07-31.md",
+        "E2E_SWARM_S1_MULTI_HOP_FFV.md"
+      ]
+    },
+    {
+      "id": 84,
+      "requirement": "NIS2 Compliance Reporting",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 5,
+      "accountableOwnerRole": "Experience and enterprise squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "E2E_SWARM_S3_COMPLIANCE.md",
+        "E2E_FEATURE_SWARM_2026-07-31.md",
+        "E2E_SWARM_S1_MULTI_HOP_FFV.md"
+      ]
+    },
+    {
+      "id": 85,
+      "requirement": "SEC Cybersecurity Rules Mapping",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 5,
+      "accountableOwnerRole": "Experience and enterprise squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "SLICE_B_IAC_COMPLIANCE.md"
+      ]
+    },
+    {
+      "id": 86,
+      "requirement": "PCI DSS Validation Reporting",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 5,
+      "accountableOwnerRole": "Experience and enterprise squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "E2E_SWARM_S3_COMPLIANCE.md",
+        "E2E_FEATURE_SWARM_2026-07-31.md",
+        "E2E_SWARM_S1_MULTI_HOP_FFV.md"
+      ]
+    },
+    {
+      "id": 87,
+      "requirement": "HIPAA Validation Reporting",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 5,
+      "accountableOwnerRole": "Experience and enterprise squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "SLICE_B_IAC_COMPLIANCE.md"
+      ]
+    },
+    {
+      "id": 88,
+      "requirement": "ISO 27001 Validation Reporting",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 5,
+      "accountableOwnerRole": "Experience and enterprise squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "SLICE_B_IAC_COMPLIANCE.md"
+      ]
+    },
+    {
+      "id": 89,
+      "requirement": "GDPR Data Isolation Proof",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 5,
+      "accountableOwnerRole": "Experience and enterprise squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "SLICE_B_IAC_COMPLIANCE.md"
+      ],
+      "honestyNote": "P12-3: tenant isolation proof real; not certification / matrix Fully-E2E compliance. Strong not Leading."
+    },
+    {
+      "id": 90,
+      "requirement": "CISO / Board Risk Dashboards",
+      "current": {
+        "product": 5,
+        "function": 5,
+        "ux": 5,
+        "operations": 4
+      },
+      "currentScore": 4.75,
+      "verdict": "Leading",
+      "targetScore": 5,
+      "accountableOwnerRole": "Experience and enterprise squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "ux-panel-2026-07-31/ICP_RESCORE_5_BOARD.md",
+        "E2E_FEATURE_SWARM_2026-07-31.md",
+        "E2E_SWARM_S1_MULTI_HOP_FFV.md"
+      ],
+      "honestyNote": "Matrix Fully-E2E-aligned (or equivalent EXV/schedule/revalidate/MSSP). Internal Leading only \u2014 not MQ placement (P12-16)."
+    },
+    {
+      "id": 91,
+      "requirement": "Multitenant MSSP Architecture",
+      "current": {
+        "product": 5,
+        "function": 5,
+        "ux": 5,
+        "operations": 4
+      },
+      "currentScore": 4.75,
+      "verdict": "Leading",
+      "targetScore": 5,
+      "accountableOwnerRole": "Experience and enterprise squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "E2E_SWARM_S6_PLATFORM.md",
+        "E2E_FEATURE_SWARM_2026-07-31.md",
+        "E2E_SWARM_S1_MULTI_HOP_FFV.md"
+      ],
+      "honestyNote": "Matrix Fully-E2E-aligned (or equivalent EXV/schedule/revalidate/MSSP). Internal Leading only \u2014 not MQ placement (P12-16)."
+    },
+    {
+      "id": 92,
+      "requirement": "Short-Term Assessment Licensing",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 5,
+      "accountableOwnerRole": "Experience and enterprise squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "SLICE_D_SCV_WL_COMMERCIAL.md",
+        "SLICE_F_RESCORE_2026-08-03.md"
+      ],
+      "honestyNote": "P12-11 residual: assessment catalog real; paymentProcessorStatus NotConfigured. Not Leading commercial path."
+    },
+    {
+      "id": 93,
+      "requirement": "Long-Term Continuous Subscriptions",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 5,
+      "accountableOwnerRole": "Experience and enterprise squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "../SUBSCRIPTION_OPERATIONS_RUNBOOK.md",
+        "../../tests/acceptance/subscription-operations-lifecycle-flow.test.ts"
+      ]
+    },
+    {
+      "id": 94,
+      "requirement": "Self-Serve Free Trials",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 5,
+      "accountableOwnerRole": "Experience and enterprise squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "SLICE_D_SCV_WL_COMMERCIAL.md"
+      ]
+    },
+    {
+      "id": 96,
+      "requirement": "Localized Go-to-Market Features",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 5,
+      "accountableOwnerRole": "Experience and enterprise squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "../LOCALIZATION_OPERATIONS_RUNBOOK.md",
+        "../../tests/acceptance/tenant-localization-flow.test.ts"
+      ]
+    },
+    {
+      "id": 97,
+      "requirement": "White-Labeling for GSIs",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 5,
+      "accountableOwnerRole": "Experience and enterprise squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "SLICE_D_SCV_WL_COMMERCIAL.md"
+      ]
+    },
+    {
+      "id": 98,
+      "requirement": "Marketplace Interoperability",
+      "current": {
+        "product": 3,
+        "function": 3,
+        "ux": 3,
+        "operations": 3
+      },
+      "currentScore": 3.0,
+      "verdict": "Scaffold/gated",
+      "targetScore": 5,
+      "accountableOwnerRole": "Experience and enterprise squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "SLICE_B_IAC_COMPLIANCE.md",
+        "SLICE_C_PARTIALS.md"
+      ],
+      "honestyNote": "P12-11/P08-2: public marketplace listing / commercial packaging NotConfigured. Scaffold until real channel ships. Zero fabricated listings."
+    },
+    {
+      "id": 107,
+      "requirement": "Asynchronous Task Processing",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 5,
+      "accountableOwnerRole": "Trust, NHI, and scale squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "../ASYNC_OPERATIONS_RUNBOOK.md",
+        "../TRACEABILITY_MATRIX.md"
+      ]
+    },
+    {
+      "id": 110,
+      "requirement": "Custom Tool Creation Framework",
+      "current": {
+        "product": 4,
+        "function": 4,
+        "ux": 4,
+        "operations": 4
+      },
+      "currentScore": 4.0,
+      "verdict": "Strong",
+      "targetScore": 5,
+      "accountableOwnerRole": "Trust, NHI, and scale squad",
+      "dependency": "None",
+      "evidenceReviewDueAt": "2026-10-15",
+      "evidenceRefs": [
+        "ANALYST_REQUIREMENTS_2026_AUDIT.md",
+        "ANALYST_94_ASV_CTEM_95_SCORE_PLAN.md",
+        "../EXTENSION_DEVELOPER_RUNBOOK.md",
+        "../../tests/acceptance/extension-developer-lifecycle-flow.test.ts"
+      ]
+    }
+  ],
+  "scope": {
+    "sourceMatrixRequirementCount": 110,
+    "coreRequirementCount": 94,
+    "retainedOriginalIds": true,
+    "excludedAdjacentRequirementIds": [
+      45,
+      46,
+      55,
+      56,
+      58,
+      95,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      108,
+      109
+    ],
+    "partnerRequirementIds": [
+      2,
+      26,
+      28,
+      35,
+      36,
+      37,
+      38,
+      51
+    ],
+    "coreOwnerNoneCount": 86,
+    "partnerEcosystemCount": 8,
+    "presentation": {
+      "coreAevPoints": 1250,
+      "coreAevMaxPoints": 1720,
+      "coreAevPercent": 72.7,
+      "partnerEcosystemPoints": 97,
+      "partnerEcosystemMaxPoints": 160,
+      "partnerEcosystemPercent": 60.6,
+      "note": "P12-7/P12-16: External AEV briefings and MQ proxy must use core (dependency\u2260Partner) only. Partner/Ecosystem rows are appendix \u2014 never Leading without joint customer proof. Internal 94-row total is an engineering evidence index only \u2014 not Magic Quadrant / Wave progress."
+    },
+    "mqProxyPolicy": "Do not export internal Leading rows, full 94-row %, or target 95.9 as MQ/Wave progress. Gate external claims on competitive matrix Fully-E2E labels, measured-edge ratio, Production connectors, and design-partner references (currently zero named refs \u2014 honest empty). scoreGovernance.isMagicQuadrantProgress=false always."
+  },
+  "scoreGovernance": {
+    "isMagicQuadrantProgress": false,
+    "isForresterWaveProgress": false,
+    "internalEngineeringIndexOnly": true,
+    "externalClaimAuthority": "docs/COMPETITIVE_COVERAGE_MATRIX.md",
+    "leadingPolicy": "Leading reserved for matrix Fully-E2E-aligned rows only (EXV scoring, dynamic risk dashboards, automated scheduling, measured revalidation, MSSP multi-tenancy, CISO/board risk dashboards).",
+    "forbiddenExports": [
+      "internal currentScore as MQ/Wave score",
+      "targetScore 95.9 as Leaders-ready claim",
+      "Leading on Partial/Scaffold/Missing matrix capabilities",
+      "fabricated customer references or ARR",
+      "public marketplace presence while NotConfigured"
+    ],
+    "marketPresence": {
+      "namedCustomerReferences": 0,
+      "publicMarketplaceListing": "NotConfigured",
+      "honesty": "Zero design-partner references and no live public marketplace \u2014 do not fabricate (P08-2/P12-6/P13-1)."
+    },
+    "matrixAlignmentPass": "2026-08-03-continuous-loop-F",
+    "notes": [
+      "P12-16 dual scoreboard: this JSON is internal evidence index only.",
+      "P19-r1/P12-3/P04-12 residual Leading on Missing/Scaffold/Partial demoted.",
+      "P05-11/P13-4 SCV demoted to Partial while inject loop remains off.",
+      "Blind independent rescore still required before any external 95+ language (Slice 10).",
+      "2026-08-01 continuous loop Slice A: rescore from S1\u2013S6 E2E acceptance + ICP boards; gate floors updated; no MQ/Wave export; no invented customer refs.",
+      "Slice B rescore 1411/1880 (75.1%): dynamic paths, hybrid compiler honesty, AI kill-switch, IaC PR comments, compliance depth. Caps held.",
+      "Slice C rescore 1444/1880 (76.8%): platform ops floors, customer-qual dry-run, partner honesty shells, model-extraction multi-probe.",
+      "Slice D rescore 1471/1880 (78.2%): hybrid mock-runner E2E, SCV coverage Partial, white-label, commercial honesty, safety scaffolds, compliance multi-framework, choke honesty, partner API. Caps held.",
+      "Slice F rescore 1489/1880 (79.2%): catch-up for Slice B IaC #70\u21924.0 Strong, Slice D commercial #92\u21924.0, hybrid #30\u21923.5 Partial (mock-runner), lab dual runners #17\u21924.25. Caps held; no MQ/Wave."
+    ]
+  }
+}

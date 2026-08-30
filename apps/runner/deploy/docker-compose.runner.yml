@@ -1,0 +1,37 @@
+# Periscan Internal Runner - Docker Compose deployment example.
+# Required network: outbound HTTPS 443 to the Periscan control plane plus DNS.
+# Do not publish ports or create inbound firewall rules for this service.
+services:
+  periscan-runner:
+    image: ghcr.io/seanheiney/periscan-runner:${PERISCAN_RUNNER_IMAGE_TAG:-latest}
+    restart: unless-stopped
+    user: "65532:65532"
+    environment:
+      PERISCAN_CONTROL_PLANE_URL: ${PERISCAN_CONTROL_PLANE_URL:?set control plane URL}
+      PERISCAN_RUNNER_ID: ${PERISCAN_RUNNER_ID:?set issued runner ID}
+      PERISCAN_RUNNER_AUTH_TOKEN: ${PERISCAN_RUNNER_AUTH_TOKEN:?set issued runner auth token}
+      PERISCAN_RUNNER_MTLS_CA_FILE: /run/secrets/periscan_runner_ca
+      PERISCAN_RUNNER_MTLS_CLIENT_CERT_FILE: /run/secrets/periscan_runner_client_cert
+      PERISCAN_RUNNER_MTLS_CLIENT_KEY_FILE: /run/secrets/periscan_runner_client_key
+      PERISCAN_TASK_SIGNING_PUBLIC_KEY_PEM: ${PERISCAN_TASK_SIGNING_PUBLIC_KEY_PEM:?set task signing public key PEM}
+      PERISCAN_RUNNER_PROXY_URL: ${PERISCAN_RUNNER_PROXY_URL:-}
+      PERISCAN_RUNNER_KILL_SWITCH: ${PERISCAN_RUNNER_KILL_SWITCH:-false}
+    secrets:
+      - periscan_runner_ca
+      - periscan_runner_client_cert
+      - periscan_runner_client_key
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+secrets:
+  periscan_runner_ca:
+    file: ${PERISCAN_RUNNER_MTLS_CA_SOURCE_FILE:?set issued runner CA certificate file}
+  periscan_runner_client_cert:
+    file: ${PERISCAN_RUNNER_MTLS_CLIENT_CERT_SOURCE_FILE:?set issued runner client certificate file}
+  periscan_runner_client_key:
+    file: ${PERISCAN_RUNNER_MTLS_CLIENT_KEY_SOURCE_FILE:?set issued runner client private key file}

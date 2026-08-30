@@ -1,0 +1,83 @@
+name: Bug
+description: Something measured or gated behaved incorrectly on authorized scope.
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this for product bugs. **Do not** attach exploit PoCs, credentials, or third-party target data.
+
+        Vulnerabilities in Periscan itself → see `SECURITY.md` (private advisory after public launch; no `security@` domain is published).
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Surface
+      options:
+        - Community validation (Validate / suite / start)
+        - Scope authorization
+        - Policy / deny path
+        - Findings / evidence
+        - Remediation / Fixed verification
+        - Engine Lab / licenses
+        - Runner
+        - API
+        - Web UI
+        - Lab / first-hour
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: Observed behavior. Quote UI copy or API status/code. No secrets.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What should have happened
+      description: Include the SETTLED claim if this violates Fixed-only-via-verify, deny-never-queues, or Community SPDX.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Repro (authorized lab only)
+      description: Steps against systems you own or are contracted to test. `pnpm seed:demo` is a fixture — say if this is fixture vs lab.
+      placeholder: |
+        1. lab:up / lab:dev …
+        2. Verify scope type …
+        3. POST /api/v1/community/validation-runs …
+    validations:
+      required: true
+  - type: dropdown
+    id: edition
+    attributes:
+      label: Edition path
+      options:
+        - Community pack (default permissive SPDX)
+        - Engine Lab copyleft opt-in
+        - Commercial / MSSP / hosted
+        - Unsure
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version / commit
+      description: git SHA, tag, or `main` + date. Do not claim GA unless a release does.
+    validations:
+      required: true
+  - type: checkboxes
+    id: honesty
+    attributes:
+      label: Honesty
+      options:
+        - label: I did not scan systems I do not own or lack written authorization to test.
+          required: true
+        - label: This issue is not a request to enable live Atomic / Caldera / SharpHound / sqlmap / Metasploit.
+          required: true
+        - label: I will not paste secrets, customer data, or exploit payloads here.
+          required: true

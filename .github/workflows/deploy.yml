@@ -1,0 +1,267 @@
+name: Deploy
+
+# Reproducible, gated production deploy pipeline (WS6).
+#
+# SAFE BY DEFAULT. The deploy job is guarded by a GitHub Environment (default
+# `production`) so it requires the configured reviewers/secrets before it runs.
+# Even after approval, an actual apply happens ONLY when the environment has
+# both the deploy target configured AND the explicit opt-in var
+# `PERISCAN_DEPLOY_ENABLED == 'true'`. Otherwise the job runs a non-destructive
+# dry-run (compose config validation + terraform validate) and exits green.
+# Nothing here ever runs `terraform apply` or a destructive command without that
+# explicit opt-in.
+#
+# Triggers:
+#   - workflow_dispatch: manual, with an `environment` input (default production)
+#   - push tags matching v* : tagged releases
+#
+# See docs/DEPLOY.md for the secrets/vars a maintainer must provide to make a
+# real deploy happen, and for rollback.
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target GitHub Environment (gates approval + secrets)"
+        type: environment
+        required: true
+        default: production
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Release gate: the deploy is blocked unless this passes. Mirrors the CI
+  # service containers/env so the gate is reproducible. Runs the core release
+  # checks (lint + typecheck + build + migrate deploy + acceptance). The full
+  # `pnpm verify` superset runs in ci.yml on every push/PR.
+  # ---------------------------------------------------------------------------
+  gate:
+    name: Release gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: periscan
+          POSTGRES_PASSWORD: periscan
+          POSTGRES_USER: periscan
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U periscan -d periscan"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      minio:
+        image: minio/minio:latest
+        env:
+          MINIO_ROOT_USER: periscan
+          MINIO_ROOT_PASSWORD: periscan123
+        ports:
+          - 9000:9000
+          - 9001:9001
+        options: >-
+          --health-cmd "curl -fsS http://127.0.0.1:9000/minio/health/live || exit 1"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://periscan:periscan@127.0.0.1:5432/periscan
+      MINIO_BUCKET: periscan-evidence
+      MINIO_ENDPOINT: 127.0.0.1
+      MINIO_PORT: 9000
+      MINIO_ROOT_PASSWORD: periscan123
+      MINIO_ROOT_USER: periscan
+      PERISCAN_API_PORT: 3001
+      PERISCAN_DATA_REGION: us-east-1
+      PERISCAN_DEV_MODE: "true"
+      PERISCAN_JWT_SECRET: periscan-ci-session-secret
+      REDIS_URL: redis://127.0.0.1:6379
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.0 --activate
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Build production artifacts
+        run: pnpm build
+
+      - name: Prisma migrate deploy
+        run: pnpm --filter @periscan/db run db:migrate:deploy
+
+      - name: Acceptance tests
+        run: pnpm test:acceptance
+
+  # ---------------------------------------------------------------------------
+  # Deploy: gated behind a GitHub Environment. Safe-by-default dry-run unless
+  # the environment opts in with PERISCAN_DEPLOY_ENABLED == 'true'.
+  # ---------------------------------------------------------------------------
+  deploy:
+    name: Deploy (${{ github.event.inputs.environment || 'production' }})
+    needs: gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: ${{ github.event.inputs.environment || 'production' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Decide apply vs dry-run. Real apply requires the explicit opt-in var AND
+      # a configured deploy target secret; anything else is a dry-run.
+      - name: Resolve deploy mode
+        id: mode
+        env:
+          DEPLOY_ENABLED: ${{ vars.PERISCAN_DEPLOY_ENABLED }}
+          DEPLOY_HOST: ${{ secrets.PERISCAN_DEPLOY_SSH_HOST }}
+        run: |
+          if [[ "${DEPLOY_ENABLED}" == "true" && -n "${DEPLOY_HOST}" ]]; then
+            echo "mode=apply" >> "$GITHUB_OUTPUT"
+            echo "Deploy mode: APPLY (opt-in enabled and target configured)"
+          else
+            echo "mode=dry-run" >> "$GITHUB_OUTPUT"
+            echo "Deploy mode: DRY-RUN (safe default)."
+            echo "Set the 'production' environment var PERISCAN_DEPLOY_ENABLED=true"
+            echo "and the secret PERISCAN_DEPLOY_SSH_HOST to enable a real apply."
+          fi
+
+      # ---- Dry-run (default) ----------------------------------------------
+      - name: Setup Docker Buildx (dry-run compose validation)
+        if: steps.mode.outputs.mode == 'dry-run'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Validate production compose config (dry-run)
+        if: steps.mode.outputs.mode == 'dry-run'
+        env:
+          # Placeholder values so `compose config` can resolve ${VARS}; these are
+          # NOT used to start anything, only to validate the file interpolates.
+          DATABASE_URL: postgresql://placeholder:placeholder@db.invalid:5432/periscan
+          REDIS_URL: rediss://placeholder:placeholder@redis.invalid:6379
+          PERISCAN_JWT_SECRET: dry-run-placeholder-secret
+          PERISCAN_EVIDENCE_S3_ENDPOINT: https://s3.invalid
+          PERISCAN_EVIDENCE_S3_BUCKET: periscan-evidence
+          PERISCAN_EVIDENCE_S3_ACCESS_KEY_ID: placeholder
+          PERISCAN_EVIDENCE_S3_SECRET_ACCESS_KEY: placeholder
+        run: |
+          echo "==> docker compose config (validate only, no apply)"
+          docker compose -f infra/production/docker-compose.prod.yml config >/dev/null
+          echo "production compose config is valid."
+
+      - name: Setup Terraform (dry-run plan/validate)
+        if: steps.mode.outputs.mode == 'dry-run'
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.7.5"
+
+      - name: Terraform validate (dry-run)
+        if: steps.mode.outputs.mode == 'dry-run'
+        working-directory: infra/terraform
+        run: |
+          echo "==> terraform init (no backend) + validate (no apply)"
+          terraform init -backend=false -input=false
+          terraform validate
+          # `terraform plan` runs here once provider modules are added and a
+          # backend/vars are wired; today infra/terraform only pins versions.
+
+      - name: Dry-run summary
+        if: steps.mode.outputs.mode == 'dry-run'
+        run: |
+          echo "Dry-run complete. No infrastructure was changed."
+          echo "This is the SAFE default. See docs/DEPLOY.md to enable a real apply."
+
+      # ---- Apply (opt-in only) --------------------------------------------
+      # Pulls the GHCR images (built + pushed by images-build.yml on this tag),
+      # runs migrations, then `compose up -d` on the target host over SSH.
+      - name: Deploy over SSH (apply)
+        if: steps.mode.outputs.mode == 'apply'
+        env:
+          DEPLOY_HOST: ${{ secrets.PERISCAN_DEPLOY_SSH_HOST }}
+          DEPLOY_USER: ${{ secrets.PERISCAN_DEPLOY_SSH_USER }}
+          DEPLOY_KEY: ${{ secrets.PERISCAN_DEPLOY_SSH_KEY }}
+          DEPLOY_PATH: ${{ vars.PERISCAN_DEPLOY_PATH }}
+          IMAGE_TAG: ${{ github.ref_type == 'tag' && github.ref_name || 'latest' }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${DEPLOY_USER}" || -z "${DEPLOY_KEY}" || -z "${DEPLOY_PATH}" ]]; then
+            echo "Apply requires PERISCAN_DEPLOY_SSH_USER, PERISCAN_DEPLOY_SSH_KEY," >&2
+            echo "and the PERISCAN_DEPLOY_PATH var. Aborting without changing anything." >&2
+            exit 1
+          fi
+          mkdir -p ~/.ssh
+          printf '%s\n' "${DEPLOY_KEY}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "${DEPLOY_HOST}" >> ~/.ssh/known_hosts 2>/dev/null
+          echo "==> deploying tag ${IMAGE_TAG} to ${DEPLOY_HOST}:${DEPLOY_PATH}"
+          ssh -i ~/.ssh/deploy_key "${DEPLOY_USER}@${DEPLOY_HOST}" bash -s <<REMOTE
+          set -euo pipefail
+          cd "${DEPLOY_PATH}"
+          export PERISCAN_IMAGE_TAG="${IMAGE_TAG}"
+          docker compose -f infra/production/docker-compose.prod.yml --env-file .env.production pull
+          # Migrations run before swapping traffic (idempotent, forward-only).
+          docker compose -f infra/production/docker-compose.prod.yml --env-file .env.production \
+            run --rm api pnpm --filter @periscan/db db:migrate:deploy
+          docker compose -f infra/production/docker-compose.prod.yml --env-file .env.production up -d
+          REMOTE
+
+      # ---- Post-deploy smoke tests ----------------------------------------
+      # Only meaningful when something was actually deployed OR a reachable base
+      # URL is configured for the environment. Fails the deploy on any non-200.
+      - name: Post-deploy smoke tests
+        if: steps.mode.outputs.mode == 'apply' || vars.PERISCAN_SMOKE_BASE_URL != ''
+        env:
+          BASE_URL: ${{ vars.PERISCAN_SMOKE_BASE_URL }}
+          WEB_BASE_URL: ${{ vars.PERISCAN_SMOKE_WEB_BASE_URL }}
+          SMOKE_SKIP_SIGNUP: ${{ vars.PERISCAN_SMOKE_SKIP_SIGNUP }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${BASE_URL}" ]]; then
+            echo "PERISCAN_SMOKE_BASE_URL is not set for this environment; cannot smoke-test." >&2
+            echo "Set it to the deployed API base URL (e.g. https://api.example.com)." >&2
+            exit 1
+          fi
+          bash scripts/smoke-test.sh
+
+      - name: Smoke test skipped notice
+        if: steps.mode.outputs.mode == 'dry-run' && vars.PERISCAN_SMOKE_BASE_URL == ''
+        run: |
+          echo "Smoke tests skipped: dry-run and no PERISCAN_SMOKE_BASE_URL configured."
+          echo "Run locally against a deployment: BASE_URL=<api-url> bash scripts/smoke-test.sh"

@@ -1,0 +1,36 @@
+{
+  "schema": "periscan-lab-scopes-v1",
+  "scopes": [
+    {
+      "scopeType": "Domain",
+      "value": "edge.lab.range.test",
+      "role": "hop0",
+      "http": "http://127.0.0.1:8081",
+      "https": "https://127.0.0.1:8443"
+    },
+    {
+      "scopeType": "Domain",
+      "value": "app.lab.range.test",
+      "role": "hop1",
+      "http": "http://127.0.0.1:8082",
+      "https": "https://127.0.0.1:8444"
+    },
+    {
+      "scopeType": "Domain",
+      "value": "data.lab.range.test",
+      "role": "hop2",
+      "http": "http://127.0.0.1:8083"
+    }
+  ],
+  "siem": {
+    "baseUrl": "http://127.0.0.1:9200",
+    "connectorKey": "splunk",
+    "authType": "apiToken",
+    "token": "lab-token",
+    "mockMode": false
+  },
+  "runners": {
+    "plant": { "siteId": "plant", "networkSegment": "ot-dmz" },
+    "hq": { "siteId": "hq", "networkSegment": "corp" }
+  }
+}

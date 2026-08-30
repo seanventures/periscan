@@ -1,0 +1,20 @@
+# Optional kind cluster for lab K8s module targets (Phase 3).
+# Create: kind create cluster --name periscan-lab --config kind-config.yaml
+# Delete: kind delete cluster --name periscan-lab
+#
+# Honesty: this is a local disposable cluster — not customer Production K8s
+# qualification and not a public reference.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: periscan-lab
+nodes:
+  - role: control-plane
+    kubeadmConfigPatches:
+      - |
+        kind: InitConfiguration
+        nodeRegistration:
+          kubeletExtraArgs:
+            node-labels: "periscan.lab/role=control-plane"
+  - role: worker
+    labels:
+      periscan.lab/role: worker

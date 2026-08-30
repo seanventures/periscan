@@ -1,0 +1,40 @@
+# Example systemd unit for Periscan Internal Runner.
+# Install binary at /usr/local/bin/periscan-runner and secrets at /etc/periscan/runner.env.
+
+[Unit]
+Description=Periscan Internal Runner
+Documentation=https://github.com/seanheiney/periscan/blob/main/RUNNER_ARCHITECTURE.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=periscan-runner
+Group=periscan-runner
+UMask=0077
+EnvironmentFile=-/etc/periscan/runner.env
+ExecStart=/usr/local/bin/periscan-runner poll
+Restart=always
+RestartSec=10s
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+RemoveIPC=true
+SystemCallArchitectures=native
+CapabilityBoundingSet=
+AmbientCapabilities=
+ReadWritePaths=/tmp
+
+[Install]
+WantedBy=multi-user.target

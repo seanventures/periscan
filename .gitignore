@@ -1,0 +1,41 @@
+node_modules
+.pnpm-store
+**/node_modules
+**/.next
+**/dist
+coverage
+playwright-report
+test-results
+.turbo
+.DS_Store
+.env
+.env.*
+!.env.example
+!**/.env.example
+.env.local
+.periscan
+# Local Community-as-code overlay (committed example is .periscan.example.yaml)
+.periscan.yaml
+**/*.tsbuildinfo
+
+# Generated product CycloneDX SBOM (CI artifact from pnpm sbom:write)
+/sbom.json
+
+# Claude Code agent worktrees / session data
+.claude
+
+# Local database backups (scripts/db-backup.sh)
+.backups/
+
+# Continuous-loop lab (Phase 1–2 / demo site)
+infra/lab/certs/
+infra/lab/.env
+infra/lab/.lab-state.json
+infra/lab/.lab-runner.env
+infra/lab/.lab-runner.env.bak
+infra/lab/.lab-*.env.bak
+infra/lab/.lab-demo.env
+infra/lab/.lab-*-runner-id
+infra/lab/.lab-tenant-id
+infra/lab/.lab-runner-creds/
+docs/qa/lab-runs/

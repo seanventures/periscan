@@ -1,0 +1,47 @@
+# Example only: Community proof card against a verified repository scope.
+# workflow_dispatch only — not the release gate. Do not add this to ci.yml.
+# Not a LICENSE flip. Denied tasks are never queued.
+
+name: Community proof (example)
+
+on:
+  workflow_dispatch:
+    inputs:
+      scope_id:
+        description: Verified repository scope UUID
+        required: true
+        type: string
+      pull_request_number:
+        description: Optional pull request number to comment on
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+  # When upload_sarif: true, also set:
+  # security-events: write
+  # actions: read   # private repositories
+
+jobs:
+  community-proof:
+    name: Community proof
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Comment Community proof
+        uses: ./actions/community-proof
+        with:
+          api_token: ${{ secrets.PERISCAN_API_TOKEN }}
+          api_url: ${{ vars.PERISCAN_API_URL }}
+          pull_request_number: ${{ inputs.pull_request_number }}
+          scope_id: ${{ inputs.scope_id }}
+          # upload_sarif: true
+          # After a queued run (not deny), GET /api/v1/findings.sarif?missionId=
+          # writes periscan.sarif and github/codeql-action/upload-sarif@v3
+          # uploads category periscan-community. Denied jobsQueued=0 never
+          # uploads a fake pass. Not a certification or pentest report.

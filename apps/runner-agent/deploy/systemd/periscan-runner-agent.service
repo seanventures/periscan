@@ -1,0 +1,41 @@
+# Example systemd unit for Periscan Runner Agent.
+# Install Node entrypoint or image binary at /usr/local/bin/periscan-runner-agent
+# and secrets at /etc/periscan/runner-agent.env.
+# Note: MemoryDenyWriteExecute is omitted — Node.js requires writable JIT pages.
+
+[Unit]
+Description=Periscan Runner Agent
+Documentation=https://github.com/seanheiney/periscan/blob/main/RUNNER_ARCHITECTURE.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=periscan-runner-agent
+Group=periscan-runner-agent
+UMask=0077
+EnvironmentFile=-/etc/periscan/runner-agent.env
+ExecStart=/usr/local/bin/periscan-runner-agent
+Restart=always
+RestartSec=10s
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=true
+LockPersonality=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+RemoveIPC=true
+SystemCallArchitectures=native
+CapabilityBoundingSet=
+AmbientCapabilities=
+ReadWritePaths=/tmp
+
+[Install]
+WantedBy=multi-user.target

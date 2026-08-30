@@ -1,0 +1,3 @@
+ALTER TYPE "EvidencePackType" ADD VALUE IF NOT EXISTS 'HIPAAAttestation';
+ALTER TYPE "EvidencePackType" ADD VALUE IF NOT EXISTS 'SOC2Attestation';
+ALTER TYPE "EvidencePackType" ADD VALUE IF NOT EXISTS 'NISTCSFAttestation';

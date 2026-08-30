@@ -1,0 +1,29 @@
+{
+  "bodyScrollWidth": 381,
+  "clientWidth": 381,
+  "flowButtons": [
+    {
+      "label": "POLPolicy gateinline-validationLinked",
+      "width": 315
+    },
+    {
+      "label": "MSNExposure Validation1 authorized scopeCompleted",
+      "width": 315
+    },
+    {
+      "label": "OUTMission outcomeFixedCompleted",
+      "width": 315
+    },
+    {
+      "label": "R1Dns Email Security Checkcontrol planeFixed",
+      "width": 315
+    },
+    {
+      "label": "EVEvidence receipts2 linked receiptsRetained",
+      "width": 315
+    }
+  ],
+  "heading": "Live validation execution",
+  "innerWidth": 390,
+  "scrollWidth": 381
+}

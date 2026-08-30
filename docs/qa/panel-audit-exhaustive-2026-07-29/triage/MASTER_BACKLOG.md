@@ -1,0 +1,447 @@
+# Master backlog — exhaustive panel 2026-07-29
+
+- Raw findings parsed: **398**
+- Unique by title: **398** (dupes collapsed: 0)
+- Zoo-related: **119**
+
+## By severity
+
+- P0: 73
+- P1: 176
+- P2: 129
+- P3: 20
+
+## By type
+
+- improvement: 212
+- bug: 89
+- feature: 54
+- request: 23
+- innovation: 16
+- competitive: 2
+- caution: 1
+- security: 1
+
+## By area (top 20)
+
+- gtm: 34
+- security: 32
+- engines: 31
+- findings: 29
+- api: 27
+- competitive: 24
+- nav: 23
+- ops: 19
+- other: 18
+- a11y: 16
+- copy: 16
+- design-system: 14
+- onboarding: 14
+- integrations: 13
+- auth: 12
+- evidence: 12
+- runners: 11
+- paths: 8
+- ai-agents: 8
+- remediation: 8
+
+## All unique findings
+
+- **P01-2** [P0|bug|a11y] Nested `<main>` landmarks on PageShell routes _(effort S · zoo no · 01-ui-engineer.md)_
+- **P07-3** [P0|improvement|ai-agents] Autonomous theater on the primary rail _(effort S–M · zoo yes · 07-steve-jobs.md)_
+- **P11-4** [P0|bug|ai-agents] Operator recommendations are not persisted objects _(effort M · zoo no · 11-palantir-cto.md)_
+- **P20-1** [P0|bug|api] policy.denied is cataloged and subscribable but never emitted _(effort M · zoo no · 20-api-platform.md)_
+- **P20-2** [P0|bug|api] OpenAPI list schemas omit real pagination envelopes (docs lie) _(effort M · zoo no · 20-api-platform.md)_
+- **P20-4** [P0|improvement|api] OpenAPI lacks securitySchemes — auth is discoverable only by tribal knowledge _(effort S · zoo no · 20-api-platform.md)_
+- **P02-1** [P0|bug|auth] Auth recovery routes are not public — reset / invite / verify dead-end at login _(effort S · zoo no · 02-ux-researcher.md)_
+- **P02-2** [P0|bug|auth] Login ignores middleware `?next=` deep links _(effort S · zoo no · 02-ux-researcher.md)_
+- **P04-4** [P0|improvement|auth] Enterprise IdP lifecycle incomplete (no SCIM/JIT, no force-MFA policy) _(effort L · zoo no · 04-ciso.md)_
+- **P17-1** [P0|feature|auth] No inbound SCIM for Periscan user lifecycle _(effort L · zoo no · 17-enterprise-buyer.md)_
+- **P17-2** [P0|feature|auth] SSO has no group → role claim mapping _(effort M · zoo no · 17-enterprise-buyer.md)_
+- **P05-3** [P0|improvement|competitive] BAS honesty gap: Atomic is dry-run import, not control inject BAS _(effort M · zoo yes · 05-red-teamer.md)_
+- **P08-7** [P0|competitive|competitive] Moat is truth architecture — breadth and theater are anti-moats _(effort S (positioning) + ongoing claim discipline · zoo yes · 08-ben-horowitz.md)_
+- **P08-9** [P0|request|competitive] Zero customer references → Wave market presence fail _(effort L (sales + customer success) / S (KPI instrumentation) · zoo no · 08-ben-horowitz.md)_
+- **P12-1** [P0|improvement|competitive] Category home is AEV/CTEM proof — not full BAS _(effort M · zoo no · 12-gartner-analyst.md)_
+- **P12-2** [P0|improvement|competitive] Visionaries placement is correct; Leaders requires Execute, not more vision docs _(effort L (program, not a single feature) · zoo yes · 12-gartner-analyst.md)_
+- **P12-4** [P0|improvement|competitive] Flagship Execute gap: measured multi-hop not default journey _(effort L · zoo no · 12-gartner-analyst.md)_
+- **P13-2** [P0|improvement|competitive] Scorecard inflation vs engineering honesty undermines analyst trust _(effort M · zoo no · 13-forrester-analyst.md)_
+- **P19-1** [P0|improvement|competitive] Own AEV/proof home; refuse BAS library bake-offs _(effort S · zoo no · 19-competitive-intel.md)_
+- **P19-2** [P0|improvement|competitive] Co-exist with Wiz — never “replace CNAPP” _(effort M · zoo no · 19-competitive-intel.md)_
+- **P19-3** [P0|improvement|competitive] Co-exist with Tenable — validation on top of RBVM _(effort M · zoo no · 19-competitive-intel.md)_
+- **P19-4** [P0|improvement|competitive] Pentera gap is deliberate — weaponize the safety floor _(effort S · zoo no · 19-competitive-intel.md)_
+- **P04-3** [P0|improvement|compliance] Compliance attestation packs are thin catalogs sold adjacent to “Attestation” naming _(effort M · zoo no · 04-ciso.md)_
+- **P17-4** [P0|improvement|compliance] “SOC 2 pack” is thin customer evidence, not vendor attestation _(effort M (rename/disclosure S; full vendor SOC 2 program XL) · zoo no · 17-enterprise-buyer.md)_
+- **P07-4** [P0|improvement|copy] Three competing proof-loop vocabularies _(effort M · zoo no · 07-steve-jobs.md)_
+- **P01-1** [P0|bug|design-system] Dual design systems still co-equal (globals.css vs Tailwind kit) _(effort L · zoo no · 01-ui-engineer.md)_
+- **P05-1** [P0|bug|engines] Fixture/sim modules stamp Validated + measured:true (sales/trust poison) _(effort M · zoo no · 05-red-teamer.md)_
+- **P06-5** [P0|improvement|engines] Closed control inject→telemetry loop still hard-disabled on control-plane API _(effort L · zoo no · 06-blue-teamer.md)_
+- **P12-5** [P0|feature|engines] SCV/DRV closed loop incomplete while scorecard says Leading _(effort L · zoo no · 12-gartner-analyst.md)_
+- **P13-4** [P0|feature|engines] Closed-loop SCV / DRV inject-and-observe incomplete for BAS Wave parity _(effort L · zoo no · 13-forrester-analyst.md)_
+- **P15-1** [P0|bug|engines] Module manifests label third-party engines Proprietary (dual-truth) _(effort M · zoo no · 15-oss-advocate.md)_
+- **P15-2** [P0|bug|engines] Semgrep modules claim MIT while catalog is LGPL-2.1 RequiresLegalReview _(effort S · zoo yes · 15-oss-advocate.md)_
+- **P19-9** [P0|feature|engines] Engine Lab is the latent category weapon — still a plan _(effort L · zoo yes · 19-competitive-intel.md)_
+- **P04-1** [P0|bug|evidence] Scorecard rates Attack Path Validation Leading while multi-hop Measured remains Partial _(effort M · zoo no · 04-ciso.md)_
+- **P11-1** [P0|bug|evidence] Free-string GraphNode.nodeType is an open ontology with no registry _(effort L · zoo no · 11-palantir-cto.md)_
+- **P11-5** [P0|bug|evidence] Living-map / terrain / swarm-KB stubs share production evidence package surface _(effort M · zoo yes · 11-palantir-cto.md)_
+- **P01-3** [P0|bug|findings] Finding status `Validated` paints success-green (open exposure) _(effort S · zoo no · 01-ui-engineer.md)_
+- **P09-1** [P0|improvement|findings] ValidationState is a theory-of-everything enum _(effort XL · zoo yes · 09-einstein.md)_
+- **P09-2** [P0|bug|findings] Path validationState can overclaim; projection silently remaps _(effort L · zoo no · 09-einstein.md)_
+- **P18-1** [P0|bug|findings] occurrenceCount / fingerprint / rootCause invisible in findings UI _(effort S · zoo no · 18-soc-analyst.md)_
+- **P18-2** [P0|improvement|findings] Default All queue keeps FalsePositive and Suppressed in priority sort _(effort S · zoo no · 18-soc-analyst.md)_
+- **P18-3** [P0|bug|findings] Priority · unowned uses disposition.ownerId (AcceptedRisk-only), ignores finding.ownerId / remediation owner _(effort S · zoo no · 18-soc-analyst.md)_
+- **P08-1** [P0|improvement|gtm] Force a single ICP wedge and refuse audience sprawl _(effort S · zoo yes · 08-ben-horowitz.md)_
+- **P08-2** [P0|improvement|gtm] Wartime sales motion does not exist yet — protocol is not a pipeline _(effort M · zoo no · 08-ben-horowitz.md)_
+- **P08-3** [P0|bug|gtm] Feature zoo on primary rail is GTM poison _(effort M · zoo yes · 08-ben-horowitz.md)_
+- **P08-4** [P0|improvement|gtm] Billing is a ledger without a bank — treat NotConfigured as wartime honesty, not silent readiness _(effort S (policy/comms); L if processor later · zoo no · 08-ben-horowitz.md)_
+- **P08-8** [P0|request|gtm] Design-partner path is built; evidence of learning is not _(effort M (execution, not code) · zoo no · 08-ben-horowitz.md)_
+- **P12-3** [P0|bug|gtm] Scorecard inflation: Leading rows vs Partial/Scaffold engineering truth _(effort M · zoo no · 12-gartner-analyst.md)_
+- **P12-6** [P0|improvement|gtm] Zero customer references → MQ Market Presence / viability fail _(effort XL (GTM + delivery) · zoo no · 12-gartner-analyst.md)_
+- **P13-1** [P0|request|gtm] Zero customer reference pack blocks Wave inclusion _(effort XL · zoo no · 13-forrester-analyst.md)_
+- **P17-12** [P0|bug|gtm] RFP/Phase 8 “SCIM + advanced RBAC” proven by string presence tests _(effort S · zoo no · 17-enterprise-buyer.md)_
+- **P19-7** [P0|bug|gtm] Scorecard inflation vs competitive matrix (trust poison) _(effort M · zoo no · 19-competitive-intel.md)_
+- **P07-1** [P0|improvement|nav] Dual navigation configs still co-exist _(effort M · zoo yes · 07-steve-jobs.md)_
+- **P07-2** [P0|improvement|nav] Primary rail is a vendor booth, not a daily tool _(effort M · zoo yes · 07-steve-jobs.md)_
+- **P11-2** [P0|bug|nav] Mission object mislabeled “Validation Snapshot” on primary rail _(effort S · zoo yes · 11-palantir-cto.md)_
+- **P13-5** [P0|bug|nav] Feature zoo + dual nav destroy Wave demo TaskSuccess _(effort M · zoo yes · 13-forrester-analyst.md)_
+- **P14-10** [P0|improvement|nav] Feature zoo: ~38 primary destinations for a many-hat operator _(effort M · zoo yes · 14-security-practitioner.md)_
+- **P04-2** [P0|bug|paths] Measured multi-hop proof loop is not yet the default operator journey _(effort L · zoo no · 04-ciso.md)_
+- **P05-2** [P0|bug|paths] Path edge launch never queues work — Measure hop stops at RequiresApproval mission _(effort L · zoo no · 05-red-teamer.md)_
+- **P13-3** [P0|feature|paths] Multi-hop measured attack paths remain the Wave offering cliff _(effort L · zoo no · 13-forrester-analyst.md)_
+- **P02-3** [P0|improvement|proof-loop] Three competing proof-loop models teach three different products _(effort M · zoo yes · 02-ux-researcher.md)_
+- **P11-3** [P0|bug|proof-loop] MissionsWorkbench never mounted; /missions is snapshot-only _(effort M · zoo yes · 11-palantir-cto.md)_
+- **P19-8** [P0|improvement|proof-loop] Flagship differentiator still Slice-3 gated _(effort L · zoo no · 19-competitive-intel.md)_
+- **P09-12** [P0|improvement|remediation] “Fixed” multiverse — one word, many truth conditions _(effort L · zoo no · 09-einstein.md)_
+- **P14-3** [P0|bug|remediation] Create ticket missing on remediation detail (exists on snapshot) _(effort S · zoo no · 14-security-practitioner.md)_
+- **P10-2** [P0|improvement|runners] Dual runners (Go vs TypeScript) without a single enterprise package _(effort L · zoo yes · 10-cisco-cto.md)_
+- **P03-1** [P0|bug|security] applyPathEdgeReceipt can forge Measured without a real validation pipeline _(effort L · zoo no · 03-security-engineer.md)_
+- **P03-2** [P0|bug|security] Dual policy gate is incomplete: startMission does not re-evaluate policy or recheck verified scope _(effort M · zoo no · 03-security-engineer.md)_
+- **P04-5** [P0|bug|security] Auth recovery routes not public — account continuity broken _(effort S · zoo no · 04-ciso.md)_
+- **P10-1** [P0|bug|security] mTLS enforcement is opt-in, not production-default _(effort M · zoo no · 10-cisco-cto.md)_
+- **P15-3** [P0|bug|security] scan-executor image redistributes GPL-family tools marked RequiresLegalReview _(effort L · zoo no · 15-oss-advocate.md)_
+- **P15-4** [P0|bug|security] licenseRisk derived only from module.license string (bypasses tool disposition) _(effort M · zoo no · 15-oss-advocate.md)_
+- **P17-5** [P0|feature|security] DPA / BAA / subprocessors not default-ready for legal redlines _(effort M · zoo no · 17-enterprise-buyer.md)_
+- **P16-1** [P1|bug|a11y] Nested main via PageShell under AppShell _(effort S · zoo no · 16-accessibility.md)_
+- **P16-14** [P1|improvement|a11y] Axe gate gaps: WCAG tags only, dual nav list, thin overlay coverage _(effort M · zoo yes · 16-accessibility.md)_
+- **P16-2** [P1|bug|a11y] Snapshot report nests a second main _(effort S · zoo no · 16-accessibility.md)_
+- **P16-3** [P1|bug|a11y] Bare demo main missing skip target id _(effort S · zoo no · 16-accessibility.md)_
+- **P16-4** [P1|bug|a11y] Product help drawer: Escape + initial focus, no trap, no restore _(effort M · zoo no · 16-accessibility.md)_
+- **P16-5** [P1|bug|a11y] ConfirmDialog claims focus trap; implements none; confirm-first risk _(effort M · zoo no · 16-accessibility.md)_
+- **P16-6** [P1|bug|a11y] Command palette dialog + incomplete listbox (no trap, no activedescendant) _(effort M · zoo no · 16-accessibility.md)_
+- **P16-8** [P1|bug|a11y] Account menu: role=menu without keyboard menu model _(effort S · zoo no · 16-accessibility.md)_
+- **P16-9** [P1|improvement|a11y] Focus-visible inconsistent on shell chrome (2.4.7 / 1.4.11) _(effort S · zoo no · 16-accessibility.md)_
+- **P03-12** [P1|bug|ai-agents] Model-gateway kill switch / anomaly / blast-radius are stubs returning safe defaults _(effort M · zoo yes · 03-security-engineer.md)_
+- **P11-9** [P1|bug|ai-agents] Swarm UI ontology falsehood: sessions/missions/engagements sold as agents _(effort S · zoo yes · 11-palantir-cto.md)_
+- **P12-8** [P1|improvement|ai-agents] Agent/A2A/MCP/Multi-Agent rows are peak-hype criteria inside an AEV matrix _(effort M · zoo yes · 12-gartner-analyst.md)_
+- **P20-6** [P1|improvement|ai-agents] MCP is correctly read-only but incomplete for analyst copilots and rate-limit bypassed _(effort M · zoo yes (MCP product rail oversell — demote to Labs until complete) · 20-api-platform.md)_
+- **P04-6** [P1|bug|api] Webhook catalog promises `policy.denied` but never emits it; SIEM contract incomplete _(effort M · zoo no · 04-ciso.md)_
+- **P06-8** [P1|improvement|api] Webhook catalog too thin for SOC automation — `policy.denied` subscribeable but not emitted; no remediation.verified _(effort M · zoo no · 06-blue-teamer.md)_
+- **P15-5** [P1|bug|api] License inventory evaluates modules without tool cross-check or policyStatus _(effort M · zoo no · 15-oss-advocate.md)_
+- **P20-11** [P1|feature|api] No bulk mutation APIs for findings/remediations/assignments _(effort M · zoo no · 20-api-platform.md)_
+- **P20-3** [P1|feature|api] No wait / long-poll / Operation-status endpoints for async proof work _(effort L · zoo no · 20-api-platform.md)_
+- **P20-5** [P1|improvement|api] Webhook catalog is thin vs product event vocabulary _(effort M · zoo no · 20-api-platform.md)_
+- **P20-7** [P1|feature|api] Idempotency is local, body-only, and missing from core proof-loop POSTs _(effort L · zoo no · 20-api-platform.md)_
+- **P20-8** [P1|feature|api] No first-class proof-loop scripts / SDK package for automation consumers _(effort L · zoo no · 20-api-platform.md)_
+- **P20-9** [P1|improvement|api] Async operations API is operator reconciliation, not a general async jobs fabric _(effort S (docs) / L (real operations resource) · zoo yes (naming zoo) · 20-api-platform.md)_
+- **P03-6** [P1|improvement|auth] API key “scopes” collapse to roles; no per-route least privilege _(effort L · zoo no · 03-security-engineer.md)_
+- **P03-7** [P1|feature|auth] No tenant force-MFA / step-up policy for privileged actions _(effort M · zoo no · 03-security-engineer.md)_
+- **P03-8** [P1|bug|auth] Auth recovery routes gated by Next middleware (session presence) _(effort S · zoo no · 03-security-engineer.md)_
+- **P03-9** [P1|improvement|auth] Single HS256 secret signs sessions and report-share tokens; no kid/rotation _(effort M · zoo no · 03-security-engineer.md)_
+- **P17-8** [P1|feature|auth] “Advanced RBAC” claimed; product has six fixed roles only _(effort L (true advanced); S (honesty rename) · zoo no · 17-enterprise-buyer.md)_
+- **P08-15** [P1|competitive|competitive] Why-now window is real; company GTM is not in the window _(effort S (narrative) + M (pilot execution) · zoo yes · 08-ben-horowitz.md)_
+- **P12-12** [P1|improvement|competitive] Choke-point “Leading 4.5” overstates graph science _(effort L · zoo no · 12-gartner-analyst.md)_
+- **P13-10** [P1|improvement|competitive] Category positioning must be AEV/proof-layer, not full multi-vector BAS peer _(effort S · zoo no · 13-forrester-analyst.md)_
+- **P19-12** [P1|improvement|competitive] Control validation loses AttackIQ demos without stimulus _(effort L · zoo no · 19-competitive-intel.md)_
+- **P19-13** [P1|improvement|competitive] Compliance Leading claims vs scaffold packs (regulated RFP lose) _(effort M · zoo yes · 19-competitive-intel.md)_
+- **P19-5** [P1|improvement|competitive] Nuclei is commodity — compete on authorized workflow _(effort S · zoo no · 19-competitive-intel.md)_
+- **P19-6** [P1|improvement|competitive] Microsoft Defender = gravity; complement only _(effort M · zoo no · 19-competitive-intel.md)_
+- **P06-20** [P1|improvement|compliance] Control “Logged only” / Needs tuning not auto-mobilized into findings or tickets _(effort M · zoo no · 06-blue-teamer.md)_
+- **P12-13** [P1|improvement|compliance] Compliance attestation depth thin for regulated MQ buyers _(effort L · zoo yes · 12-gartner-analyst.md)_
+- **P13-12** [P1|improvement|compliance] Compliance packs thin relative to regulated Wave buyers _(effort L · zoo no · 13-forrester-analyst.md)_
+- **P07-7** [P1|bug|copy] Findings H1 says “Validated Results” _(effort S · zoo no · 07-steve-jobs.md)_
+- **P07-8** [P1|improvement|copy] Missions vs Validation Snapshot schizophrenia _(effort S · zoo no · 07-steve-jobs.md)_
+- **P12-10** [P1|improvement|copy] Three proof-loop vocabularies break Completeness of Vision consistency _(effort S–M · zoo yes · 12-gartner-analyst.md)_
+- **P13-11** [P1|bug|copy] Competing proof-loop vocabularies confuse Wave questionnaire answers _(effort S · zoo yes · 13-forrester-analyst.md)_
+- **P14-2** [P1|bug|copy] Triple naming: Findings vs Validated Results vs Exposure _(effort S · zoo yes · 14-security-practitioner.md)_
+- **P15-10** [P1|bug|copy] Nuclei missing template name defaults to Periscan-branded string _(effort S · zoo no · 15-oss-advocate.md)_
+- **P15-6** [P1|bug|copy] AGPL policy dual-truth: “legal review” prose vs unconditional Blocked in code _(effort S · zoo no · 15-oss-advocate.md)_
+- **P01-10** [P1|improvement|design-system] Orphan v1/v2 component twins and dual trust surfaces _(effort M · zoo yes · 01-ui-engineer.md)_
+- **P01-4** [P1|bug|design-system] Severity color maps disagree across dashboard charts, badges, and legacy findings _(effort M · zoo no · 01-ui-engineer.md)_
+- **P01-9** [P1|improvement|design-system] Inconsistent page chrome (ad-hoc max-w-7xl vs PageShell vs breadcrumb width) _(effort M · zoo no · 01-ui-engineer.md)_
+- **P07-6** [P1|improvement|design-system] Dashboard is an airport terminal _(effort L · zoo yes · 07-steve-jobs.md)_
+- **P11-10** [P1|bug|design-system] Customer-visible Living Map SVG is static fixture theater _(effort S · zoo yes · 11-palantir-cto.md)_
+- **P05-10** [P1|improvement|engines] External validation limits are correct — product cannot be sold as full ASV/pentest external _(effort S · zoo no · 05-red-teamer.md)_
+- **P05-6** [P1|improvement|engines] Kill-chain “Engine” is plan-only; 7/10 stages have null safeLiveModuleId _(effort S · zoo yes · 05-red-teamer.md)_
+- **P05-7** [P1|feature|engines] Ransomware “emulation” is a null stage — scorecard Scaffold is correct; do not build live crypto _(effort M (substitute) / never (live crypto) · zoo no · 05-red-teamer.md)_
+- **P05-8** [P1|improvement|engines] Identity abuse modules are dry-run theater with fixture Validated escape hatch _(effort M · zoo no · 05-red-teamer.md)_
+- **P05-9** [P1|improvement|engines] OT/ICS: passive port classification is fine; fixture baseline Validated and liveSupported:true overstate pack maturity _(effort M · zoo no · 05-red-teamer.md)_
+- **P07-12** [P1|improvement|engines] Validation Ops + Signal Activity + Missions triple home _(effort M · zoo yes · 07-steve-jobs.md)_
+- **P09-8** [P1|improvement|engines] Control language quadruple (edges, ControlState, Verdict, Effectiveness) _(effort L · zoo yes · 09-einstein.md)_
+- **P14-11** [P1|improvement|engines] Engine install UX is a marketplace, not a readiness checklist _(effort M · zoo yes · 14-security-practitioner.md)_
+- **P15-11** [P1|bug|engines] Module certification certifies dual-truth and does not fail on tool↔module license mismatch _(effort M · zoo no · 15-oss-advocate.md)_
+- **P15-7** [P1|improvement|engines] NPSL treated as generic Allowed while redistributed in runner-agent _(effort M · zoo no · 15-oss-advocate.md)_
+- **P15-8** [P1|feature|engines] Engine Lab BYO license acceptance is plan-only; runtime is hard-deny with no accept path _(effort L · zoo no · 15-oss-advocate.md)_
+- **P15-9** [P1|improvement|engines] Catalog lacks integrity/upstream license URL fields required by Engine Lab Phase 0 _(effort L · zoo no · 15-oss-advocate.md)_
+- **P19-10** [P1|bug|engines] Module license dual-truth undermines Engine Lab credibility _(effort M · zoo no · 19-competitive-intel.md)_
+- **P20-12** [P1|feature|engines] Engine / Lab API needs are under-served for customer automation _(effort L · zoo yes (tool-intake zoo vs lab run wedge) · 20-api-platform.md)_
+- **P11-13** [P1|improvement|evidence] Evidence graph is a write-side OS without operator read plane _(effort L · zoo no · 11-palantir-cto.md)_
+- **P18-8** [P1|bug|evidence] ENTITY_ROUTE missing Finding (and signal); reverse pivot from ledger is text-only _(effort S · zoo no · 18-soc-analyst.md)_
+- **P18-9** [P1|bug|evidence] Threat Center evidence chips are non-clickable full UUIDs _(effort S · zoo no · 18-soc-analyst.md)_
+- **P01-8** [P1|improvement|findings] Badge density turns the findings queue into a chip rail _(effort M · zoo yes · 01-ui-engineer.md)_
+- **P06-1** [P1|bug|findings] Findings UI never surfaces fingerprint / occurrenceCount / rootCauseSummary _(effort M · zoo no · 06-blue-teamer.md)_
+- **P06-2** [P1|improvement|findings] Findings workbench is client-side filter/paginate only — not SOC-scale queue ops _(effort M · zoo no · 06-blue-teamer.md)_
+- **P06-3** [P1|improvement|findings] No durable owner/SLA on findings except AcceptedRisk; priority-unowned is half-finished _(effort M · zoo no · 06-blue-teamer.md)_
+- **P09-3** [P1|improvement|findings] Finding identity couples triage to graph UUID _(effort L · zoo no · 09-einstein.md)_
+- **P09-4** [P1|bug|findings] occurrenceCount / merge semantics incomplete at emit time _(effort M · zoo no · 09-einstein.md)_
+- **P09-9** [P1|improvement|findings] Risk score multiverse without composition law _(effort L · zoo no · 09-einstein.md)_
+- **P18-13** [P1|improvement|findings] Remediation meta is count → /remediation list; multi-path create uses only first relatedPathIds[0] _(effort S · zoo no · 18-soc-analyst.md)_
+- **P18-4** [P1|improvement|findings] Badge soup on every row — five concurrent state languages _(effort M · zoo no · 18-soc-analyst.md)_
+- **P18-5** [P1|improvement|findings] Client-only filter over full listFindings(); title-only search; API filter unused _(effort M · zoo no · 18-soc-analyst.md)_
+- **P18-6** [P1|feature|findings] No mandatory FP/Suppress reason taxonomy; InfoPopover mentions “duplicate” without Duplicate disposition _(effort M · zoo no · 18-soc-analyst.md)_
+- **P18-7** [P1|improvement|findings] Bulk triage is disposition-only; no bulk rem route / hide-until / select-filtered-all _(effort M · zoo no · 18-soc-analyst.md)_
+- **P05-11** [P1|bug|gtm] Scorecard inflation on Attack Path / Dynamic Paths vs measured reality _(effort S · zoo no · 05-red-teamer.md)_
+- **P08-10** [P1|improvement|gtm] Hard vs fake hard — company still spends peacetime calories _(effort S (governance) · zoo yes · 08-ben-horowitz.md)_
+- **P08-11** [P1|improvement|gtm] Freemium LightExternalScan is a strategic trap if productized as Tenable-lite _(effort M · zoo no · 08-ben-horowitz.md)_
+- **P08-12** [P1|improvement|gtm] First sellable MVP is correct — product surface does not enforce it _(effort M · zoo yes · 08-ben-horowitz.md)_
+- **P08-13** [P1|feature|gtm] Private pricing bands and conversion ops missing as first-class GTM system _(effort M · zoo no · 08-ben-horowitz.md)_
+- **P08-18** [P1|innovation|gtm] North-star metric is correct — instrument and govern it as the only wartime KPI _(effort M · zoo no · 08-ben-horowitz.md)_
+- **P08-20** [P1|request|gtm] Hire / assign a wartime seller who can demo honesty without flinching _(effort L (people) / S (scorecard) · zoo no · 08-ben-horowitz.md)_
+- **P08-5** [P1|improvement|gtm] Packaging is architecturally right and commercially unfinished _(effort M · zoo no · 08-ben-horowitz.md)_
+- **P10-10** [P1|improvement|gtm] Packaging SKUs under-serve hybrid runners; payment still NotConfigured _(effort M · zoo no · 10-cisco-cto.md)_
+- **P12-11** [P1|improvement|gtm] GTM narrative is wartime honesty + peacetime shell _(effort L · zoo no · 12-gartner-analyst.md)_
+- **P12-7** [P1|improvement|gtm] Partner-gated rows still shape the “core” 94-row narrative _(effort M · zoo yes · 12-gartner-analyst.md)_
+- **P13-14** [P1|improvement|gtm] Wave demo script must ruthlessly exclude feature zoo _(effort S · zoo yes · 13-forrester-analyst.md)_
+- **P13-9** [P1|request|gtm] Market presence near-zero: payment, Marketplace listing, partner metrics _(effort XL · zoo no · 13-forrester-analyst.md)_
+- **P17-13** [P1|improvement|gtm] Feature zoo confuses RFP scope and expands risk questionnaires _(effort M · zoo yes · 17-enterprise-buyer.md)_
+- **P17-15** [P1|request|gtm] No customer-facing security questionnaire / trust pack artifact set _(effort M · zoo no · 17-enterprise-buyer.md)_
+- **P19-15** [P1|request|gtm] No customer references → Wave/MQ automatic fail _(effort XL (program, not engineering) · zoo no · 19-competitive-intel.md)_
+- **P19-20** [P1|improvement|gtm] Deny-list must be productized (shared claim-language for GTM) _(effort S · zoo no · 19-competitive-intel.md)_
+- **P06-6** [P1|bug|integrations] Multiple SIEM mocks stamp technique-only placeholder ControlObservations — coverage theater risk _(effort M · zoo no · 06-blue-teamer.md)_
+- **P10-8** [P1|feature|integrations] Cisco stack depth is thin vs enterprise network reality _(effort L · zoo no · 10-cisco-cto.md)_
+- **P10-9** [P1|improvement|integrations] Breadth theater: 267 catalog / 126 “live” / 29 contract-tested _(effort M · zoo yes · 10-cisco-cto.md)_
+- **P11-6** [P1|feature|integrations] Scan-file importers exist as library only — not a fabric product path _(effort L · zoo no · 11-palantir-cto.md)_
+- **P12-14** [P1|request|integrations] Integration breadth is CoV asset; depth certification is AtE debt _(effort L · zoo no · 12-gartner-analyst.md)_
+- **P13-6** [P1|improvement|integrations] Integration catalog is breadth-honest but depth-unproven for Wave ecosystem criteria _(effort L · zoo no · 13-forrester-analyst.md)_
+- **P13-7** [P1|feature|integrations] Missing scan-file importers weakens VM-adjacent Wave narratives _(effort M · zoo no · 13-forrester-analyst.md)_
+- **P17-10** [P1|feature|integrations] Audit is pull-export, not SIEM-stream enterprise monitoring _(effort M · zoo no · 17-enterprise-buyer.md)_
+- **P19-14** [P1|feature|integrations] Integration breadth is real — depth uneven vs market leaders _(effort M · zoo yes · 19-competitive-intel.md)_
+- **P01-11** [P1|improvement|mobile] Responsive gaps: filter bars, hop tables, mobile drawer chrome _(effort M · zoo no · 01-ui-engineer.md)_
+- **P16-7** [P1|bug|mobile] Mobile nav drawer lacks Escape, focus management, modal semantics _(effort M · zoo yes (long rail worsens drawer length) · 16-accessibility.md)_
+- **P04-14** [P1|improvement|mssp] MSSP multi-tenant architecture exists but enterprise cross-client blast-radius packaging is incomplete _(effort L · zoo no · 04-ciso.md)_
+- **P08-14** [P1|improvement|mssp] MSSPPartner packaging does not encode unit economics for partners _(effort M · zoo no · 08-ben-horowitz.md)_
+- **P08-6** [P1|feature|mssp] MSSP multi-tenant is a real asset sold too early as existence proof _(effort M (GTM + one dogfood); isolation matrix residual = L · zoo no · 08-ben-horowitz.md)_
+- **P17-6** [P1|feature|mssp] Billing is a ledger without procurement settlement _(effort L · zoo yes · 17-enterprise-buyer.md)_
+- **P01-6** [P1|improvement|nav] Dual nav configs + orphan AppNavigation (feature zoo backbone) _(effort M · zoo yes · 01-ui-engineer.md)_
+- **P01-7** [P1|improvement|nav] Primary rail is a feature zoo (~37 destinations; Autonomous on main track) _(effort M · zoo yes · 01-ui-engineer.md)_
+- **P02-6** [P1|improvement|nav] Primary rail is a feature zoo (~35 destinations, 7 groups) _(effort M · zoo yes · 02-ux-researcher.md)_
+- **P02-7** [P1|bug|nav] Dual nav configs with divergent labels and route sets _(effort M · zoo yes · 02-ux-researcher.md)_
+- **P02-8** [P1|bug|nav] Activating lifecycle rail omits Findings and Remediation during the critical handoff _(effort S · zoo no · 02-ux-researcher.md)_
+- **P04-12** [P1|improvement|nav] Feature zoo undermines trust — Autonomous/Swarm/MCP on primary rail before proof loop is boring _(effort M · zoo yes · 04-ciso.md)_
+- **P06-14** [P1|improvement|nav] Feature zoo on primary rail crowds out the blue daily driver _(effort M · zoo yes · 06-blue-teamer.md)_
+- **P06-9** [P1|improvement|nav] Threat Center / Threat Feed / Signal Activity / Validation Ops / Schedules fragment one blue job _(effort L · zoo yes · 06-blue-teamer.md)_
+- **P07-10** [P1|improvement|nav] Investigate group is a second product catalog _(effort S · zoo yes · 07-steve-jobs.md)_
+- **P09-11** [P1|improvement|nav] ProofLoopStage vs CTEMStage vs marketing loop — three clocks _(effort M · zoo yes · 09-einstein.md)_
+- **P09-20** [P1|improvement|nav] Feature zoo is model explosion projected into IA _(effort M · zoo yes · 09-einstein.md)_
+- **P11-8** [P1|improvement|nav] Dual nav ontologies: same href, different type labels _(effort S · zoo yes · 11-palantir-cto.md)_
+- **P12-9** [P1|improvement|nav] Feature zoo dilutes category — ~35–50 destinations, dual nav configs _(effort M · zoo yes · 12-gartner-analyst.md)_
+- **P18-11** [P1|improvement|nav] Dual threat surfaces + Autonomus/Intel zoo on primary rail _(effort M · zoo yes · 18-soc-analyst.md)_
+- **P19-11** [P1|improvement|nav] Feature zoo vs focused peers (AttackIQ/Cymulate/Wiz ship a spine) _(effort M · zoo yes · 19-competitive-intel.md)_
+- **P02-4** [P1|improvement|onboarding] Dual onboarding: 3-step GetStarted vs 9-milestone Getting Started _(effort M · zoo no · 02-ux-researcher.md)_
+- **P02-5** [P1|improvement|onboarding] Welcome persona wizard is a third first-run layer with weak handoff _(effort M · zoo no · 02-ux-researcher.md)_
+- **P02-9** [P1|improvement|onboarding] Scope lives under Missions while nav also sells “Assets & Scope” _(effort S (rename/copy) / L (workspace merge) · zoo yes · 02-ux-researcher.md)_
+- **P07-5** [P1|improvement|onboarding] Dual first-run stories _(effort M · zoo yes · 07-steve-jobs.md)_
+- **P11-16** [P1|improvement|onboarding] Data fabric is high-quality fusion UX but buried / mis-scoped vs “Assets & Scope” _(effort M · zoo yes · 11-palantir-cto.md)_
+- **P13-8** [P1|improvement|onboarding] UI TaskSuccess lag vs Trust creates asymmetric Wave story _(effort L · zoo yes · 13-forrester-analyst.md)_
+- **P14-1** [P1|improvement|onboarding] Monday Needs you: server queue vs client fallback taxonomies disagree _(effort M · zoo no · 14-security-practitioner.md)_
+- **P14-12** [P1|improvement|onboarding] Dual first-run: GetStarted vs Getting Started guide _(effort M · zoo yes · 14-security-practitioner.md)_
+- **P14-8** [P1|feature|onboarding] No authorized-scope home; Assets & Scope is data fabric _(effort L · zoo yes · 14-security-practitioner.md)_
+- **P04-10** [P1|feature|ops] No customer-facing SLA, status page, or support RTO/RPO contract surface _(effort M (process) + L (ops maturity) · zoo no · 04-ciso.md)_
+- **P05-4** [P1|bug|ops] Module certification report stale (40 modules @ 2026-06-24 vs expanded registry) _(effort S · zoo no · 05-red-teamer.md)_
+- **P10-5** [P1|improvement|ops] Fleet scale and HA are honesty-documented but commercially unproven _(effort L · zoo no · 10-cisco-cto.md)_
+- **P10-6** [P1|feature|ops] Production deploy/IaC is documentation + single-replica Compose, not enterprise topology _(effort L · zoo no · 10-cisco-cto.md)_
+- **P10-7** [P1|feature|ops] Air-gap / on-prem MCP is product language over fixture modules _(effort XL for real MCP; S for claim hygiene · zoo yes · 10-cisco-cto.md)_
+- **P12-15** [P1|improvement|ops] Ops/security external validation still blocks Leaders-band Execute _(effort L · zoo no · 12-gartner-analyst.md)_
+- **P14-5** [P1|improvement|ops] Schedules lack mid-market ops knobs _(effort M · zoo no · 14-security-practitioner.md)_
+- **P17-7** [P1|feature|ops] No public SLA status page or contractual uptime surface _(effort M · zoo no · 17-enterprise-buyer.md)_
+- **P07-11** [P1|improvement|other] Intel triad is feature zoo _(effort M · zoo yes · 07-steve-jobs.md)_
+- **P07-9** [P1|improvement|other] Proof-loop Packs are over-abstraction _(effort M · zoo yes · 07-steve-jobs.md)_
+- **P09-10** [P1|improvement|other] Mission / Scenario / Pillar / sourceMotion quadruple taxonomy _(effort M · zoo yes · 09-einstein.md)_
+- **P09-17** [P1|innovation|other] Codify Five Laws as schema/API acceptance gates _(effort S–M · zoo yes · 09-einstein.md)_
+- **P09-5** [P1|improvement|other] Scope vs Asset: authorization and inventory lack a durable join _(effort L · zoo yes · 09-einstein.md)_
+- **P09-6** [P1|improvement|other] Inventory multiverse: Asset vs AssetInventoryEntry vs ScopeAssetClass vs tags _(effort L · zoo yes · 09-einstein.md)_
+- **P09-7** [P1|improvement|other] Threat dual stack without subsumption law _(effort L · zoo yes · 09-einstein.md)_
+- **P11-7** [P1|feature|other] No Object Explorer / object workspace — route-local ENTITY_ROUTE maps only _(effort L · zoo yes · 11-palantir-cto.md)_
+- **P18-10** [P1|feature|other] Threat alert → investigation deep-links missing (scope/finding/path) _(effort M · zoo no · 18-soc-analyst.md)_
+- **P01-5** [P1|bug|paths] Dead “Verify scope” href `/scopes` (no app route) _(effort S · zoo no · 01-ui-engineer.md)_
+- **P05-5** [P1|improvement|paths] Path measurement ceiling: identity & lateral hops have NoSafeModule _(effort L · zoo no · 05-red-teamer.md)_
+- **P11-11** [P1|improvement|paths] PathNode.entityType closed enum vs GraphNode.nodeType free string — dual type systems _(effort M · zoo no · 11-palantir-cto.md)_
+- **P18-12** [P1|feature|paths] Attack path detail has no reverse list of citing findings _(effort M · zoo no · 18-soc-analyst.md)_
+- **P16-15** [P1|bug|proof-loop] Hop measure keyboard path incomplete (busy, focus, disabled reason) _(effort M · zoo no · 16-accessibility.md)_
+- **P06-7** [P1|bug|remediation] Create ticket missing on remediation detail (API + client exist; snapshot has CTA) _(effort S · zoo no · 06-blue-teamer.md)_
+- **P14-4** [P1|feature|remediation] Path-gated remediation blocks signal-only findings _(effort M · zoo no · 14-security-practitioner.md)_
+- **P04-11** [P1|improvement|reports] Board / executive packs risk overclaim if fed heuristic paths _(effort M · zoo no · 04-ciso.md)_
+- **P03-4** [P1|improvement|runners] Runner mTLS fingerprint enforcement remains opt-in _(effort S · zoo no · 03-security-engineer.md)_
+- **P06-12** [P1|bug|runners] Runner status stays Active while UI-only staleness is the only honesty signal _(effort M · zoo no · 06-blue-teamer.md)_
+- **P10-12** [P1|improvement|runners] runner-agent lacks production deploy artifacts the Go runner has _(effort M · zoo yes (dual package) · 10-cisco-cto.md)_
+- **P10-3** [P1|feature|runners] WindowsService is catalog fiction — no Windows packaging _(effort L · zoo no · 10-cisco-cto.md)_
+- **P10-4** [P1|feature|runners] ServiceViaProxy channel is a unit-tested SEAM, not a product _(effort XL · zoo no · 10-cisco-cto.md)_
+- **P14-7** [P1|improvement|runners] Runner readiness ≠ engine install readiness _(effort M · zoo no · 14-security-practitioner.md)_
+- **P03-3** [P1|bug|security] RLS backstop enforces writes only; reads remain correct-by-convention _(effort L · zoo no · 03-security-engineer.md)_
+- **P03-5** [P1|bug|security] External validation SSRF guard is pre-resolve hostname only (DNS rebinding residual) _(effort M · zoo no · 03-security-engineer.md)_
+- **P04-13** [P1|bug|security] Module license dual-truth creates supply-chain / legal residual _(effort M · zoo no · 04-ciso.md)_
+- **P04-7** [P1|improvement|security] Multi-tenant isolation is strong but not default-read RLS — residual leak class _(effort L · zoo yes (velocity amplifies convention risk) · 04-ciso.md)_
+- **P04-8** [P1|improvement|security] Runner mTLS and result signing remain opt-in — provenance not production-default _(effort M · zoo no · 04-ciso.md)_
+- **P04-9** [P1|request|security] No independent platform pen-test — vendor risk gate open _(effort L (mostly external) · zoo no · 04-ciso.md)_
+- **P10-11** [P1|improvement|security] Result signing is opt-in; unsigned runners still accepted _(effort M · zoo no · 10-cisco-cto.md)_
+- **P13-13** [P1|request|security] External control-plane pen test still open (trust pack gap) _(effort L · zoo no · 13-forrester-analyst.md)_
+- **P17-3** [P1|feature|security] No tenant force-MFA policy (optional user MFA only) _(effort M · zoo no · 17-enterprise-buyer.md)_
+- **P17-9** [P1|improvement|security] Residency exists but multi-region/trust proof is deployment-fragile _(effort M · zoo no · 17-enterprise-buyer.md)_
+- **P04-15** [P1|improvement|trust-safety] Trust & Safety surface is deployment-env driven — not a complete enterprise trust pack _(effort M · zoo no · 04-ciso.md)_
+- **P16-12** [P2|improvement|a11y] Placeholder-as-label pattern on filters and forms _(effort M · zoo yes (many workbenches copy the pattern) · 16-accessibility.md)_
+- **P16-13** [P2|bug|a11y] LoadingSkeleton is aria-hidden with no companion live status _(effort S · zoo no · 16-accessibility.md)_
+- **P16-16** [P2|bug|a11y] Command palette search status not a live region; Escape scoped to input _(effort S · zoo no · 16-accessibility.md)_
+- **P16-18** [P2|bug|a11y] PageShell unit test and globals main styles reinforce dual-main _(effort S · zoo no · 16-accessibility.md)_
+- **P16-20** [P2|improvement|a11y] Palette launcher missing aria-haspopup; tenant chevron looks like a menu _(effort S · zoo no · 16-accessibility.md)_
+- **P04-18** [P2|bug|ai-agents] Model-gateway “advanced safety” stubs must not be sold as enterprise AI governance _(effort M · zoo yes · 04-ciso.md)_
+- **P11-15** [P2|improvement|ai-agents] Approve recommendation returns Approved without durable status — API honesty gap _(effort S (with P11-4 M) · zoo no · 11-palantir-cto.md)_
+- **P03-18** [P2|improvement|api] `policy.denied` webhook catalog honesty (emit or remove) _(effort S · zoo no · 03-security-engineer.md)_
+- **P09-13** [P2|improvement|api] RelatedEntityType as universal type system (platform sprawl) _(effort M · zoo yes · 09-einstein.md)_
+- **P09-16** [P2|improvement|api] Enum accretion without partition laws (~100+ z.enums in domain.ts) _(effort L · zoo yes · 09-einstein.md)_
+- **P11-14** [P2|improvement|api] Graph and path properties are LooseObject bags — untyped ontology properties _(effort L · zoo no · 11-palantir-cto.md)_
+- **P14-13** [P2|bug|api] Work-queue “Policy approvals” lands on Policies = Trust & Safety shell _(effort M · zoo no · 14-security-practitioner.md)_
+- **P17-16** [P2|improvement|api] Marketplace procurement gate honest but commercially incomplete _(effort L (business); S (product already mostly ready) · zoo no · 17-enterprise-buyer.md)_
+- **P20-10** [P2|improvement|api] OpenAPI product version stuck at 0.2.0 without changelog discipline _(effort S · zoo no · 20-api-platform.md)_
+- **P20-13** [P2|bug|api] Unbounded list endpoints for core entities (paths, remediations) _(effort M · zoo no · 20-api-platform.md)_
+- **P20-15** [P2|security|api] Rate-limit key uses raw API key material _(effort S · zoo no · 20-api-platform.md)_
+- **P20-16** [P2|improvement|api] Webhook payload schemas not published (type-only catalog) _(effort M · zoo no · 20-api-platform.md)_
+- **P20-17** [P2|improvement|api] API key scopes are role-coarse; not capability-scoped for automation least privilege _(effort L · zoo no · 20-api-platform.md)_
+- **P20-18** [P2|request|api] Partial OpenAPI payload coverage without machine-readable “undocumented payload” marker _(effort M · zoo no · 20-api-platform.md)_
+- **P17-14** [P2|feature|auth] JIT provisioning absent; SSO is invite-gated _(effort M · zoo no · 17-enterprise-buyer.md)_
+- **P02-17** [P2|improvement|cognitive-load] Command center density competes with Needs you as the hero _(effort M · zoo yes · 02-ux-researcher.md)_
+- **P05-16** [P2|improvement|competitive] Do not compete as BAS library peer — own AEV/proof narrative _(effort S (positioning) / L (product depth) · zoo yes · 05-red-teamer.md)_
+- **P12-17** [P2|innovation|competitive] Honesty architecture is the Leaders differentiator — productize the trust metric _(effort M · zoo no · 12-gartner-analyst.md)_
+- **P13-19** [P2|innovation|competitive] Honesty architecture is the rare Wave Strategy asset — productize it as criteria, not apology _(effort S · zoo no · 13-forrester-analyst.md)_
+- **P19-17** [P2|improvement|competitive] Choke-point “Leading” overstates graph science vs XM Cyber / Wiz _(effort L (solver) / S (relabel) · zoo no · 19-competitive-intel.md)_
+- **P19-18** [P2|improvement|competitive] Auto-mitigate naming vs AttackIQ/RemOps expectations _(effort S · zoo no · 19-competitive-intel.md)_
+- **P19-19** [P2|feature|competitive] Continuous cadence gap vs “always-on” BAS marketing _(effort M · zoo no · 19-competitive-intel.md)_
+- **P15-12** [P2|improvement|compliance] THIRD_PARTY_NOTICES is a license inventory table, not attribution notices _(effort M · zoo no · 15-oss-advocate.md)_
+- **P01-13** [P2|bug|copy] Nav labels and page titles disagree (Findings / Validated Results / Exposure) _(effort S · zoo yes · 01-ui-engineer.md)_
+- **P02-15** [P2|improvement|copy] Label collisions across nav, H1, breadcrumbs, and legacy names _(effort S · zoo yes · 02-ux-researcher.md)_
+- **P07-13** [P2|improvement|copy] Schedules filed under Remediate _(effort S · zoo yes · 07-steve-jobs.md)_
+- **P07-18** [P2|improvement|copy] Assets & Scope labeled “Data fabric” in spirit _(effort M · zoo no · 07-steve-jobs.md)_
+- **P11-17** [P2|request|copy] Autonomous nav group is feature-zoo ontology tax before proof loop is inevitable _(effort S · zoo yes · 11-palantir-cto.md)_
+- **P15-18** [P2|improvement|copy] “Never raw tool branding as primary UX” over-read as erase-upstream risk _(effort S · zoo no · 15-oss-advocate.md)_
+- **P02-12** [P2|improvement|demo] “Explore a live sample” risks demo/real conflation next to real setup _(effort S · zoo no · 02-ux-researcher.md)_
+- **P01-12** [P2|improvement|design-system] Empty states are three dialects, not one kit _(effort M · zoo no · 01-ui-engineer.md)_
+- **P01-17** [P2|bug|design-system] Legacy teal brand accent still in global chrome (breadcrumb separators, skip link, primary-button) _(effort S · zoo no · 01-ui-engineer.md)_
+- **P07-14** [P2|improvement|design-system] First-run radar vs swarm radar = brand confusion _(effort M · zoo yes · 07-steve-jobs.md)_
+- **P07-17** [P2|improvement|design-system] Lifecycle nav still teaches the full zoo via “Show all” _(effort M · zoo yes · 07-steve-jobs.md)_
+- **P07-20** [P2|improvement|design-system] Dual workbenches / orphans multiply anti-taste _(effort M · zoo yes · 07-steve-jobs.md)_
+- **P16-10** [P2|improvement|design-system] text-subtle + 9–10.5px mono risk AA contrast/legibility _(effort S · zoo no · 16-accessibility.md)_
+- **P01-14** [P2|improvement|engines] Tool governance page is a visual feature zoo (marketplace + packs + developer studio) _(effort M · zoo yes · 01-ui-engineer.md)_
+- **P05-12** [P2|improvement|engines] Catalog-only sims still return Validated in code — quarantine incomplete if toolchain surfaces them _(effort S · zoo yes · 05-red-teamer.md)_
+- **P05-13** [P2|feature|engines] Safe substitutes to build (detection canaries) vs never build (live offense) _(effort XL (program) / governance S · zoo yes · 05-red-teamer.md)_
+- **P05-15** [P2|bug|engines] Metasploit / ScoutSuite “Measured” language on fixture outputs _(effort S · zoo no · 05-red-teamer.md)_
+- **P05-17** [P2|innovation|engines] Technique-mapped “safe stage” playbooks as the only ethical kill-chain productization _(effort M · zoo no · 05-red-teamer.md)_
+- **P06-11** [P2|feature|engines] Signal triggers are a fixed four-rule catalog — not customer detection content _(effort M · zoo no · 06-blue-teamer.md)_
+- **P15-16** [P2|bug|engines] Adapter contract text violated by current manifests _(effort S · zoo no · 15-oss-advocate.md)_
+- **P15-20** [P2|improvement|engines] License summary API is inventory-only; no acceptance/obligation export for auditors _(effort M · zoo no · 15-oss-advocate.md)_
+- **P19-16** [P2|innovation|engines] OSS engine adapter framework as anti-Nuclei-SaaS moat _(effort L · zoo yes · 19-competitive-intel.md)_
+- **P04-16** [P2|improvement|evidence] Audit export is admin-only JSON/CSV — not SIEM-native continuous assurance _(effort L · zoo no · 04-ciso.md)_
+- **P04-20** [P2|improvement|evidence] ClosedWithoutEvidence and Fixed honesty are excellent — protect and surface to executives _(effort S · zoo no · 04-ciso.md)_
+- **P05-14** [P2|improvement|evidence] BloodHound Validated confuses graph import with path proof _(effort M · zoo no · 05-red-teamer.md)_
+- **P06-17** [P2|improvement|evidence] Disposition keys remain findingId not fingerprint — group absorb can orphan triage decisions _(effort L · zoo no · 06-blue-teamer.md)_
+- **P11-18** [P2|innovation|evidence] Ship “Ontology module” in shared: type registry + action map + claim rules as first-class product IP _(effort XL · zoo no · 11-palantir-cto.md)_
+- **P13-15** [P2|feature|evidence] Evidence chain integrity under-exposed in product surfaces _(effort M · zoo no · 13-forrester-analyst.md)_
+- **P01-18** [P2|feature|findings] Findings UI still omits fingerprint / occurrenceCount (visual ops gap) _(effort M · zoo no · 01-ui-engineer.md)_
+- **P06-15** [P2|improvement|findings] Default view is “All” not Active/untriaged — anti-pattern for shift start _(effort S · zoo no · 06-blue-teamer.md)_
+- **P06-4** [P2|feature|findings] FalsePositive / Suppressed dispositions are labels only — no detection-engineering feedback loop _(effort L · zoo no · 06-blue-teamer.md)_
+- **P09-15** [P2|improvement|findings] Exploitability dual enums + control states mapped to exploitability _(effort M · zoo no · 09-einstein.md)_
+- **P14-14** [P2|improvement|findings] Fingerprint / occurrence / root-cause invisible in queue _(effort S · zoo no · 14-security-practitioner.md)_
+- **P14-17** [P2|improvement|findings] Fix workflow uses only first related path _(effort S · zoo no · 14-security-practitioner.md)_
+- **P16-17** [P2|improvement|findings] Findings expand control lacks focus ring and aria-controls _(effort S · zoo no · 16-accessibility.md)_
+- **P18-14** [P2|improvement|findings] CSV / SOAR export omits fingerprint, occurrence, root cause, assets _(effort S · zoo no · 18-soc-analyst.md)_
+- **P18-16** [P2|feature|findings] No snooze / revisit for Suppressed; only AcceptedRisk has expiry governance _(effort M · zoo no · 18-soc-analyst.md)_
+- **P18-17** [P2|improvement|findings] Signal-sourced titles remain terse; weak ticket titles without expand _(effort M · zoo no · 18-soc-analyst.md)_
+- **P18-18** [P2|innovation|findings] Disposition and module feedback loop absent — FP never trains “don’t raise again” _(effort L · zoo no · 18-soc-analyst.md)_
+- **P04-19** [P2|request|gtm] No customer references — cannot complete peer diligence for PoR _(effort XL (GTM) · zoo no · 04-ciso.md)_
+- **P07-16** [P2|improvement|gtm] Compliance parked in Prove group _(effort S · zoo yes · 07-steve-jobs.md)_
+- **P08-16** [P2|improvement|gtm] Enterprise SKU is a kitchen sink — packaging anti-pattern _(effort M · zoo yes · 08-ben-horowitz.md)_
+- **P08-19** [P2|bug|gtm] Dual nav configs create dual product stories for buyers and PMs _(effort M · zoo yes · 08-ben-horowitz.md)_
+- **P12-16** [P2|improvement|gtm] Internal 79.1→95.9 plan is not an MQ progress metric _(effort S · zoo yes · 12-gartner-analyst.md)_
+- **P15-14** [P2|improvement|gtm] Marketplace honesty: dual surfaces + legal-review dead-end without BYO story _(effort L · zoo yes · 15-oss-advocate.md)_
+- **P02-13** [P2|improvement|handoffs] ProofLoopContext is strong but stage mapping is coarse and uneven _(effort M · zoo yes · 02-ux-researcher.md)_
+- **P06-16** [P2|feature|integrations] No bi-directional SIEM case / notable close path _(effort L · zoo no · 06-blue-teamer.md)_
+- **P10-16** [P2|request|integrations] Network enforcement missing from enterprise breadth readiness _(effort S · zoo no · 10-cisco-cto.md)_
+- **P14-21** [P2|request|integrations] Ticket create needs zero-click default destination _(effort S · zoo no · 14-security-practitioner.md)_
+- **P20-14** [P2|improvement|integrations] Webhook secret rotation and dead-letter redrive missing _(effort M · zoo no · 20-api-platform.md)_
+- **P16-11** [P2|bug|mobile] Touch targets under 24px / 44px on shell and kit _(effort S · zoo no · 16-accessibility.md)_
+- **P12-18** [P2|improvement|mssp] MSSP multi-tenancy is Execute wedge underplayed in GTM _(effort L · zoo no · 12-gartner-analyst.md)_
+- **P13-16** [P2|improvement|mssp] MSSP architecture is Wave-positive; commercial packaging is not _(effort L · zoo no · 13-forrester-analyst.md)_
+- **P02-14** [P2|improvement|nav] Tenant chip looks like a switcher but is a hard link to MSSP _(effort S · zoo no · 02-ux-researcher.md)_
+- **P14-6** [P2|improvement|nav] Schedules live under “Remediate” group _(effort S · zoo yes · 14-security-practitioner.md)_
+- **P14-9** [P2|improvement|nav] Dual dashboard labels (Dashboard vs Executive vs legacy Command center) _(effort S · zoo yes · 14-security-practitioner.md)_
+- **P01-16** [P2|improvement|onboarding] Dual first-run systems still present in chrome _(effort M · zoo yes · 01-ui-engineer.md)_
+- **P02-11** [P2|improvement|onboarding] Getting-started discoverability is account-menu only on the live rail _(effort S · zoo no · 02-ux-researcher.md)_
+- **P02-16** [P2|feature|onboarding] No explicit recovery path when first validation fails mid-loop _(effort M · zoo no · 02-ux-researcher.md)_
+- **P07-15** [P2|feature|onboarding] Hero loop is not productized as a guided path _(effort L · zoo no · 07-steve-jobs.md)_
+- **P12-20** [P2|feature|onboarding] Design-partner mode is correct AtE scaffolding — instrument it for analyst evidence _(effort M · zoo yes · 12-gartner-analyst.md)_
+- **P06-10** [P2|improvement|ops] Schedules lack run history, failure reasons, and change-window integration depth _(effort M · zoo no · 06-blue-teamer.md)_
+- **P08-17** [P2|improvement|ops] AWS Marketplace as GTM strategy is fake hard before direct pitch is known _(effort S (decision) · zoo no · 08-ben-horowitz.md)_
+- **P10-14** [P2|improvement|ops] Explicit corporate proxy support is uneven across dual agents _(effort S · zoo yes · 10-cisco-cto.md)_
+- **P13-18** [P2|improvement|ops] Blind independent rescore and release qualification required before external analyst pursuit _(effort M · zoo no · 13-forrester-analyst.md)_
+- **P14-16** [P2|improvement|ops] Needs you total sums bucket counts (inflated badge) _(effort S · zoo no · 14-security-practitioner.md)_
+- **P14-19** [P2|feature|ops] Schedules not linked into Needs you as first-class program health _(effort M · zoo no · 14-security-practitioner.md)_
+- **P15-15** [P2|bug|ops] Module certification report is stale relative to module catalog growth _(effort S · zoo no · 15-oss-advocate.md)_
+- **P17-18** [P2|request|ops] Support / incident contact is env-deployed, not contractual product surface _(effort S · zoo no · 17-enterprise-buyer.md)_
+- **P07-19** [P2|innovation|other] One-button “Break the cheapest link” moment missing _(effort L · zoo no · 07-steve-jobs.md)_
+- **P09-14** [P2|improvement|other] GraphNode.nodeType free string vs PathNode.entityType enum _(effort M · zoo no · 09-einstein.md)_
+- **P09-18** [P2|improvement|other] Identity multiverse — Identity vs NHI vs graph Identity with local risk atom _(effort L · zoo yes · 09-einstein.md)_
+- **P09-19** [P2|feature|other] Exposure as third lifecycle peer of Path and Finding _(effort M · zoo yes · 09-einstein.md)_
+- **P11-12** [P2|bug|other] Coverage tag ontology duplicates (K8s vs Kubernetes) and free assetType on inventory _(effort S · zoo yes · 11-palantir-cto.md)_
+- **P15-13** [P2|request|other] No root CONTRIBUTING.md or public OSS adapter contribution guide _(effort S · zoo no · 15-oss-advocate.md)_
+- **P15-17** [P2|improvement|other] No repository root LICENSE clarifies Periscan product vs engine licenses _(effort S · zoo no · 15-oss-advocate.md)_
+- **P18-15** [P2|feature|other] No single chronological “investigations / case” feed across findings + threat alerts + risk approvals _(effort L · zoo no · 18-soc-analyst.md)_
+- **P01-15** [P2|improvement|paths] Attack path detail chrome: badge header + multi-section density without progressive disclosure _(effort M · zoo no · 01-ui-engineer.md)_
+- **P18-19** [P2|improvement|performance] Non-streaming polls (45s findings / 60s dashboard & threat) without “new since last visit” markers _(effort M · zoo no · 18-soc-analyst.md)_
+- **P02-10** [P2|improvement|proof-loop] GetStarted progress double-counts two different scales on one bar _(effort S · zoo no · 02-ux-researcher.md)_
+- **P04-17** [P2|improvement|remediation] Owner/SLA fields exist in schema but operational SLA discipline is not enterprise-grade _(effort M · zoo no · 04-ciso.md)_
+- **P06-13** [P2|improvement|remediation] Fix retest module selection is keyword-family-based — measured Fixed hard for many exposures _(effort L · zoo no · 06-blue-teamer.md)_
+- **P13-17** [P2|bug|remediation] Remediation ticket CTA gaps hurt mobilization criteria _(effort S · zoo no · 13-forrester-analyst.md)_
+- **P14-15** [P2|improvement|remediation] Remediation detail loads entire rem list to resolve one id _(effort S · zoo no · 14-security-practitioner.md)_
+- **P03-15** [P2|improvement|runners] Runner egress DNS trust / IPv6 gap remains _(effort M · zoo no · 03-security-engineer.md)_
+- **P10-15** [P2|improvement|runners] Fleet policy is strong ops UX but lacks multi-site routing semantics _(effort L · zoo no · 10-cisco-cto.md)_
+- **P10-17** [P2|innovation|runners] Segment-aware runner SKU + appliance profile (not full BAS appliance) _(effort L · zoo no · 10-cisco-cto.md)_
+- **P14-18** [P2|improvement|runners] Multiple runner UIs increase ops training cost _(effort M · zoo yes · 14-security-practitioner.md)_
+- **P03-10** [P2|improvement|security] CSRF reliance on SameSite=Lax alone; no double-submit token for cookie sessions _(effort M · zoo no · 03-security-engineer.md)_
+- **P03-11** [P2|improvement|security] Web middleware treats any cookie presence as authenticated shell _(effort S · zoo no · 03-security-engineer.md)_
+- **P03-13** [P2|improvement|security] pathEdge update in applyPathEdgeReceipt lacks tenantId in WHERE (defense-in-depth) _(effort S · zoo no · 03-security-engineer.md)_
+- **P03-14** [P2|improvement|security] Fixed-without-verify is mostly closed for tickets; keep risk-band & UI honesty under regression _(effort M · zoo no · 03-security-engineer.md)_
+- **P03-16** [P2|improvement|security] Threat-model doc lag: claims no Prisma RLS while write-path RLS exists; understates result-signing mandate _(effort S · zoo no · 03-security-engineer.md)_
+- **P03-17** [P2|feature|security] Secrets at rest for integrations/evidence encryption are env-optional _(effort M · zoo no · 03-security-engineer.md)_
+- **P06-19** [P2|request|security] Practice/drill mode for kill switch + denied-task visibility in SOC runbooks _(effort S · zoo no · 06-blue-teamer.md)_
+- **P10-13** [P2|bug|security] Egress allow path is IPv6-blind _(effort M · zoo no · 10-cisco-cto.md)_
+- **P11-19** [P2|improvement|security] Multi-source honesty excellence must not be diluted by fixture terrain $$ in risk helpers _(effort S · zoo yes · 11-palantir-cto.md)_
+- **P12-19** [P2|caution|security] Safety floor is CoV strength — do not erode for BAS peer pressure _(effort S–M · zoo no · 12-gartner-analyst.md)_
+- **P15-19** [P2|bug|security] ScoutSuite installed into default image despite RequiresLegalReview _(effort M · zoo no · 15-oss-advocate.md)_
+- **P17-11** [P2|feature|security] No BYOK / customer-managed encryption keys _(effort XL (full BYOK); S (honest disclosure) · zoo no · 17-enterprise-buyer.md)_
+- **P17-17** [P2|improvement|security] Isolation proof pack is strong; buyer cannot use it as vendor assurance alone _(effort S · zoo no · 17-enterprise-buyer.md)_
+- **P16-19** [P3|improvement|a11y] InfoPopover uses role=tooltip with click toggle _(effort S · zoo no · 16-accessibility.md)_
+- **P10-18** [P3|improvement|api] Control channel schema advertises futures that confuse security review _(effort S · zoo no · 10-cisco-cto.md)_
+- **P11-20** [P3|bug|api] Audit ENTITY_ROUTE maps Scope → /missions (wrong object workspace) _(effort S · zoo no · 11-palantir-cto.md)_
+- **P20-19** [P3|innovation|api] Dual auth modes undocumented for multi-tenant automation (cookie vs key + tenant header) _(effort S · zoo no · 20-api-platform.md)_
+- **P13-20** [P3|request|auth] Enterprise identity residuals (SCIM/JIT, recovery routes) affect buyer and presence narratives _(effort M · zoo no · 13-forrester-analyst.md)_
+- **P14-22** [P3|improvement|copy] Proof-loop stage vocab vs CTEM radar vs Needs you stages _(effort M · zoo yes · 14-security-practitioner.md)_
+- **P15-21** [P3|improvement|copy] Toolchain notes sometimes over-claim breadth beyond liveSupported _(effort S · zoo yes · 15-oss-advocate.md)_
+- **P01-19** [P3|innovation|design-system] Introduce a single “Claim language strip” primitive for proof-loop pages _(effort M · zoo no · 01-ui-engineer.md)_
+- **P14-20** [P3|improvement|design-system] Dual chrome components on operator paths _(effort L · zoo yes · 14-security-practitioner.md)_
+- **P15-22** [P3|innovation|engines] Engine Lab license lanes + digest theater are the right productization of OSS respect _(effort XL · zoo no · 15-oss-advocate.md)_
+- **P07-21** [P3|improvement|gtm] Tagline stack is good — hierarchy is not _(effort S · zoo no · 07-steve-jobs.md)_
+- **P03-19** [P3|improvement|ops] Rate limiter keying and trustProxy not proven in app path _(effort S · zoo no · 03-security-engineer.md)_
+- **P06-18** [P3|innovation|ops] Blue “shift pack” — single morning brief API + page for validated program health _(effort M · zoo yes (replaces sprawl with one job surface) · 06-blue-teamer.md)_
+- **P20-20** [P3|improvement|ops] Evidence list is limit-only without hasMore/cursor _(effort S · zoo no · 20-api-platform.md)_
+- **P18-20** [P3|request|other] World catalog actions: search findings by CVE / copy IOC / open advisory _(effort M · zoo yes · 18-soc-analyst.md)_
+- **P01-20** [P3|request|performance] Command center fires many parallel list polls (visual jank risk) _(effort L · zoo no · 01-ui-engineer.md)_
+- **P07-22** [P3|request|performance] Silent multi-fetch partial failure looks like empty peace _(effort M · zoo no · 07-steve-jobs.md)_
+- **P02-18** [P3|innovation|proof-loop] Make the loop a spatial product map, not only a pill strip _(effort L · zoo yes · 02-ux-researcher.md)_
+- **P03-20** [P3|innovation|security] Make PEP unavoidable: policy proxy / interceptor for all execution entrypoints _(effort XL · zoo no · 03-security-engineer.md)_
+- **P05-18** [P3|request|security] Sales / demo guardrails for offensive modules _(effort M · zoo yes · 05-red-teamer.md)_
