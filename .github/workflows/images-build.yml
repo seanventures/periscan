@@ -70,7 +70,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Build api (load locally for smoke)
         uses: docker/build-push-action@v5
@@ -126,7 +126,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Build scan-executor (load locally for smoke)
         uses: docker/build-push-action@v5
@@ -185,7 +185,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Build runner-agent (load locally for smoke)
         uses: docker/build-push-action@v5
@@ -241,7 +241,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Build web (load locally for smoke)
         uses: docker/build-push-action@v5

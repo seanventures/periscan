@@ -167,7 +167,7 @@ jobs:
       # ---- Dry-run (default) ----------------------------------------------
       - name: Setup Docker Buildx (dry-run compose validation)
         if: steps.mode.outputs.mode == 'dry-run'
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Validate production compose config (dry-run)
         if: steps.mode.outputs.mode == 'dry-run'
