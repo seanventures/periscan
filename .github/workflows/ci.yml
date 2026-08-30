@@ -89,7 +89,7 @@ jobs:
           cache: pnpm
 
       - name: Setup Go for runner verification
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v7
         with:
           go-version-file: apps/runner/go.mod
           cache: true
