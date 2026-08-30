@@ -188,7 +188,7 @@ jobs:
 
       - name: Setup Terraform (dry-run plan/validate)
         if: steps.mode.outputs.mode == 'dry-run'
-        uses: hashicorp/setup-terraform@v3
+        uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: "1.7.5"
 
