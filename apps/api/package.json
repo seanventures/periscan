@@ -30,7 +30,7 @@
     "@periscan/webhooks": "workspace:^",
     "@periscan/worker": "workspace:^",
     "@prisma/client": "^6.19.3",
-    "argon2": "^0.44.0",
+    "argon2": "^0.45.1",
     "bullmq": "^5.77.7",
     "fastify": "^5.10.0",
     "jose": "^6.1.2",
