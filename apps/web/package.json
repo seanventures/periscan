@@ -22,7 +22,7 @@
     "@periscan/reports": "workspace:^",
     "@periscan/shared": "workspace:^",
     "@radix-ui/react-tabs": "^1.1.14",
-    "@radix-ui/react-toast": "^1.2.16",
+    "@radix-ui/react-toast": "^1.2.23",
     "@tanstack/react-query": "^5.101.2",
     "clsx": "^2.1.1",
     "cytoscape": "^3.34.0",
