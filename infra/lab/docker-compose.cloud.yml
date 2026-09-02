@@ -1,0 +1,40 @@
+# Optional Phase 3 — cloud/k8s simulation for lab rows that need S3/IAM/K8s targets.
+# Not started as a product requirement. Enable only when modules can target these
+# endpoints without inventing Production connector claims.
+#
+# Usage (from infra/lab):
+#   docker compose -f docker-compose.yml -f docker-compose.cloud.yml --profile cloud up -d
+#
+# Defaults are deliberately local-only and disposable.
+name: periscan-lab
+
+services:
+  # LocalStack Community — S3/IAM-shaped misconfig targets for CSV/cloud modules.
+  # Requires Docker; image pull may be large. Do not expose past localhost.
+  localstack:
+    profiles: ["cloud"]
+    image: localstack/localstack:4.3
+    ports:
+      - "4566:4566"
+    environment:
+      SERVICES: s3,iam,sts
+      DEBUG: "0"
+      PERSISTENCE: "0"
+    volumes:
+      - localstack_data:/var/lib/localstack
+    networks: [lab_core]
+    restart: unless-stopped
+
+  # kind is intentionally NOT a long-running compose service.
+  # Operators create a cluster on the host when needed:
+  #   kind create cluster --name periscan-lab --config kind/kind-config.yaml
+  #   kubectl apply -f kind/smoke-namespace.yaml
+  # Tear down: kind delete cluster --name periscan-lab
+
+volumes:
+  localstack_data:
+
+networks:
+  lab_core:
+    external: true
+    name: periscan-lab_lab_core

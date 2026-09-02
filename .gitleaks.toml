@@ -1,0 +1,79 @@
+# Committed config for history / public-tree scrub.
+# Extends gitleaks defaults (AWS access keys, PKCS private keys, GitHub PATs, …).
+# Do not path-allowlist docs/qa/HANDOFF.md, compose.yaml, or app.env.tmpl.
+
+title = "Periscan"
+
+minVersion = "v8.25.0"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "periscan-plane-api-token"
+description = "Plane API token assignment (not ops-API fetch or replace-me placeholders)"
+regex = '''(?i)(?:PLANE_API_KEY\s*[=:]\s*|X-API-Key:\s*)['"]?([A-Za-z0-9_\-]{20,})'''
+secretGroup = 1
+keywords = [
+    "plane_api_key",
+    "x-api-key",
+]
+tags = ["plane", "secret"]
+
+[[rules]]
+id = "periscan-goldeneye-operator-surface"
+description = "Goldeneye operator SSH, tailnet registry, or public IPv4 beside app.periscan.com (HANDOFF)"
+regex = '''(?:ssh\s+root@goldeneye|goldeneye\.tail[0-9a-f]+\.ts\.net|(?:app\.periscan\.com.{0,80}(?:\d{1,3}\.){3}\d{1,3}|(?:\d{1,3}\.){3}\d{1,3}.{0,80}app\.periscan\.com))'''
+keywords = [
+    "goldeneye",
+    "app.periscan.com",
+]
+tags = ["goldeneye", "handoff"]
+
+# Labeled OSS-module fixtures (synthetic scanner payloads, including fake AWS keys).
+[[allowlists]]
+description = "Labeled packages/modules/fixtures"
+paths = [
+    '''(?:^|/)packages/modules/fixtures/''',
+]
+
+# Path allowlists skip the whole file. Only skip lab-runs whose path is labeled.
+# Unlabeled docs/qa/lab-runs JSON/logs still scan.
+[[allowlists]]
+description = "Labeled docs/qa/lab-runs fixtures only"
+paths = [
+    '''(?:^|/)docs/qa/lab-runs/.*fixture''',
+]
+
+# Placeholders and synthetic tokens — not live credentials.
+[[allowlists]]
+description = "PEM begin-marker tests and k8s replace-with-* placeholders"
+paths = [
+    '''(?:^|/)apps/runner/main_test.go$''',
+    '''(?:^|/)apps/runner/deploy/k8s/''',
+    '''(?:^|/)apps/runner-agent/deploy/k8s/''',
+    '''(?:^|/)scripts/validate-runner-deploy.sh$''',
+    '''(?:^|/)tests/acceptance/identity-connectors-flow.test.ts$''',
+    '''(?:^|/)tests/acceptance/live-oss-engine-execution.test.ts$''',
+]
+
+[[allowlists]]
+description = "Lab Splunk Bearer lab-token placeholder"
+paths = [
+    '''(?:^|/)infra/lab/README.md$''',
+    '''(?:^|/)infra/lab/scripts/canary-loop.sh$''',
+]
+
+[[allowlists]]
+description = "Documented fake keys in unit tests"
+paths = [
+    '''(?:^|/)packages/connectors/src/intel471.contract.test.ts$''',
+    '''(?:^|/)packages/evidence/src/storage.test.ts$''',
+    '''(?:^|/)packages/model-gateway/src/credentials.test.ts$''',
+]
+
+[[allowlists]]
+description = "THREAT_MODEL prose (key ids / executionEnvironment)"
+paths = [
+    '''(?:^|/)docs/THREAT_MODEL.md$''',
+]

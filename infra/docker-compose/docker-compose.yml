@@ -1,0 +1,58 @@
+# Pinned project name: without it, compose derives the name from the checkout
+# directory, so two clones silently fight over the same containers/volumes.
+name: periscan-deps
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: periscan
+      POSTGRES_USER: periscan
+      POSTGRES_PASSWORD: periscan
+    ports:
+      - "${PERISCAN_POSTGRES_PUBLISHED_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U periscan -d periscan"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "${PERISCAN_REDIS_PUBLISHED_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: periscan
+      MINIO_ROOT_PASSWORD: periscan123
+    ports:
+      - "${PERISCAN_MINIO_PUBLISHED_PORT:-9000}:9000"
+      - "${PERISCAN_MINIO_CONSOLE_PUBLISHED_PORT:-9001}:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -fsS http://127.0.0.1:9000/minio/health/live || exit 1"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:

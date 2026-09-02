@@ -1,0 +1,24 @@
+[
+  {
+    "checkId": "s3_bucket_public_access_block_disabled",
+    "description": "Public access block is disabled on a production bucket.",
+    "region": "us-east-1",
+    "remediation": "Enable S3 public access block and remove public bucket access.",
+    "resourceId": "periscan-demo-public-artifacts",
+    "service": "s3",
+    "severity": "high",
+    "status": "FAIL",
+    "statusExtended": "Bucket level public access block is disabled."
+  },
+  {
+    "checkId": "ec2_security_group_allows_ssh_from_world",
+    "description": "A security group allows inbound SSH from 0.0.0.0/0.",
+    "region": "us-east-1",
+    "remediation": "Restrict the security group to approved source ranges and remove internet-wide SSH access.",
+    "resourceId": "sg-0123456789abcdef0",
+    "service": "ec2",
+    "severity": "critical",
+    "status": "FAIL",
+    "statusExtended": "Ingress rule exposes TCP/22 to the internet."
+  }
+]

@@ -1,0 +1,44 @@
+[
+  {
+    "Filename": "template.yaml",
+    "Level": "Error",
+    "Location": {
+      "End": { "ColumnNumber": 20, "LineNumber": 8 },
+      "Path": ["Resources", "FixtureBucket", "Properties", "AccessControl"],
+      "Start": { "ColumnNumber": 7, "LineNumber": 8 }
+    },
+    "Message": "Property Resources/FixtureBucket/Properties/AccessControl is deprecated",
+    "Rule": {
+      "Description": "Check deprecated CloudFormation properties",
+      "Id": "E3037",
+      "ShortDescription": "Deprecated property",
+      "Source": "https://github.com/aws-cloudformation/cfn-lint"
+    }
+  },
+  {
+    "Filename": "template.yaml",
+    "Level": "Warning",
+    "Location": {
+      "End": { "ColumnNumber": 18, "LineNumber": 24 },
+      "Path": [
+        "Resources",
+        "FixtureRole",
+        "Properties",
+        "Policies",
+        0,
+        "PolicyDocument",
+        "Statement",
+        0,
+        "Action"
+      ],
+      "Start": { "ColumnNumber": 17, "LineNumber": 24 }
+    },
+    "Message": "IAM policy Action '*' is too permissive",
+    "Rule": {
+      "Description": "IAM wildcard actions on authorized templates",
+      "Id": "W1020",
+      "ShortDescription": "IAM wildcard action",
+      "Source": "https://github.com/aws-cloudformation/cfn-lint"
+    }
+  }
+]

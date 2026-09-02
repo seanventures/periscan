@@ -1,0 +1,60 @@
+name: Feature
+description: Propose Community or product behavior that respects SETTLED and the safety floor.
+title: "[feature] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Community edition is the open-core **validation slice**, not a LICENSE flip and not full BAS.
+        Read `COMMUNITY.md`, `OPEN_CORE.md`, `GOVERNANCE.md`, and `docs/SETTLED.md` first.
+  - type: dropdown
+    id: offering
+    attributes:
+      label: Offering
+      options:
+        - Community edition (validation pack / proof loop)
+        - Engine adapter (use the Engine adapter template instead if that is the whole request)
+        - Docs / first-hour
+        - Commercial edge (MSSP, hosted, SSO polish) — may be declined as out of Community
+        - Unsure
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: Who is stuck, on what authorized scope, without this?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: Behavior, API, or UX. Honest AEV/CTEM language only.
+    validations:
+      required: true
+  - type: textarea
+    id: non-goals
+    attributes:
+      label: Explicit non-goals
+      description: What this must not become (full BAS, CNAPP replacement, LICENSE flip, Fixed-without-verify, …).
+    validations:
+      required: true
+  - type: checkboxes
+    id: settled
+    attributes:
+      label: SETTLED (must all hold)
+      options:
+        - label: This is not a request to rewrite root LICENSE or announce that Periscan is open source.
+          required: true
+        - label: This is not a request to enable live Atomic / Caldera / SharpHound / sqlmap / Metasploit.
+          required: true
+        - label: This does not mark Fixed without a verification event.
+          required: true
+        - label: This does not put AGPL / SSPL / BSL / Commons Clause / PolyForm on the default image or Community start.
+          required: true
+        - label: This does not claim full BAS, automated pentest, certification, or CNAPP/RBVM replacement.
+          required: true
+        - label: Denied tasks still never queue; product-visible data stays real or honest-empty.
+          required: true

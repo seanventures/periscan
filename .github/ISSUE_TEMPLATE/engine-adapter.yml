@@ -1,0 +1,85 @@
+name: Engine adapter
+description: Propose wrapping an upstream OSS tool as a Periscan Validation Module.
+title: "[adapter] "
+labels: ["engine-adapter"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Follow `docs/OPEN_SOURCE_TOOL_ADAPTER_SPEC.md` §7 and `GOVERNANCE.md`.
+        Community start is permissive SPDX only. Theater tools are rejected.
+  - type: input
+    id: tool-name
+    attributes:
+      label: Upstream tool name
+      placeholder: gitleaks
+    validations:
+      required: true
+  - type: input
+    id: spdx
+    attributes:
+      label: Upstream SPDX
+      description: MIT / Apache-2.0 / BSD-3-Clause / NPSL (Community-eligible) or GPL/LGPL (Engine Lab + accept). AGPL/SSPL/BSL/Commons Clause/PolyForm are Blocked.
+      placeholder: Apache-2.0
+    validations:
+      required: true
+  - type: input
+    id: upstream-url
+    attributes:
+      label: Upstream repo or docs URL
+    validations:
+      required: true
+  - type: dropdown
+    id: intended-path
+    attributes:
+      label: Intended path
+      options:
+        - Community start (permissive SPDX + certified module)
+        - Engine Lab catalog only
+        - Engine Lab + copyleft license accept (GPL/LGPL)
+        - Unsure — maintainers will classify
+    validations:
+      required: true
+  - type: dropdown
+    id: safety
+    attributes:
+      label: Declared safety level
+      options:
+        - PassiveReadOnly
+        - ActiveNonInvasive
+        - Other (likely rejected for first-time adapters)
+    validations:
+      required: true
+  - type: dropdown
+    id: writes
+    attributes:
+      label: Writes to / modifies the target?
+      options:
+        - No (required for validation modules)
+        - Yes (will be rejected)
+    validations:
+      required: true
+  - type: textarea
+    id: capability
+    attributes:
+      label: Capability
+      description: One sentence. What evidence does the module emit? Which scope types?
+    validations:
+      required: true
+  - type: checkboxes
+    id: gates
+    attributes:
+      label: Adapter gates
+      options:
+        - label: I will add OpenSourceToolDefinition + a conformant ValidationModule (manifest, parser, redaction, fixtures).
+          required: true
+        - label: manifest.license will equal the primary tool SPDX (no invented Proprietary for a third-party tool).
+          required: true
+        - label: I will run pnpm licenses:check, pnpm modules:certify, and module tests.
+          required: true
+        - label: This is not Atomic / Caldera / SharpHound / sqlmap / Metasploit / live offensive chaining.
+          required: true
+        - label: This is not silent AGPL/SSPL/BSL intake and not a Fixed-without-verify shortcut.
+          required: true
+        - label: Raw tool JSON will not become primary UX; the engine will be attributed by name + SPDX.
+          required: true
