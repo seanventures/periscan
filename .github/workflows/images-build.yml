@@ -96,7 +96,7 @@ jobs:
       - name: Metadata
         if: startsWith(github.ref, 'refs/tags/v')
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ghcr.io/seanheiney/periscan-api
           tags: |
@@ -154,7 +154,7 @@ jobs:
       - name: Metadata
         if: startsWith(github.ref, 'refs/tags/v')
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ghcr.io/seanheiney/periscan-scan-executor
           tags: |
@@ -211,7 +211,7 @@ jobs:
       - name: Metadata
         if: startsWith(github.ref, 'refs/tags/v')
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ghcr.io/seanheiney/periscan-runner-agent
           tags: |
@@ -268,7 +268,7 @@ jobs:
       - name: Metadata
         if: startsWith(github.ref, 'refs/tags/v')
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ghcr.io/seanheiney/periscan-web
           tags: |
