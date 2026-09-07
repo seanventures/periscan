@@ -37,7 +37,7 @@ jobs:
 
       - name: Upload golden artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: lab-golden-${{ github.run_id }}
           path: docs/qa/lab-runs/
