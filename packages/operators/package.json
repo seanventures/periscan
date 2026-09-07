@@ -13,6 +13,6 @@
   },
   "dependencies": {
     "@periscan/shared": "workspace:^",
-    "zod": "^4.1.12"
+    "zod": "^4.5.4"
   }
 }
