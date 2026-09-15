@@ -1,0 +1,89 @@
+name: PR Fast
+
+# Fast pull-request checks. This workflow is NOT the release gate.
+# Merge and release still require ci.yml `pnpm verify` (Playwright E2E,
+# acceptance, production builds, runner, OSS toolchain, and the rest of the
+# verify contract). Do not add Playwright, acceptance, or `pnpm verify` here.
+
+on:
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: pr-fast-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  fast:
+    name: Fast checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: periscan
+          POSTGRES_PASSWORD: periscan
+          POSTGRES_USER: periscan
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U periscan -d periscan"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://periscan:periscan@127.0.0.1:5432/periscan
+      PERISCAN_API_PORT: 3001
+      PERISCAN_DATA_REGION: us-east-1
+      PERISCAN_DEV_MODE: "true"
+      PERISCAN_JWT_SECRET: periscan-ci-session-secret
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.0 --activate
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Settled tripwire
+        run: pnpm settled:check
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Workspace tests
+        run: pnpm test
+
+      - name: License inventory
+        run: pnpm licenses:check
+
+      - name: License policy tests
+        run: pnpm test:license
+
+      # RLS/security tests write to Postgres; schema must exist first.
+      - name: Apply Prisma migrations
+        run: pnpm --filter @periscan/db run db:migrate:deploy
+
+      - name: Security tests
+        run: pnpm test:security

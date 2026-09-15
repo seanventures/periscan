@@ -1,0 +1,74 @@
+name: SBOM
+
+# Product CycloneDX SBOM for pnpm Node dependencies. This is inventory, not a
+# claim that Periscan is open source or that optional copyleft engines ship in
+# the default image. Product LICENSE stays proprietary.
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  sbom:
+    name: CycloneDX
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.0 --activate
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate CycloneDX SBOM
+        run: pnpm sbom:write
+
+      - name: Assert CycloneDX document
+        run: |
+          node --input-type=module -e '
+          import { readFile } from "node:fs/promises";
+          const sbom = JSON.parse(await readFile("sbom.json", "utf8"));
+          if (sbom.bomFormat !== "CycloneDX") {
+            throw new Error("sbom.json is not CycloneDX (got " + String(sbom.bomFormat) + ")");
+          }
+          if (!sbom.specVersion) {
+            throw new Error("sbom.json missing specVersion");
+          }
+          if (!Array.isArray(sbom.components) || sbom.components.length === 0) {
+            throw new Error("sbom.json has no components");
+          }
+          const productLicenses = JSON.stringify(sbom.metadata?.component?.licenses ?? []);
+          if (!productLicenses.includes("Proprietary")) {
+            throw new Error("product component must remain Proprietary");
+          }
+          console.log(
+            "CycloneDX specVersion=" +
+              sbom.specVersion +
+              " components=" +
+              sbom.components.length
+          );
+          '
+
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom.json
+          path: sbom.json
+          if-no-files-found: error

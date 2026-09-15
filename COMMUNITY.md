@@ -1,0 +1,130 @@
+# Periscan Community edition
+
+You already have scanners. You do not have **proof**.
+
+Community edition is the self-hosted **AEV/CTEM proof layer**: authorize a
+scope you own (or are contracted to test), run a dense safe OSS pack under
+policy, keep evidence, and only mark **Fixed** when a re-measurement says so.
+
+Source is **Apache-2.0** ([`LICENSE`](./LICENSE), [`OPEN_CORE.md`](./OPEN_CORE.md)).
+It is **not** full BAS, automated pentest, a Nuclei wrapper, or a Wiz / Tenable
+replacement.
+
+Contract: `packages/shared/src/community-edition.ts`
+(`COMMUNITY_EDITION_VALUE_LINE`).
+
+---
+
+## Who it is for
+
+- AppSec, platform, and security engineers who need measured proof on systems
+  they **own or are contracted to test**
+- Teams who already run Trivy, Gitleaks, Nuclei, Prowler and want one evidence
+  ledger instead of a scanner dump
+- Contributors adding a **safe engine adapter**
+  ([`docs/ADAPTER_FIRST_PR.md`](./docs/ADAPTER_FIRST_PR.md),
+  [`CONTRIBUTING.md`](./CONTRIBUTING.md))
+
+Not for: unauthorized scanning, live ransomware theater, or “make us look like
+Cymulate.”
+
+---
+
+## Start
+
+```bash
+git clone https://github.com/seanventures/periscan.git
+cd periscan
+bash scripts/periscan.sh install
+bash scripts/periscan.sh start
+```
+
+Open the printed URL. Create an account. **Authorize a local clone path** — not
+`github.com/org/repo`. Run Community validation. Remediations stay **Open**
+until verify.
+
+Ports, fallbacks (`community-first-hour.sh`, `lab:dev` auto-shift), and HTTP:
+[`USING.md`](./USING.md). Questions: [`FAQ.md`](./FAQ.md).
+
+`pnpm seed:demo` is a **labeled fixture**. It is not this loop.
+
+---
+
+## Proof loop
+
+```text
+verified scope
+    → policy decision (deny never queues)
+    → Community engines (permissive SPDX + first-party)
+    → evidence
+    → findings?missionId=
+    → remediations
+    → revalidate
+    → Fixed only via verification
+```
+
+| Scope                   | Authorization                                                                      |
+| ----------------------- | ---------------------------------------------------------------------------------- |
+| Domain / subdomain      | DNS TXT                                                                            |
+| Repository              | `.periscan-authorization` token file (or Owner/Admin attestation when runner-only) |
+| Cloud account           | Connected AWS match, or Owner/Admin attestation                                    |
+| IP range / internal net | Audited Owner/Admin attestation                                                    |
+
+---
+
+## Pack (default start)
+
+Permissive SPDX only (MIT / Apache-2.0 / BSD-3-Clause / NPSL) plus first-party
+checks. Load binaries from Engine Lab with **Install + enable Community pack**.
+
+Secrets (Gitleaks, detect-secrets, …), SCA (Trivy, OSV, Grype, …), SAST
+(Bandit, gosec, …), IaC (Checkov, Terrascan, KICS, …), SBOM (Syft, cdxgen),
+containers (Dockle, Trivy, kube-bench), TLS/HTTP first-party + SSLyze, ZAP,
+Nuclei **second mission**, Prowler on Connected AWS, YARA / Falco **rules lint**,
+recon when a runner is enrolled.
+
+**Not Community start:** GPL/LGPL (Semgrep, testssl, Nikto, …) → Engine Lab +
+license accept. Atomic, Caldera, SharpHound, sqlmap, Metasploit → catalog
+theater. Never installable as validation.
+
+---
+
+## Safety floor
+
+- Only **verified, customer-authorized** scope
+- Denied tasks **never** queue
+- **Fixed** requires a verification event
+- No destructive tests, exfil, credential theft, or persistence
+- Live Atomic / Caldera / SharpHound / sqlmap / Metasploit stay off without a
+  separate legal SOW
+- Runner transport is **outbound HTTPS signed-task polling**
+
+[`SECURITY_BOUNDARIES.md`](./SECURITY_BOUNDARIES.md) ·
+[`SECURITY.md`](./SECURITY.md) · [`docs/SETTLED.md`](./docs/SETTLED.md)
+
+## Honest language
+
+| Say                                            | Do not say                                         |
+| ---------------------------------------------- | -------------------------------------------------- |
+| AEV / CTEM **proof layer** on authorized scope | Full BAS platform / multi-vector BAS like Cymulate |
+| Measured exposure validation with evidence     | Automated pentest / autonomous red team            |
+| Co-exist with CNAPP (Wiz) and RBVM (Tenable)   | Replace your CNAPP / replace Tenable               |
+| Fixed only after re-validation                 | Mark Fixed from ticket sync                        |
+| Apache-2.0 Community validation slice          | We are open source now                             |
+
+Contract: `CLAIM_LANGUAGE_CATALOG` in `packages/shared/src/claim-deny-list.ts`.
+
+---
+
+## Rails
+
+Short map. Not a README fold. Not a LICENSE flip.
+
+| Want | File |
+| --- | --- |
+| FAQ | [`docs/FAQ.md`](./docs/FAQ.md) |
+| How to use it | [`docs/USING.md`](./docs/USING.md) |
+| Install / start / update | [`scripts/periscan.sh`](./scripts/periscan.sh) (`install`, `start`, `update`, `down`) |
+| Terminal operator TUI | [`docs/TUI.md`](./docs/TUI.md) (`pnpm tui`, `PERISCAN_API_URL`) |
+| First adapter PR | [`docs/ADAPTER_FIRST_PR.md`](./docs/ADAPTER_FIRST_PR.md) |
+| Measured mark (not certified) | [`docs/BADGES.md`](./docs/BADGES.md) |

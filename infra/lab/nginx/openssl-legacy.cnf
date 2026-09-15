@@ -1,0 +1,18 @@
+# Loaded by nginx via OPENSSL_CONF so the EXPOSED vhost can negotiate the
+# deprecated TLS 1.0/1.1 protocols that periscan.tls_protocol_audit probes for.
+# OpenSSL 3 disables these at SECLEVEL>=1 and MinProtocol>=TLSv1.2 by default.
+# Best-effort: if the platform build still refuses, the module reports
+# Inconclusive (never a false pass). See docs/MEASURED_TEST_RANGE.md §7.
+
+openssl_conf = openssl_init
+
+[openssl_init]
+ssl_conf = ssl_sect
+
+[ssl_sect]
+system_default = system_default_sect
+
+[system_default_sect]
+MinProtocol = TLSv1
+CipherString = DEFAULT@SECLEVEL=0
+Options = UnsafeLegacyRenegotiation

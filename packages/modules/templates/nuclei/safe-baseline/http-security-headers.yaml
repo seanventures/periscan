@@ -1,0 +1,27 @@
+id: periscan-safe-http-security-headers
+
+info:
+  name: Periscan Safe HTTP Security Header Review
+  author: periscan
+  severity: info
+  description: Safe GET-only response-header observation for verified external targets.
+  tags: periscan,safe,http,headers
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/"
+    redirects: true
+    max-redirects: 2
+    matchers:
+      - type: dsl
+        dsl:
+          - "status_code >= 100 && status_code < 600"
+    extractors:
+      - type: kval
+        kval:
+          - server
+          - content_type
+          - x_frame_options
+          - strict_transport_security
+          - content_security_policy

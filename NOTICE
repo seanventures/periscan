@@ -1,0 +1,13 @@
+Periscan
+Copyright 2026 Periscan contributors
+
+This product is licensed under the Apache License, Version 2.0.
+See the LICENSE file in the project root.
+
+Third-party open-source validation engines, Node dependencies, and related
+components remain under their own SPDX licenses. See
+licenses/THIRD_PARTY_NOTICES.md.
+
+The "Periscan" name and marks are trademarks of the copyright holders and
+are not licensed under Apache-2.0 except as required for reasonable
+attribution (Apache License section 6).

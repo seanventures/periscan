@@ -1,0 +1,15 @@
+# Authoritative for range.test (A/CNAME/CAA/TXT the DNS modules query),
+# recursive forwarder for everything else so real DNS keeps working while the
+# API's resolver is pointed here (dns-preload.mjs -> 127.0.0.1:5354).
+
+range.test:53 {
+    file /etc/coredns/zones/db.range.test
+    log
+    errors
+}
+
+.:53 {
+    forward . 1.1.1.1 8.8.8.8
+    log
+    errors
+}

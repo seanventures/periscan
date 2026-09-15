@@ -1,0 +1,106 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: periscan
+          POSTGRES_PASSWORD: periscan
+          POSTGRES_USER: periscan
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U periscan -d periscan"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      minio:
+        image: minio/minio:latest
+        env:
+          MINIO_ROOT_USER: periscan
+          MINIO_ROOT_PASSWORD: periscan123
+        ports:
+          - 9000:9000
+          - 9001:9001
+        options: >-
+          --health-cmd "curl -fsS http://127.0.0.1:9000/minio/health/live || exit 1"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://periscan:periscan@127.0.0.1:5432/periscan
+      MINIO_BUCKET: periscan-evidence
+      MINIO_ENDPOINT: 127.0.0.1
+      MINIO_PORT: 9000
+      MINIO_ROOT_PASSWORD: periscan123
+      MINIO_ROOT_USER: periscan
+      PERISCAN_API_PORT: 3001
+      PERISCAN_DATA_REGION: us-east-1
+      PERISCAN_DEV_MODE: "true"
+      PERISCAN_JWT_SECRET: periscan-ci-session-secret
+      REDIS_URL: redis://127.0.0.1:6379
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.0 --activate
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: pnpm
+
+      - name: Setup Go for runner verification
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: apps/runner/go.mod
+          cache: true
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify
+        run: pnpm verify
+
+      - name: Verification contract summary
+        run: |
+          echo "pnpm verify is the single release gate."
+          echo "It runs lint, typecheck, workspace tests, production builds, runner checks, runner lab, OSS toolchain readiness, license checks, Prisma migrate deploy, Playwright E2E/accessibility, security tests, fatal high+ dependency audit, advisory production dependency audit, and acceptance tests."

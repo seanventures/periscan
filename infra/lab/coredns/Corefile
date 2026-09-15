@@ -1,0 +1,12 @@
+# Authoritative for lab.range.test; forward everything else upstream.
+lab.range.test:53 {
+    file /etc/coredns/zones/db.lab.range.test
+    log
+    errors
+}
+
+.:53 {
+    forward . 1.1.1.1 8.8.8.8
+    log
+    errors
+}

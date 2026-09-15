@@ -1,0 +1,13 @@
+[
+  {
+    "Description": "GitHub token in environment file",
+    "File": ".env",
+    "StartLine": 1,
+    "EndLine": 1,
+    "Secret": "ghp_periscanfixturetoken1234567890",
+    "Match": "GITHUB_TOKEN=ghp_periscanfixturetoken1234567890",
+    "RuleID": "github-token",
+    "Fingerprint": "fixture-github-token-1",
+    "Tags": ["key", "github"]
+  }
+]

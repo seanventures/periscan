@@ -1,0 +1,596 @@
+name: Periscan Community proof
+description: >
+  Start a Community Validation Snapshot and comment measured proof on a pull
+  request. Not a LICENSE flip. Denied tasks are never queued.
+author: Periscan
+inputs:
+  api_url:
+    description: Periscan API origin, with or without /api/v1
+    required: true
+  api_token:
+    description: Tenant API key (Bearer). Requires mission:run or write.
+    required: true
+  scope_id:
+    description: Verified scope UUID (repository Community lane is the default pack)
+    required: true
+  github_token:
+    description: Token used to comment on the pull request
+    required: false
+    default: ${{ github.token }}
+  pull_request_number:
+    description: Pull request number to comment on
+    required: false
+    default: ${{ github.event.pull_request.number }}
+  poll_timeout_seconds:
+    description: Seconds to wait for a terminal mission status
+    required: false
+    default: "480"
+  poll_interval_seconds:
+    description: Seconds between mission and findings polls
+    required: false
+    default: "10"
+  upload_sarif:
+    description: >
+      After a queued Community run, GET /api/v1/findings.sarif?missionId= and
+      upload periscan.sarif to GitHub Code Scanning. Denied jobsQueued=0 does
+      not upload a fake pass.
+    required: false
+    default: "false"
+
+outputs:
+  mission_id:
+    description: Community primary mission id
+    value: ${{ steps.proof.outputs.mission_id }}
+  jobs_queued:
+    description: jobsQueued from POST /community/validation-runs
+    value: ${{ steps.proof.outputs.jobs_queued }}
+  finding_count:
+    description: Finding count from GET /findings?missionId=
+    value: ${{ steps.proof.outputs.finding_count }}
+  policy_decision_id:
+    description: Policy decision id used for the start
+    value: ${{ steps.proof.outputs.policy_decision_id }}
+  denied:
+    description: true when HTTP 200 and jobsQueued is 0
+    value: ${{ steps.proof.outputs.denied }}
+  comment_path:
+    description: Rendered markdown path
+    value: ${{ steps.proof.outputs.comment_path }}
+  sarif_path:
+    description: periscan.sarif when upload_sarif fetched a Community log
+    value: ${{ steps.sarif.outputs.sarif_path }}
+
+branding:
+  icon: shield
+  color: purple
+
+runs:
+  using: composite
+  steps:
+    - name: Start Community validation and render proof comment
+      id: proof
+      shell: bash
+      env:
+        PERISCAN_API_TOKEN: ${{ inputs.api_token }}
+        PERISCAN_API_URL: ${{ inputs.api_url }}
+        PERISCAN_COMMENT_TEMPLATE: ${{ github.action_path }}/comment.md
+        PERISCAN_POLL_INTERVAL_SECONDS: ${{ inputs.poll_interval_seconds }}
+        PERISCAN_POLL_TIMEOUT_SECONDS: ${{ inputs.poll_timeout_seconds }}
+        PERISCAN_SCOPE_ID: ${{ inputs.scope_id }}
+      run: |
+        set -euo pipefail
+        if ! command -v python3 >/dev/null 2>&1; then
+          echo "python3 is required on the runner."
+          exit 1
+        fi
+        python3 - <<'PY'
+        import json
+        import os
+        import re
+        import sys
+        import time
+        import urllib.error
+        import urllib.request
+        from collections import Counter
+
+        REFUSE_PHRASES = (
+            "full bas",
+            "automated pentest",
+            "certified",
+            "we are open source",
+        )
+        TERMINAL = frozenset(
+            {"Completed", "Failed", "DeniedByPolicy", "Cancelled"}
+        )
+        UUID_RE = re.compile(
+            r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-"
+            r"[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+        )
+
+
+        class ProofError(Exception):
+            def __init__(self, message, heading="Community proof did not finish"):
+                super().__init__(message)
+                self.heading = heading
+
+
+        def env(name, default=""):
+            return (os.environ.get(name) or default).strip()
+
+
+        def none_if_empty(value):
+            text = ", ".join(value) if isinstance(value, (list, tuple)) else str(value).strip()
+            return text if text else "none"
+
+
+        def split_base(url):
+            origin = url.strip().rstrip("/")
+            if origin.endswith("/api/v1"):
+                return origin[: -len("/api/v1")].rstrip("/"), origin
+            return origin, origin + "/api/v1"
+
+
+        def http(method, url, token, body=None, extra_headers=None):
+            payload = None if body is None else json.dumps(body).encode("utf-8")
+            headers = {
+                "Accept": "application/json",
+                "Authorization": "Bearer " + token,
+                "User-Agent": "periscan-community-proof-action",
+            }
+            if payload is not None:
+                headers["Content-Type"] = "application/json"
+            if extra_headers:
+                headers.update(extra_headers)
+            request = urllib.request.Request(
+                url, data=payload, headers=headers, method=method
+            )
+            try:
+                with urllib.request.urlopen(request, timeout=45) as response:
+                    raw = response.read().decode("utf-8")
+                    parsed = json.loads(raw) if raw else {}
+                    return response.status, parsed
+            except urllib.error.HTTPError as error:
+                raw = error.read().decode("utf-8")
+                try:
+                    parsed = json.loads(raw) if raw else {"error": raw}
+                except json.JSONDecodeError:
+                    parsed = {"error": raw or error.reason}
+                return error.code, parsed
+            except urllib.error.URLError as error:
+                raise ProofError(f"{method} {url} failed: {error.reason}") from error
+
+
+        def api_error(status, payload):
+            if not isinstance(payload, dict):
+                return f"HTTP {status}"
+            detail = payload.get("error") or payload.get("message") or payload.get("code")
+            code = payload.get("code")
+            if detail and code and str(detail) != str(code):
+                return f"HTTP {status} ({code}): {detail}"
+            if detail:
+                return f"HTTP {status}: {detail}"
+            return f"HTTP {status}"
+
+
+        def preview_target(scope):
+            scope_type = scope.get("scopeType") or ""
+            value = (scope.get("value") or "").strip()
+            if scope_type == "Repository":
+                segments = [part for part in value.split("/") if part]
+                return {
+                    "repositoryName": segments[-1] if segments else value,
+                    "repositoryPath": value,
+                }
+            if scope_type == "CloudAccount":
+                return {"awsAccountId": value}
+            if scope_type in {"IPRange", "InternalNetwork"}:
+                return {"cidr": value, "targets": value}
+            hostname = value
+            for prefix in ("https://", "http://"):
+                if hostname.startswith(prefix):
+                    hostname = hostname[len(prefix) :]
+            hostname = hostname.split("/")[0].split(":")[0]
+            return {
+                "domain": hostname,
+                "host": hostname,
+                "hostname": hostname,
+                "port": 443,
+                "protocol": "https",
+                "targetHost": hostname,
+                "targets": value,
+                "templateProfile": "safe-baseline",
+                "value": value,
+            }
+
+
+        def policy_shape(suite):
+            startable = set(suite.get("startableModuleIds") or [])
+            modules = [
+                module
+                for module in suite.get("modules") or []
+                if module.get("moduleId") in startable
+            ]
+            needs_runner = any(
+                module.get("executionMode") == "InternalRunner" for module in modules
+            )
+            active = any(
+                module.get("defaultSafetyLevel") == "ActiveNonInvasive"
+                for module in modules
+            )
+            environment = "InternalRunner" if needs_runner else "ControlPlane"
+            return environment, "ActiveNonInvasive" if active else "PassiveReadOnly"
+
+
+        def collect_findings(api_root, token, mission_id):
+            items = []
+            offset = 0
+            limit = 100
+            while True:
+                status, payload = http(
+                    "GET",
+                    f"{api_root}/findings?missionId={mission_id}&limit={limit}&offset={offset}",
+                    token,
+                )
+                if status != 200:
+                    raise ProofError(
+                        "GET /api/v1/findings?missionId= failed: "
+                        + api_error(status, payload)
+                    )
+                batch = payload.get("items") or []
+                items.extend(batch)
+                page = payload.get("page") or {}
+                if not page.get("hasMore"):
+                    return items
+                offset = int(page.get("offset") or offset) + int(page.get("limit") or limit)
+
+
+        def unique_ids(rows, key="evidenceIds"):
+            seen = []
+            found = set()
+            for row in rows:
+                for item in row.get(key) or []:
+                    if item and item not in found:
+                        found.add(item)
+                        seen.append(item)
+            return seen
+
+
+        def write_outputs(path, values):
+            with open(path, "a", encoding="utf-8") as handle:
+                for key, value in values.items():
+                    text = "" if value is None else str(value)
+                    if "\n" in text:
+                        handle.write(f"{key}<<PROOF_EOF\n{text}\nPROOF_EOF\n")
+                    else:
+                        handle.write(f"{key}={text}\n")
+
+
+        def render(template, values):
+            rendered = template
+            for key, value in values.items():
+                rendered = rendered.replace("{{" + key + "}}", str(value))
+            leftover = re.findall(r"\{\{[a-z_]+\}\}", rendered)
+            if leftover:
+                raise ProofError("unfilled comment placeholders: " + ", ".join(leftover))
+            lowered = rendered.lower()
+            hits = [phrase for phrase in REFUSE_PHRASES if phrase in lowered]
+            if hits:
+                raise ProofError("comment contained refuse phrase(s): " + ", ".join(hits))
+            return rendered
+
+
+        def main():
+            token = env("PERISCAN_API_TOKEN")
+            raw_url = env("PERISCAN_API_URL")
+            scope_id = env("PERISCAN_SCOPE_ID")
+            template_path = env("PERISCAN_COMMENT_TEMPLATE")
+            timeout_s = max(1, int(env("PERISCAN_POLL_TIMEOUT_SECONDS", "480") or "480"))
+            interval_s = max(1, int(env("PERISCAN_POLL_INTERVAL_SECONDS", "10") or "10"))
+            if not token:
+                raise ProofError("api_token is required")
+            if not raw_url:
+                raise ProofError("api_url is required")
+            if not UUID_RE.match(scope_id):
+                raise ProofError("scope_id must be a UUID")
+            if not template_path or not os.path.isfile(template_path):
+                raise ProofError("comment.md template is missing")
+
+            _origin, api_root = split_base(raw_url)
+            template = open(template_path, encoding="utf-8").read()
+            values = {
+                "engine_list": "none",
+                "evidence_ids": "none",
+                "finding_count": "0",
+                "jobs_queued": "0",
+                "mission_id": "none",
+                "mission_status": "none",
+                "nuclei_note": "none",
+                "outcome_body": "The Action did not finish a Community snapshot.",
+                "outcome_heading": "Community proof did not finish",
+                "policy_decision_id": "none",
+                "scope_id": scope_id,
+                "scope_type": "unknown",
+                "validation_state_counts": "none",
+            }
+            outputs = {
+                "comment_path": "",
+                "denied": "false",
+                "finding_count": "0",
+                "jobs_queued": "0",
+                "mission_id": "",
+                "policy_decision_id": "",
+            }
+            exit_code = 1
+            comment_path = os.path.join(
+                env("RUNNER_TEMP") or "/tmp", "periscan-community-proof.md"
+            )
+
+            try:
+                status, scope = http("GET", f"{api_root}/scopes/{scope_id}", token)
+                if status != 200:
+                    raise ProofError(
+                        "GET /api/v1/scopes/:id failed: " + api_error(status, scope),
+                        "Scope read failed",
+                    )
+                values["scope_type"] = scope.get("scopeType") or "unknown"
+                if scope.get("verificationStatus") != "Verified":
+                    raise ProofError(
+                        "Community validation requires a verified scope "
+                        f"(verificationStatus={scope.get('verificationStatus')}).",
+                        "Scope is not verified",
+                    )
+
+                status, suite = http(
+                    "GET",
+                    f"{api_root}/community/validation-suite?scopeId={scope_id}",
+                    token,
+                )
+                if status != 200:
+                    raise ProofError(
+                        "GET /api/v1/community/validation-suite failed: "
+                        + api_error(status, suite),
+                        "Community suite read failed",
+                    )
+
+                environment, safety = policy_shape(suite)
+                preview_body = {
+                    "executionEnvironment": environment,
+                    "missionType": "ValidationSnapshot",
+                    "requestedAction": {
+                        "credentialTheft": False,
+                        "destructive": False,
+                        "persistence": False,
+                        "realDataExfiltration": False,
+                        "requiresInternalRunner": environment == "InternalRunner",
+                        "requiresTimeWindow": False,
+                        "uncontrolledExploitChaining": False,
+                    },
+                    "safetyLevel": safety,
+                    "target": preview_target(scope),
+                }
+                run_id = env("GITHUB_RUN_ID") or str(int(time.time()))
+                repo = env("GITHUB_REPOSITORY")
+                preview_headers = {
+                    "Idempotency-Key": f"community-proof:{repo}:{run_id}:{scope_id}:preview"
+                }
+                start_headers = {
+                    "Idempotency-Key": f"community-proof:{repo}:{run_id}:{scope_id}:start"
+                }
+                status, decision = http(
+                    "POST",
+                    f"{api_root}/scopes/{scope_id}/policy-decisions/preview",
+                    token,
+                    preview_body,
+                    preview_headers,
+                )
+                if status not in {200, 201}:
+                    raise ProofError(
+                        "POST /api/v1/scopes/:id/policy-decisions/preview failed: "
+                        + api_error(status, decision),
+                        "Policy preview failed",
+                    )
+                policy_id = decision.get("policyDecisionId") or ""
+                values["policy_decision_id"] = policy_id or "none"
+                outputs["policy_decision_id"] = policy_id
+                rationale = (decision.get("rationale") or "").strip()
+
+                status, started = http(
+                    "POST",
+                    f"{api_root}/community/validation-runs",
+                    token,
+                    {"policyDecisionId": policy_id, "scopeId": scope_id},
+                    start_headers,
+                )
+                if status != 200:
+                    raise ProofError(
+                        "POST /api/v1/community/validation-runs failed: "
+                        + api_error(status, started),
+                        "Community validation start failed",
+                    )
+
+                mission = started.get("mission") or {}
+                mission_id = mission.get("missionId") or ""
+                mission_status = mission.get("status") or "unknown"
+                jobs_queued = int(started.get("jobsQueued") or 0)
+                module_ids = started.get("moduleIds") or [
+                    run.get("moduleId")
+                    for run in started.get("runs") or []
+                    if run.get("moduleId")
+                ]
+                values["engine_list"] = none_if_empty(module_ids)
+                values["jobs_queued"] = str(jobs_queued)
+                values["mission_id"] = mission_id or "none"
+                values["mission_status"] = mission_status
+                outputs["jobs_queued"] = str(jobs_queued)
+                outputs["mission_id"] = mission_id
+                outputs["policy_decision_id"] = (
+                    mission.get("policyDecisionId") or policy_id
+                )
+                values["policy_decision_id"] = outputs["policy_decision_id"] or "none"
+                nuclei_id = started.get("nucleiMissionId")
+                nuclei_skip = started.get("nucleiSkipReason")
+                if nuclei_id:
+                    values["nuclei_note"] = f"second mission `{nuclei_id}`"
+                elif nuclei_skip:
+                    values["nuclei_note"] = nuclei_skip
+                else:
+                    values["nuclei_note"] = "not started (primary Community pack only)"
+
+                denied = jobs_queued == 0
+                outputs["denied"] = "true" if denied else "false"
+                if not denied and not mission_id:
+                    raise ProofError(
+                        "POST /api/v1/community/validation-runs returned jobsQueued>0 without a missionId"
+                    )
+                if denied:
+                    values["outcome_heading"] = "Denied — nothing queued"
+                    deny_lines = [
+                        "`POST /api/v1/community/validation-runs` returned HTTP 200 "
+                        "with `jobsQueued=0`.",
+                        f"Mission status: `{mission_status}`.",
+                    ]
+                    if rationale:
+                        deny_lines.append(rationale)
+                    deny_lines.append(
+                        "Denied never queued. This Action does not treat that as an error."
+                    )
+                    values["outcome_body"] = "\n\n".join(deny_lines)
+                    values["nuclei_note"] = "not started (denied never queued)"
+                    exit_code = 0
+                else:
+                    deadline = time.time() + timeout_s
+                    current = dict(mission)
+                    while time.time() < deadline:
+                        m_status, current = http(
+                            "GET", f"{api_root}/missions/{mission_id}", token
+                        )
+                        if m_status != 200:
+                            raise ProofError(
+                                "GET /api/v1/missions/:id failed: "
+                                + api_error(m_status, current)
+                            )
+                        mission_status = current.get("status") or mission_status
+                        values["mission_status"] = mission_status
+                        if mission_status in TERMINAL:
+                            break
+                        time.sleep(interval_s)
+
+                    r_status, runs_payload = http(
+                        "GET", f"{api_root}/missions/{mission_id}/runs", token
+                    )
+                    run_items = (
+                        runs_payload.get("items") or [] if r_status == 200 else []
+                    )
+                    findings = collect_findings(api_root, token, mission_id)
+                    states = Counter(
+                        finding.get("validationState") or "unknown" for finding in findings
+                    )
+                    evidence = unique_ids(findings) or unique_ids(run_items)
+                    if current.get("evidenceIds"):
+                        for item in current.get("evidenceIds") or []:
+                            if item not in evidence:
+                                evidence.append(item)
+                    values["finding_count"] = str(len(findings))
+                    values["validation_state_counts"] = none_if_empty(
+                        [f"{name}: {count}" for name, count in sorted(states.items())]
+                    )
+                    values["evidence_ids"] = none_if_empty(
+                        [f"`{item}`" for item in evidence]
+                    )
+                    outputs["finding_count"] = str(len(findings))
+                    timed_out = mission_status not in TERMINAL
+                    if timed_out:
+                        values["outcome_heading"] = "Snapshot still running"
+                        values["outcome_body"] = (
+                            f"Timed out after {timeout_s}s waiting for a terminal "
+                            f"mission status (last status `{mission_status}`). "
+                            "Comment shows evidence collected so far."
+                        )
+                        exit_code = 1
+                    else:
+                        values["outcome_heading"] = "Queued Community snapshot"
+                        values["outcome_body"] = (
+                            "`POST /api/v1/community/validation-runs` returned HTTP 200 "
+                            f"with `jobsQueued={jobs_queued}`.\n\n"
+                            f"Mission status after poll: `{mission_status}`."
+                        )
+                        exit_code = 0 if mission_status != "Failed" else 1
+            except ProofError as error:
+                values["outcome_heading"] = error.heading
+                values["outcome_body"] = str(error)
+                print(f"::error::{error}", file=sys.stderr)
+                exit_code = 1
+
+            markdown = render(template, values)
+            with open(comment_path, "w", encoding="utf-8") as handle:
+                handle.write(markdown.rstrip() + "\n")
+            outputs["comment_path"] = comment_path
+            github_output = env("GITHUB_OUTPUT")
+            if github_output:
+                write_outputs(github_output, outputs)
+            summary = env("GITHUB_STEP_SUMMARY")
+            if summary:
+                with open(summary, "a", encoding="utf-8") as handle:
+                    handle.write(markdown.rstrip() + "\n")
+            print(markdown)
+            raise SystemExit(exit_code)
+
+
+        if __name__ == "__main__":
+            main()
+        PY
+
+    - name: Comment proof on the pull request
+      if: ${{ always() && steps.proof.outputs.comment_path != '' }}
+      shell: bash
+      env:
+        COMMENT_PATH: ${{ steps.proof.outputs.comment_path }}
+        GH_TOKEN: ${{ inputs.github_token }}
+        PULL_REQUEST_NUMBER: ${{ inputs.pull_request_number }}
+      run: |
+        set -euo pipefail
+        if [ -z "${PULL_REQUEST_NUMBER}" ]; then
+          echo "No pull request number; wrote the job summary only."
+          exit 0
+        fi
+        if [ ! -f "${COMMENT_PATH}" ]; then
+          echo "Rendered comment file is missing."
+          exit 1
+        fi
+        BODY="$(python3 -c 'import json,sys; print(json.dumps(open(sys.argv[1],encoding="utf-8").read()))' "${COMMENT_PATH}")"
+        URL="https://api.github.com/repos/${GITHUB_REPOSITORY}/issues/${PULL_REQUEST_NUMBER}/comments"
+        HTTP_CODE="$(curl -sS -o /tmp/periscan-community-proof-comment.json -w "%{http_code}" \
+          -X POST \
+          -H "Accept: application/vnd.github+json" \
+          -H "Authorization: Bearer ${GH_TOKEN}" \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          -H "Content-Type: application/json" \
+          --data "{\"body\": ${BODY}}" \
+          "${URL}")"
+        if [ "${HTTP_CODE}" != "201" ]; then
+          echo "GitHub comment failed HTTP ${HTTP_CODE}"
+          cat /tmp/periscan-community-proof-comment.json
+          exit 1
+        fi
+        echo "Commented Community proof on PR #${PULL_REQUEST_NUMBER}."
+
+    # Denied jobsQueued=0: do not upload a fake pass.
+    - name: Fetch Community SARIF
+      id: sarif
+      if: ${{ always() && inputs.upload_sarif == 'true' && steps.proof.outcome == 'success' && steps.proof.outputs.denied != 'true' && steps.proof.outputs.mission_id != '' }}
+      shell: bash
+      env:
+        PERISCAN_API_TOKEN: ${{ inputs.api_token }}
+        PERISCAN_API_URL: ${{ inputs.api_url }}
+        PERISCAN_DENIED: ${{ steps.proof.outputs.denied }}
+        PERISCAN_MISSION_ID: ${{ steps.proof.outputs.mission_id }}
+      run: |
+        set -euo pipefail
+        python3 "${{ github.action_path }}/fetch-sarif.py"
+
+    - name: Upload Community SARIF to GitHub Code Scanning
+      if: ${{ always() && inputs.upload_sarif == 'true' && steps.proof.outcome == 'success' && steps.proof.outputs.denied != 'true' && steps.sarif.outputs.sarif_path != '' }}
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: periscan.sarif
+        category: periscan-community

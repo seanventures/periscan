@@ -1,0 +1,49 @@
+# Optional continuous-loop lab golden path (Linux — UDP DNS reliable).
+# Manual dispatch only; not a merge gate. Physical smoke + canary export.
+name: lab-golden
+
+on:
+  workflow_dispatch:
+  schedule:
+    # weekly Sunday 06:00 UTC — soft signal, not release-blocking
+    - cron: "0 6 * * 0"
+
+jobs:
+  lab-physical-golden:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start lab (exposed)
+        working-directory: infra/lab
+        run: |
+          chmod +x scripts/*.sh gen-certs.sh || true
+          ./scripts/up.sh
+
+      - name: Physical smoke
+        working-directory: infra/lab
+        run: ./scripts/smoke.sh
+
+      - name: Canary loop (physical)
+        working-directory: infra/lab
+        run: ./scripts/canary-loop.sh
+
+      - name: Golden path
+        working-directory: infra/lab
+        run: ./scripts/golden-path.sh
+        env:
+          PERISCAN_LAB_REPORT_DIR: ${{ github.workspace }}/docs/qa/lab-runs
+
+      - name: Upload golden artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lab-golden-${{ github.run_id }}
+          path: docs/qa/lab-runs/
+          if-no-files-found: ignore
+
+      - name: Teardown
+        if: always()
+        working-directory: infra/lab
+        run: ./scripts/down.sh || true

@@ -1,0 +1,28 @@
+{
+  "results": [
+    {
+      "source": {
+        "path": "package-lock.json"
+      },
+      "packages": [
+        {
+          "package": {
+            "name": "demo-vulnerable-package",
+            "ecosystem": "npm"
+          },
+          "vulnerabilities": [
+            {
+              "id": "GHSA-demo-1111",
+              "summary": "Demo vulnerable package advisory",
+              "details": "Fixture OSV advisory used to cross-check dependency risk.",
+              "aliases": ["CVE-2024-11111"],
+              "database_specific": {
+                "severity": "HIGH"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
