@@ -1,0 +1,21 @@
+{
+  "name": "@periscan/model-gateway",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "lint": "eslint .",
+    "test": "vitest run src",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@periscan/evidence": "workspace:^",
+    "@periscan/operators": "workspace:^",
+    "@periscan/shared": "workspace:^",
+    "@prisma/client": "^6.19.3",
+    "zod": "^4.1.12"
+  }
+}

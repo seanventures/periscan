@@ -1,0 +1,151 @@
+# Periscan continuous-loop lab (Phase 1)
+# Design: docs/LAB_DESIGN_CONTINUOUS_LOOP.md
+#
+# Configs are **baked into images** (ARG LAB_PROFILE) so Colima/remote Docker
+# does not depend on bind-mounting macOS /Volumes paths.
+#
+#   cd infra/lab && LAB_PROFILE=exposed ./scripts/up.sh
+#   LAB_PROFILE=hardened ./scripts/up.sh
+#   docker compose --profile runners up -d   # needs tokens
+#
+name: periscan-lab
+
+networks:
+  lab_core:
+  lab_edge:
+  lab_app:
+  lab_data:
+
+volumes:
+  certs:
+  runner_plant_creds:
+  runner_hq_creds:
+
+services:
+  init-certs:
+    build:
+      context: .
+      dockerfile: Dockerfile.init-certs
+    volumes:
+      - certs:/certs
+    restart: "no"
+
+  coredns:
+    build:
+      context: ./coredns
+      dockerfile: Dockerfile
+      args:
+        LAB_PROFILE: ${LAB_PROFILE:-exposed}
+    ports:
+      - "5355:53/udp"
+      - "5355:53/tcp"
+    networks: [lab_core]
+    restart: unless-stopped
+
+  edge:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile.edge
+      args:
+        LAB_PROFILE: ${LAB_PROFILE:-exposed}
+    depends_on:
+      init-certs:
+        condition: service_completed_successfully
+    volumes:
+      - certs:/etc/nginx/certs:ro
+    ports:
+      - "8081:80"
+      - "8443:443"
+    networks: [lab_edge]
+    restart: unless-stopped
+
+  app:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile.app
+      args:
+        LAB_PROFILE: ${LAB_PROFILE:-exposed}
+    depends_on:
+      init-certs:
+        condition: service_completed_successfully
+    volumes:
+      - certs:/etc/nginx/certs:ro
+    ports:
+      - "8082:80"
+      - "8444:443"
+    networks: [lab_app]
+    restart: unless-stopped
+
+  data:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile.data
+      args:
+        LAB_PROFILE: ${LAB_PROFILE:-exposed}
+    ports:
+      - "8083:8080"
+    networks: [lab_data]
+    restart: unless-stopped
+
+  mocksiem:
+    build: ./mocksiem
+    ports:
+      - "9200:9200"
+    networks: [lab_core]
+    restart: unless-stopped
+
+  runner-plant:
+    profiles: ["runners"]
+    image: ${PERISCAN_RUNNER_IMAGE:-ghcr.io/seanheiney/periscan-runner:latest}
+    # Load task-signing PEM from enroll-runners creds dir (multiline-safe).
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        export PERISCAN_TASK_SIGNING_PUBLIC_KEY_PEM="$$(cat /runner-creds/task-signing-public.pem)"
+        export PERISCAN_TASK_SIGNING_KEY_ID="$$(cat /runner-creds/task-signing-key-id)"
+        if [ -f /runner-creds/result-signing-private.pem ]; then
+          export PERISCAN_RESULT_SIGNING_PRIVATE_KEY_PEM="$$(cat /runner-creds/result-signing-private.pem)"
+        fi
+        exec /usr/local/bin/periscan-runner poll
+    volumes:
+      # Named volumes (not bind mounts) — Colima cannot see /Volumes host paths.
+      - runner_plant_creds:/runner-creds:ro
+    environment:
+      PERISCAN_CONTROL_PLANE_URL: ${CONTROL_PLANE_URL:-http://host.docker.internal:3001}
+      PERISCAN_RUNNER_AUTH_TOKEN: ${PLANT_TOKEN:-}
+      PERISCAN_RUNNER_ID: ${PLANT_RUNNER_ID:-}
+      PERISCAN_RUNNER_TENANT_ID: ${PERISCAN_RUNNER_TENANT_ID:-}
+      PERISCAN_SITE: plant
+      PERISCAN_NETWORK_SEGMENT: ot-dmz
+      PERISCAN_RUNNER_BOOTSTRAP_MODE: ${PERISCAN_RUNNER_BOOTSTRAP_MODE:-true}
+    networks: [lab_edge, lab_app, lab_data, lab_core]
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+  runner-hq:
+    profiles: ["runners"]
+    image: ${PERISCAN_RUNNER_IMAGE:-ghcr.io/seanheiney/periscan-runner:latest}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        export PERISCAN_TASK_SIGNING_PUBLIC_KEY_PEM="$$(cat /runner-creds/task-signing-public.pem)"
+        export PERISCAN_TASK_SIGNING_KEY_ID="$$(cat /runner-creds/task-signing-key-id)"
+        if [ -f /runner-creds/result-signing-private.pem ]; then
+          export PERISCAN_RESULT_SIGNING_PRIVATE_KEY_PEM="$$(cat /runner-creds/result-signing-private.pem)"
+        fi
+        exec /usr/local/bin/periscan-runner poll
+    volumes:
+      - runner_hq_creds:/runner-creds:ro
+    environment:
+      PERISCAN_CONTROL_PLANE_URL: ${CONTROL_PLANE_URL:-http://host.docker.internal:3001}
+      PERISCAN_RUNNER_AUTH_TOKEN: ${HQ_TOKEN:-}
+      PERISCAN_RUNNER_ID: ${HQ_RUNNER_ID:-}
+      PERISCAN_RUNNER_TENANT_ID: ${PERISCAN_RUNNER_TENANT_ID:-}
+      PERISCAN_SITE: hq
+      PERISCAN_NETWORK_SEGMENT: corp
+      PERISCAN_RUNNER_BOOTSTRAP_MODE: ${PERISCAN_RUNNER_BOOTSTRAP_MODE:-true}
+    networks: [lab_core, lab_edge]
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped

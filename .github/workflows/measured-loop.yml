@@ -1,0 +1,114 @@
+name: Measured Loop (WS1)
+
+# End-to-end proof of Periscan's honest MEASURED closed loop, run LIVE (no fixtures)
+# against the committed containerized test range (infra/test-range):
+#   exposed range  → measured Validated exposures (evidenceBasis=Measured)
+#   hardened range → the SAME live probes measure Fixed
+#
+# Linux runners have working published-UDP DNS and legacy-TLS handshakes, so this
+# exercises ALL 10 measured modules (HTTP/TLS + the 3 DNS modules that are skipped
+# on macOS Docker Desktop — see infra/test-range/README.md "Platform notes").
+#
+# Separate from ci.yml on purpose (ci.yml is the release gate; this is the WS1 gate).
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  measured-loop:
+    name: Live measured closed loop
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: periscan
+          POSTGRES_PASSWORD: periscan
+          POSTGRES_USER: periscan
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U periscan -d periscan"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://periscan:periscan@127.0.0.1:5432/periscan
+      PERISCAN_DATA_REGION: us-east-1
+      PERISCAN_DEV_MODE: "true"
+      PERISCAN_JWT_SECRET: periscan-measured-loop-secret
+      # The test range lives in the checkout; Linux bind-mounts it directly (no
+      # $HOME copy needed, unlike Docker Desktop on macOS).
+      RANGE_DIR: infra/test-range
+      # DNS modules opt-in: Linux published UDP reaches CoreDNS, so run all 10.
+      RUN_MEASURED_E2E: "1"
+      RUN_MEASURED_DNS: "1"
+      RANGE_DNS_SERVER: 127.0.0.1:5354
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.0 --activate
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm --filter @periscan/db run db:generate
+
+      - name: Apply migrations
+        run: pnpm --filter @periscan/db run db:migrate:deploy
+
+      - name: Bring up the test range (exposed profile)
+        working-directory: infra/test-range
+        run: |
+          RANGE_PROFILE=exposed docker compose up -d
+          # Wait for the one-shot cert generator to finish and nginx to serve.
+          for _ in $(seq 1 30); do
+            if docker cp periscan-test-range-nginx-1:/etc/nginx/certs/ca.crt "$GITHUB_WORKSPACE/range-ca.crt" 2>/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          test -s "$GITHUB_WORKSPACE/range-ca.crt"
+          docker compose ps
+
+      - name: Map range hosts (/etc/hosts) for the TLS/HTTP dns.lookup path
+        run: |
+          echo "127.0.0.1 app.range.test cert.range.test dangling.range.test ghost.range.test" | sudo tee -a /etc/hosts
+
+      - name: Sanity-check the live range
+        run: |
+          curl -sSf --cacert "$GITHUB_WORKSPACE/range-ca.crt" -o /dev/null -w "app https %{http_code}\n" https://app.range.test/
+          dig @127.0.0.1 -p 5354 +short cname dangling.range.test
+          dig @127.0.0.1 -p 5354 +short caa app.range.test || true
+
+      - name: Run the measured closed-loop test (all 10 modules)
+        env:
+          # Global fetch (undici) trusts the range CA — must be set at Node startup.
+          NODE_EXTRA_CA_CERTS: ${{ github.workspace }}/range-ca.crt
+          # Point node:dns/promises resolve* at the range CoreDNS for the DNS modules.
+          NODE_OPTIONS: --import ${{ github.workspace }}/infra/test-range/dns-preload.mjs
+        run: pnpm exec vitest run tests/e2e-measured --testTimeout=180000
+
+      - name: Tear down the test range
+        if: always()
+        working-directory: infra/test-range
+        run: docker compose down -v || true

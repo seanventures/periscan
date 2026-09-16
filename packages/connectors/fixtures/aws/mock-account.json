@@ -1,0 +1,64 @@
+{
+  "accountId": "123456789012",
+  "accountAlias": "periscan-demo",
+  "buckets": [
+    {
+      "isPublic": true,
+      "name": "periscan-demo-public-artifacts",
+      "region": "us-east-1"
+    },
+    {
+      "isPublic": false,
+      "name": "periscan-demo-private-backups",
+      "region": "us-east-1"
+    }
+  ],
+  "instances": [
+    {
+      "instanceId": "i-0abc123def4567890",
+      "name": "periscan-web-1",
+      "publicIpAddress": "198.51.100.24",
+      "region": "us-east-1",
+      "securityGroupIds": ["sg-0123456789abcdef0"],
+      "state": "running"
+    },
+    {
+      "instanceId": "i-0fedcba9876543210",
+      "name": "periscan-worker-1",
+      "publicIpAddress": null,
+      "region": "us-east-1",
+      "securityGroupIds": ["sg-0fedcba9876543210"],
+      "state": "running"
+    }
+  ],
+  "roles": [
+    {
+      "attachedPolicies": ["AdministratorAccess", "AmazonS3ReadOnlyAccess"],
+      "arn": "arn:aws:iam::123456789012:role/PeriscanProdAdmin",
+      "isPrivileged": true,
+      "name": "PeriscanProdAdmin"
+    },
+    {
+      "attachedPolicies": ["AmazonEC2ReadOnlyAccess"],
+      "arn": "arn:aws:iam::123456789012:role/PeriscanReadOnly",
+      "isPrivileged": false,
+      "name": "PeriscanReadOnly"
+    }
+  ],
+  "securityGroups": [
+    {
+      "groupId": "sg-0123456789abcdef0",
+      "groupName": "public-web",
+      "openToWorld": true,
+      "ports": [80, 443],
+      "region": "us-east-1"
+    },
+    {
+      "groupId": "sg-0fedcba9876543210",
+      "groupName": "internal-workers",
+      "openToWorld": false,
+      "ports": [443],
+      "region": "us-east-1"
+    }
+  ]
+}

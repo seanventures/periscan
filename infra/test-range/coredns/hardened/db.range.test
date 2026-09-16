@@ -1,0 +1,23 @@
+; HARDENED zone — the remediated DNS posture. Re-serving the same names this way
+; is the closed-loop fix; a re-run measures each DNS dimension as Fixed.
+$ORIGIN range.test.
+$TTL 60
+@   IN SOA ns.range.test. admin.range.test. ( 2024010102 7200 3600 1209600 60 )
+@       IN NS    ns.range.test.
+ns      IN A     127.0.0.1
+
+app     IN A     127.0.0.1
+cert    IN A     127.0.0.1
+
+; Dangling CNAME replaced with a real A record ->
+; periscan.dns_resolution_check -> Fixed (dns_resolved).
+dangling IN A     127.0.0.1
+
+; CAA restricts issuance to an authorized CA ->
+; periscan.dns_caa_check -> Fixed (dns_caa_present).
+app     IN CAA   0 issue "letsencrypt.org"
+
+; SPF (-all) + enforcing DMARC (p=reject) ->
+; periscan.dns_email_security_check -> Fixed (email_security_enforced).
+app         IN TXT "v=spf1 -all"
+_dmarc.app  IN TXT "v=DMARC1; p=reject; rua=mailto:dmarc@range.test"

@@ -1,0 +1,14 @@
+{
+  "matches": [
+    {
+      "vulnerability": {
+        "id": "CVE-2024-0001",
+        "severity": "High"
+      },
+      "artifact": {
+        "name": "demo-lib",
+        "version": "1.0.0"
+      }
+    }
+  ]
+}

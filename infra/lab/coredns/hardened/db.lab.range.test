@@ -1,0 +1,20 @@
+$ORIGIN lab.range.test.
+$TTL 60
+@       IN SOA ns.lab.range.test. hostmaster.lab.range.test. (
+            2026080202 60 30 86400 60 )
+@       IN NS  ns.lab.range.test.
+ns      IN A   127.0.0.1
+
+edge    IN A   127.0.0.1
+app     IN A   127.0.0.1
+data    IN A   127.0.0.1
+siem    IN A   127.0.0.1
+marker  IN A   127.0.0.1
+
+_periscan.edge  IN TXT "periscan-verification=lab-dev-token"
+_periscan.app   IN TXT "periscan-verification=lab-dev-token"
+_periscan.data  IN TXT "periscan-verification=lab-dev-token"
+
+app     IN CAA 0 issue "letsencrypt.org"
+app     IN TXT "v=spf1 -all"
+_dmarc.app IN TXT "v=DMARC1; p=reject; rua=mailto:dmarc@lab.range.test"

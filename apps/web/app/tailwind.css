@@ -1,0 +1,131 @@
+/*
+ * Tailwind v4 entry for the Periscan component kit.
+ *
+ * IMPORTANT: preflight (Tailwind's base reset) is intentionally NOT imported.
+ * The legacy app/globals.css still styles every not-yet-migrated page, and a
+ * global reset would clobber it. We import only the `theme` (design tokens) and
+ * `utilities` layers, so Tailwind utility classes + the kit can be adopted
+ * page-by-page without breaking existing screens. Once all pages are migrated to
+ * the kit, re-enable preflight and retire globals.css product classes.
+ *
+ * [P01-1] Canonical token + primitive source. globals.css `.panel` /
+ * `.primary-button` / `.status-pill` are deprecated compatibility shims that
+ * already map to these tokens — do not reintroduce a second palette there.
+ */
+@layer theme, components, utilities;
+
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+
+/*
+ * Periscan design tokens. These values come directly from the supplied
+ * "dark security-console" handoff and are the canonical source for product UI.
+ */
+@theme {
+  /* Surfaces (utilities: bg-bg, bg-elevated, bg-surface, bg-surface-strong) */
+  --color-bg: #05070f;
+  --color-elevated: #080c18;
+  --color-surface: #0a1226;
+  --color-surface-strong: #12203f;
+
+  /*
+   * Borders (utilities: border-line, border-line-panel, border-line-strong).
+   * Ladder (quiet → strong) — prefer these over ad-hoc hex in kit components:
+   *   line         #16264a  dividers, hairlines
+   *   line-panel   #1e3568  panel/card chrome (alias of legacy --border-panel)
+   *   line-strong  #2b477f  secondary buttons, elevated chrome
+   * Legacy globals also define --border-hairline / --border-input; map new
+   * work to this ladder so border color does not drift per surface.
+   */
+  --color-line: #16264a;
+  --color-line-panel: #1e3568;
+  --color-line-strong: #2b477f;
+
+  /* Text (utilities: text-ink, text-muted, text-subtle)
+   * Small UI copy (11–12px) needs ≥4.5:1 on void/elevated/surface-strong. */
+  --color-ink: #eaf0fb;
+  --color-muted: #c0d0e8;
+  --color-subtle: #a8bbdc;
+
+  /* Brand + semantic
+   * brand / brand-2: light azure for text/links/borders on dark surfaces.
+   * brand-fill: deep solid for white-label CTAs (WCAG AA with text-white). */
+  --color-brand: #3c96ff;
+  --color-brand-2: #6fb2ff;
+  --color-brand-fill: #2563d4;
+  --color-success: #2fe0b0;
+  --color-warning: #ffcf4d;
+  --color-danger: #ff5065;
+  --color-info: #3c96ff;
+
+  /* Radius — tight product chrome; avoid 999px “pill” chips */
+  --radius-card: 6px;
+  --radius-control: 5px;
+  /* Prefer rounded-control for labels; keep token for rare track ends */
+  --radius-pill: 4px;
+
+  --font-sans: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+
+  /* Display = body family (no Space Grotesk / Inter / Geist) */
+  --font-display: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+
+  /*
+   * Semantic VALIDATION-STATE tokens (design-system v1). Kept distinct from the
+   * brand azure so "what needs attention" never competes with product identity.
+   * Utilities: text-validated, bg-blocked/15, border-missed, etc. Each maps to a
+   * ValidationStateBadge / PolicyGateBadge / ControlStateBadge tone.
+   */
+  --color-validated: #2fe0b0;
+  --color-blocked: #3c96ff;
+  --color-blocked-text: #8fc0ff;
+  --color-missed: #ff5065;
+  --color-approval: #ffcf4d;
+  --color-fixed: #2fe0b0;
+  --color-inconclusive: #6b82ab;
+  --color-inconclusive-text: #9fb2d6;
+}
+
+/*
+ * Tailwind preflight is intentionally disabled while legacy surfaces remain,
+ * but product-kit buttons still need a deterministic canvas. Without this
+ * small reset Chromium paints its native ButtonFace behind otherwise
+ * transparent controls, which both breaks the dark theme and reduces contrast.
+ * Utility backgrounds override this component-layer default.
+ */
+@layer components {
+  button {
+    appearance: none;
+    border: 0;
+    background-color: transparent;
+    color: inherit;
+    font: inherit;
+  }
+
+  ::selection {
+    background: rgb(60 150 255 / 35%);
+  }
+}
+
+@keyframes help-enter {
+  from {
+    opacity: 0;
+    transform: translateX(1rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Kit modal enter — pair with motion-safe:animate-[ps-modal_*] (no motion under reduce) */
+@keyframes ps-modal {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

@@ -1,0 +1,24 @@
+id: periscan-safe-public-metadata
+
+info:
+  name: Periscan Safe Public Metadata Review
+  author: periscan
+  severity: info
+  description: Safe GET-only checks for standard public metadata paths on verified external targets.
+  tags: periscan,safe,http,metadata
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/robots.txt"
+      - "{{BaseURL}}/sitemap.xml"
+      - "{{BaseURL}}/.well-known/security.txt"
+    redirects: true
+    max-redirects: 1
+    matchers-condition: or
+    matchers:
+      - type: status
+        status:
+          - 200
+          - 401
+          - 403

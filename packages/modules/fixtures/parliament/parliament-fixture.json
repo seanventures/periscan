@@ -1,0 +1,26 @@
+[
+  {
+    "issue": "RESOURCE_STAR",
+    "title": "Unnecessary use of Resource *",
+    "severity": "LOW",
+    "description": "Unnecessary use of Resource *",
+    "detail": "",
+    "location": {
+      "actions": ["*"],
+      "filepath": "overly-permissive-policy.json",
+      "resource": "*"
+    }
+  },
+  {
+    "issue": "INVALID_ARN",
+    "title": "Invalid ARN",
+    "severity": "MEDIUM",
+    "description": "Malformed resource, should have the form arn:partition:service:region:account:id",
+    "detail": "",
+    "location": {
+      "actions": ["s3:GetObject"],
+      "filepath": "overly-permissive-policy.json",
+      "resource": "arn:aws:iam::123456789012:not-a-valid-s3-arn"
+    }
+  }
+]

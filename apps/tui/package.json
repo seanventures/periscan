@@ -1,0 +1,29 @@
+{
+  "name": "@periscan/tui",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "periscan": "./src/index.tsx"
+  },
+  "scripts": {
+    "dev": "tsx src/index.tsx",
+    "start": "tsx src/index.tsx",
+    "lint": "eslint .",
+    "test": "vitest run src",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@periscan/shared": "workspace:^",
+    "ink": "^5.2.1",
+    "ink-text-input": "^6.0.0",
+    "react": "^18.3.1",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.18",
+    "ink-testing-library": "^4.0.0",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  }
+}

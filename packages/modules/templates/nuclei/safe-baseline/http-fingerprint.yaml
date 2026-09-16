@@ -1,0 +1,23 @@
+id: periscan-safe-http-fingerprint
+
+info:
+  name: Periscan Safe HTTP Fingerprint
+  author: periscan
+  severity: info
+  description: Safe HTTP fingerprinting for verified external targets.
+  tags: periscan,safe,http
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/"
+    redirects: true
+    max-redirects: 2
+    matchers:
+      - type: status
+        status:
+          - 200
+          - 301
+          - 302
+          - 401
+          - 403
