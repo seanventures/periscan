@@ -14,7 +14,7 @@
   "dependencies": {
     "@periscan/policy": "workspace:^",
     "@periscan/shared": "workspace:^",
-    "yaml": "^2.9.0",
+    "yaml": "^2.9.1",
     "zod": "^4.1.12"
   }
 }
