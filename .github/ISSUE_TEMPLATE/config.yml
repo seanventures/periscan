@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security policy
+    url: https://github.com/seanventures/periscan/blob/main/SECURITY.md
+    about: Prefer the Security issue template — title-only [SECURITY], no PoCs, not GitHub PVR.
+  - name: How to contribute
+    url: https://github.com/seanventures/periscan/blob/main/CONTRIBUTING.md
+    about: First useful PR is an adapter + fixture. Clone this repo.

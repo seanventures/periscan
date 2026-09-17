@@ -1,0 +1,36 @@
+# Community-as-code example. Copy to .periscan.yaml in a project you own.
+#
+# This file is a portable declaration of Community pack *intent*.
+# The Periscan control plane does not load it. Validation still starts
+# through POST /api/v1/community/validation-runs and the policy engine.
+# Denied work never queues.
+#
+# YAML cannot replace DNS TXT, .periscan-authorization, or Owner
+# attestation. It cannot enable Atomic, Caldera, SharpHound, sqlmap, or
+# Metasploit. It is not a LICENSE flip and not full BAS.
+#
+# Schema + parser: packages/shared/src/community-as-code.ts
+# Docs: docs/PERISCAN_YAML.md
+
+version: 1
+kind: CommunityAsCode
+pack: community
+
+safety:
+  ceiling: ActiveNonInvasive
+  require_verified_scope: true
+  deny_never_queues: true
+  live_offensive: false
+
+nuclei:
+  # External PoA stays a sibling mission so a PoA kill-switch cannot
+  # block the rest of the pack.
+  second_mission: true
+  include_in_primary_start: false
+
+engines:
+  atomic: false
+  caldera: false
+  sharphound: false
+  sqlmap: false
+  metasploit: false

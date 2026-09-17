@@ -1,0 +1,21 @@
+$ORIGIN lab.range.test.
+$TTL 60
+@       IN SOA ns.lab.range.test. hostmaster.lab.range.test. (
+            2026080201 60 30 86400 60 )
+@       IN NS  ns.lab.range.test.
+ns      IN A   127.0.0.1
+
+; Multi-hop tiers (host DNS /etc/hosts maps to published ports on docker host)
+edge    IN A   127.0.0.1
+app     IN A   127.0.0.1
+data    IN A   127.0.0.1
+siem    IN A   127.0.0.1
+marker  IN A   127.0.0.1
+
+; Optional verification TXT placeholders (seed script overwrites token)
+_periscan.edge  IN TXT "periscan-verification=lab-dev-token"
+_periscan.app   IN TXT "periscan-verification=lab-dev-token"
+_periscan.data  IN TXT "periscan-verification=lab-dev-token"
+
+; Exposed DNS posture (weak email/CAA for posture modules against app)
+app     IN TXT "v=spf1 +all"

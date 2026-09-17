@@ -1,0 +1,34 @@
+{
+  "nodes": [
+    {
+      "id": "user:dev-admin",
+      "type": "User",
+      "name": "dev-admin@example.com",
+      "privilege": "Admin"
+    },
+    {
+      "id": "group:cloud-admins",
+      "type": "Group",
+      "name": "Cloud Admins",
+      "privilege": "Privileged"
+    },
+    {
+      "id": "asset:prod-account",
+      "type": "CloudAccount",
+      "name": "Production AWS Account",
+      "criticality": "High"
+    }
+  ],
+  "edges": [
+    {
+      "source": "user:dev-admin",
+      "target": "group:cloud-admins",
+      "relationship": "MemberOf"
+    },
+    {
+      "source": "group:cloud-admins",
+      "target": "asset:prod-account",
+      "relationship": "CanAdmin"
+    }
+  ]
+}

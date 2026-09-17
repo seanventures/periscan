@@ -1,0 +1,143 @@
+# Example Kubernetes manifests for Periscan Internal Runner.
+# Replace all secret values with issued runner credentials before applying.
+# The runner is outbound-only and does not require a Service or Ingress.
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: periscan
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: periscan-runner-secrets
+  namespace: periscan
+type: Opaque
+stringData:
+  PERISCAN_CONTROL_PLANE_URL: "https://api.periscan.cloud"
+  PERISCAN_RUNNER_ID: "replace-with-issued-runner-id"
+  PERISCAN_RUNNER_AUTH_TOKEN: "replace-with-issued-runner-auth-token"
+  PERISCAN_RUNNER_MTLS_CA_FILE: "/etc/periscan/tls/runner-ca.pem"
+  PERISCAN_RUNNER_MTLS_CLIENT_CERT_FILE: "/etc/periscan/tls/runner-client.pem"
+  PERISCAN_RUNNER_MTLS_CLIENT_KEY_FILE: "/etc/periscan/tls/runner-client.key"
+  PERISCAN_TASK_SIGNING_PUBLIC_KEY_PEM: |
+    -----BEGIN PUBLIC KEY-----
+    replace-with-issued-task-signing-public-key
+    -----END PUBLIC KEY-----
+  PERISCAN_RUNNER_PROXY_URL: ""
+  PERISCAN_RUNNER_KILL_SWITCH: "false"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: periscan-runner-mtls
+  namespace: periscan
+type: Opaque
+stringData:
+  runner-ca.pem: |
+    -----BEGIN CERTIFICATE-----
+    replace-with-issued-runner-ca-certificate
+    -----END CERTIFICATE-----
+  runner-client.pem: |
+    -----BEGIN CERTIFICATE-----
+    replace-with-issued-runner-client-certificate
+    -----END CERTIFICATE-----
+  runner-client.key: |
+    -----BEGIN RSA PRIVATE KEY-----
+    replace-with-locally-generated-runner-client-private-key
+    -----END RSA PRIVATE KEY-----
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: periscan-runner
+  namespace: periscan
+  labels:
+    app: periscan-runner
+    app.kubernetes.io/name: periscan-runner
+    app.kubernetes.io/part-of: periscan
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: periscan-runner
+  template:
+    metadata:
+      labels:
+        app: periscan-runner
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: runner
+          image: ghcr.io/seanheiney/periscan-runner:latest
+          imagePullPolicy: IfNotPresent
+          args: ["poll"]
+          envFrom:
+            - secretRef:
+                name: periscan-runner-secrets
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: runner-mtls
+              mountPath: /etc/periscan/tls
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: runner-mtls
+          secret:
+            secretName: periscan-runner-mtls
+            items:
+              - key: runner-ca.pem
+                path: runner-ca.pem
+              - key: runner-client.pem
+                path: runner-client.pem
+              - key: runner-client.key
+                path: runner-client.key
+        - name: tmp
+          emptyDir:
+            medium: Memory
+            sizeLimit: 16Mi
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: periscan-runner-egress
+  namespace: periscan
+spec:
+  podSelector:
+    matchLabels:
+      app: periscan-runner
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress: []
+  egress:
+    - ports:
+        - protocol: TCP
+          port: 443
+    - ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53

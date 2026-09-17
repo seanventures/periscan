@@ -1,0 +1,46 @@
+name: Security
+description: Title-only [SECURITY] vulnerability intake. No public PoC.
+title: "[SECURITY] "
+labels: ["security"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Public intake is title-only.** Do **not** paste exploit details, PoCs, payloads, credentials, or customer data in this issue.
+
+        Maintainers acknowledge within **72 hours** and aim to fix or disclose within **90 days** (see [SECURITY.md](https://github.com/seanventures/periscan/blob/main/SECURITY.md)).
+
+        We do **not** use GitHub private vulnerability reporting. There is no public `security@` mailbox — do not invent one.
+  - type: dropdown
+    id: component
+    attributes:
+      label: Affected surface (high level only)
+      options:
+        - Control plane / API
+        - Web UI
+        - Runner / task signing
+        - Policy / audit gates
+        - Dependency / supply chain
+        - Docs / install path
+        - Unsure
+    validations:
+      required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: One-line public summary
+      description: Non-sensitive title expansion only. No steps, payloads, or PoCs here.
+      placeholder: Example — tenant isolation gap in findings list (details offline)
+    validations:
+      required: true
+  - type: checkboxes
+    id: disclosure
+    attributes:
+      label: Disclosure rules
+      options:
+        - label: I did not include a public PoC, exploit payload, credentials, or third-party target data in this issue.
+          required: true
+        - label: Any reproduction was against systems I own or have written authorization to test.
+          required: true
+        - label: I understand maintainers will follow up privately; this public issue stays title/summary only.
+          required: true
