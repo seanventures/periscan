@@ -38,7 +38,7 @@
     "@tailwindcss/postcss": "^4",
     "@types/cytoscape": "^3.31.0",
     "@types/qrcode": "^1.5.5",
-    "axe-core": "^4.11.4",
+    "axe-core": "^4.13.0",
     "tailwindcss": "^4"
   }
 }
