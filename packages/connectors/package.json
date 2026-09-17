@@ -21,6 +21,6 @@
     "@aws-sdk/client-wafv2": "^3.1058.0",
     "@periscan/shared": "workspace:^",
     "ldapts": "^8.1.8",
-    "zod": "^4.1.12"
+    "zod": "^4.6.5"
   }
 }
