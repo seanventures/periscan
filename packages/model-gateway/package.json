@@ -15,7 +15,7 @@
     "@periscan/evidence": "workspace:^",
     "@periscan/operators": "workspace:^",
     "@periscan/shared": "workspace:^",
-    "@prisma/client": "^6.19.3",
+    "@prisma/client": "^7.10.0",
     "zod": "^4.1.12"
   }
 }
