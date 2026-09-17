@@ -49,7 +49,7 @@ jobs:
             ${{ github.event.inputs.tag != '' && format('type=raw,value={0}', github.event.inputs.tag) || '' }}
 
       - name: Build and push runner image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: apps/runner
           file: apps/runner/Dockerfile
