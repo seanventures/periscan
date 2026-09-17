@@ -1,0 +1,12 @@
+[
+  {
+    "host": "https://app.example.com",
+    "info": {
+      "description": "The application exposes an HTTP service fingerprint using a safe GET request.",
+      "name": "Periscan Safe HTTP Fingerprint",
+      "severity": "low"
+    },
+    "matched-at": "https://app.example.com/",
+    "template-id": "periscan-safe-http-fingerprint"
+  }
+]

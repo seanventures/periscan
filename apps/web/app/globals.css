@@ -1,0 +1,1730 @@
+:root {
+  color-scheme: dark;
+  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+  --surface-void: #05070f;
+  --surface-base: #0a1024;
+  --surface-panel: #0c1428;
+  --surface-panel-alt: #0a1226;
+  --surface-raised: #12203f;
+  --surface-input: #080d1c;
+  /*
+   * UX-W2 visual tokens (86–92) — border ladder, not free-form hex.
+   * Prefer Tailwind kit: border-line / border-line-panel / border-line-strong.
+   *   hairline     #12203f  deepest dividers
+   *   hairline-2   #16264a  = kit border-line
+   *   panel        #1e3568  = kit border-line-panel (card/panel chrome)
+   *   input        #23386b  field chrome
+   *   line-strong  #2b477f  = kit border-line-strong (secondary CTA)
+   * Density: shell sets data-density from localStorage periscan-density
+   * (comfortable | compact; UX-W9). Compact tightens product-main padding.
+   */
+  --border-hairline: #12203f;
+  --border-hairline-2: #16264a;
+  --border-panel: #1e3568;
+  --border-input: #23386b;
+  --signal-blue: #3c96ff;
+  --deep-blue: #2563d4;
+  --clear-teal: #2fe0b0;
+  --risk-high: #ff5065;
+  --risk-medium: #ffcf4d;
+  --ink: #eaf0fb;
+  --muted: #c0d0e8;
+  --subtle: #a8bbdc;
+}
+
+/* UX-W2 density attribute on .periscan-app-shell (comfortable = default rhythm). */
+[data-density="comfortable"] {
+  --shell-density-pad: 1rem;
+}
+[data-density="compact"] {
+  --shell-density-pad: 0.75rem;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  /* Flat console canvas — no marketing bloom */
+  background: var(--surface-void);
+  color: var(--ink);
+}
+
+/* UX-W5 / 196: SOC dark cockpit — flat void, no bloom (off by default). */
+body.soc-dark-cockpit,
+.periscan-app-shell.soc-dark-cockpit {
+  background: var(--surface-void);
+}
+
+body.soc-dark-cockpit {
+  background-image: none;
+}
+
+.skip-link {
+  position: fixed;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 100;
+  transform: translateY(-150%);
+  border-radius: 5px;
+  /* Brand azure (not legacy teal) — reserve teal for success/verified signals only [P01-17] */
+  background: var(--signal-blue, #3c96ff);
+  color: #07111b;
+  font-weight: 700;
+  padding: 0.7rem 1rem;
+  text-decoration: none;
+  transition: transform 120ms ease;
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
+/* Skip-link landing target: no permanent outline, brief focus ring for 2.4.7 */
+#main-content:focus {
+  outline: none;
+}
+#main-content:focus-visible {
+  outline: 2px solid var(--color-brand, #3c96ff);
+  outline-offset: 2px;
+}
+
+/*
+ * P16-18: Legacy max-width/padding only on auth/public mains.
+ * Product shell owns a single <main class="product-main"> with no nested main
+ * (PageShell is a div). Do not reintroduce global main { max-width: 960px }.
+ */
+main.auth-main,
+main.public-main {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 3rem 1.5rem 4rem;
+}
+
+main.product-main {
+  margin: 0;
+  max-width: none;
+  padding: 0;
+  width: 100%;
+}
+
+/*
+ * UX-W9 / #192 — adaptive density.
+ * Shell root sets data-density=comfortable|compact from localStorage periscan-density.
+ * Compact tightens common page/panel/row padding without inventing a second theme.
+ */
+.periscan-app-shell[data-density="compact"] main.product-main .px-5 {
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+}
+.periscan-app-shell[data-density="compact"] main.product-main .px-4 {
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+}
+.periscan-app-shell[data-density="compact"] main.product-main .py-6 {
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+}
+.periscan-app-shell[data-density="compact"] main.product-main .py-4 {
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+.periscan-app-shell[data-density="compact"] main.product-main .py-3 {
+  padding-top: 0.4rem;
+  padding-bottom: 0.4rem;
+}
+.periscan-app-shell[data-density="compact"] main.product-main .gap-5 {
+  gap: 0.75rem;
+}
+.periscan-app-shell[data-density="compact"] main.product-main .gap-4 {
+  gap: 0.5rem;
+}
+.periscan-app-shell[data-density="compact"] main.product-main .p-4 {
+  padding: 0.65rem;
+}
+.periscan-app-shell[data-density="compact"] main.product-main .sm\:px-5 {
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+}
+.periscan-app-shell[data-density="compact"] main.product-main .lg\:px-6 {
+  padding-left: 0.875rem;
+  padding-right: 0.875rem;
+}
+
+.hero {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.eyebrow {
+  color: #8abfe3;
+  font-size: 0.85rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.headline {
+  margin: 0;
+  font-size: clamp(2.5rem, 5vw, 4.5rem);
+  line-height: 0.96;
+}
+
+.subcopy {
+  max-width: 46rem;
+  color: #bfd0df;
+  font-size: 1.05rem;
+  line-height: 1.6;
+}
+
+/*
+ * [P01-1] DEPRECATED product chrome — do not use in new code.
+ *
+ * Canonical kit: apps/web/src/ui/* (Panel, PanelHeader, Button, StatusPill,
+ * Badge) + apps/web/app/tailwind.css tokens. These class names remain only as
+ * compatibility shims for unmigrated surfaces; they map to kit tokens so
+ * remaining consumers do not paint the old teal/marketing look.
+ */
+.panel {
+  border: 1px solid var(--border-panel);
+  border-radius: 6px;
+  background: var(--surface-panel-alt);
+  box-shadow: none;
+  min-width: 0;
+  padding: 1.5rem;
+  width: 100%;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.panel-header > * {
+  min-width: 0;
+}
+
+.panel-header h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.compact-header {
+  margin-bottom: 0.5rem;
+}
+
+/* [P01-1] Prefer <StatusPill /> / <Badge /> from @/src/ui */
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 0;
+  background: transparent;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 0;
+  text-transform: uppercase;
+}
+
+.status-pill--ok {
+  color: var(--clear-teal);
+}
+
+.status-pill--error {
+  color: var(--risk-high);
+}
+
+.status-pill--pending {
+  color: var(--risk-medium);
+}
+
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.metric {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.metric dt {
+  color: #9fb4c8;
+  margin-bottom: 0.35rem;
+}
+
+.metric dd {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.workspace-shell {
+  display: grid;
+  gap: 1.5rem;
+}
+
+/* [P01-1] Prefer <Panel className="..."> from @/src/ui */
+.panel--elevated {
+  border-color: var(--border-panel);
+  border-radius: 6px;
+  background: var(--surface-panel-alt);
+}
+
+.stack {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.stack > * {
+  min-width: 0;
+}
+
+.compact-stack {
+  gap: 0.25rem;
+}
+
+.compact {
+  max-width: none;
+}
+
+.auth-panel,
+.hero-panel {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.segmented {
+  display: inline-flex;
+  gap: 0.35rem;
+  padding: 0.35rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  width: fit-content;
+}
+
+/* [P01-1] Prefer <Button /> / buttonClassName() from @/src/ui */
+.segment,
+.primary-button,
+.secondary-button,
+.link-button {
+  appearance: none;
+  border: 0;
+  border-radius: 5px;
+  cursor: pointer;
+  font: inherit;
+  text-decoration: none;
+}
+
+.segment {
+  background: transparent;
+  color: #bfd0df;
+  padding: 0.55rem 0.95rem;
+}
+
+.segment.is-active {
+  background: rgba(122, 212, 210, 0.16);
+  color: #f5fbff;
+}
+
+.form-grid,
+.workspace-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.field span {
+  color: #9fb4c8;
+  font-size: 0.9rem;
+}
+
+.field input,
+.field select,
+.field textarea,
+.inline-form input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #f3f7fb;
+  padding: 0.85rem 0.95rem;
+}
+
+.field select {
+  appearance: none;
+}
+
+.field textarea {
+  font: inherit;
+  min-height: 8rem;
+  resize: vertical;
+}
+
+.primary-button {
+  border: 1px solid #2563d4;
+  background: #2563d4;
+  box-shadow: none;
+  color: #ffffff;
+}
+
+.secondary-button,
+.link-button {
+  border: 1px solid #2b477f;
+  background: rgba(60, 150, 255, 0.06);
+  color: #cfe0ff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.8rem 1rem;
+}
+
+.primary-button:disabled,
+.secondary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.dashboard-grid,
+.workspace-grid {
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.dashboard-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.metric-card {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 1rem 1.1rem;
+}
+
+.metric-card span {
+  color: #9fb4c8;
+  display: block;
+}
+
+.metric-card strong {
+  display: block;
+  font-size: 2rem;
+  margin-top: 0.4rem;
+}
+
+.metric-card .small-strong {
+  font-size: 0.9rem;
+  margin-top: 0;
+}
+
+.inline-form,
+.action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.inline-form input {
+  min-width: min(26rem, 100%);
+  flex: 1;
+}
+
+.list-card {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.03);
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+}
+
+.list-card > * {
+  min-width: 0;
+}
+
+.list-card code {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.list-card--stack {
+  align-items: flex-start;
+  flex-direction: column;
+}
+
+.detail-grid {
+  display: grid;
+  gap: 0.75rem 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  margin: 0;
+}
+
+.detail-grid dt {
+  color: var(--muted, #6b7280);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.detail-grid dd {
+  margin: 0.15rem 0 0;
+  overflow-wrap: anywhere;
+}
+
+.code-block {
+  background: rgba(15, 23, 42, 0.85);
+  border-radius: 0.5rem;
+  color: #e2e8f0;
+  font-family: "IBM Plex Mono", "SFMono-Regular", monospace;
+  font-size: 0.8rem;
+  margin: 0;
+  overflow-x: auto;
+  padding: 0.9rem 1.1rem;
+  white-space: pre;
+}
+
+.threat-list-button {
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  width: 100%;
+}
+
+.threat-list-button:hover,
+.threat-list-button:focus-visible {
+  border-color: rgba(122, 212, 210, 0.38);
+  outline: none;
+}
+
+.trust-grid {
+  align-items: start;
+}
+
+.trust-detail-grid,
+.trust-principles,
+.audit-toolbar {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.trust-detail-grid h4 {
+  margin: 0 0 0.5rem;
+}
+
+.chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.chip-list li {
+  border: 1px solid rgba(138, 191, 227, 0.18);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #bfd0df;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.85rem;
+}
+
+.chip-list span {
+  border: 1px solid rgba(138, 191, 227, 0.18);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #bfd0df;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.85rem;
+}
+
+.marketplace-metrics,
+.marketplace-filters {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+}
+
+.marketplace-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+
+.marketplace-card {
+  display: grid;
+  gap: 1rem;
+  align-content: start;
+}
+
+.marketplace-card h3 {
+  margin: 0.25rem 0 0;
+}
+
+.portfolio-card {
+  align-content: start;
+}
+
+.card-topline {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.metadata-grid {
+  display: grid;
+  gap: 0.8rem;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.metadata-grid dt {
+  color: #8abfe3;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.metadata-grid dd {
+  margin: 0.25rem 0 0;
+}
+
+.snapshot-banner {
+  border-left: 3px solid #7ad4d2;
+  padding-left: 1rem;
+}
+
+.coverage-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.9rem;
+}
+
+.coverage-card {
+  border: 1px solid rgba(122, 212, 210, 0.14);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 1rem;
+}
+
+.coverage-card strong {
+  display: block;
+  font-size: 1.9rem;
+  margin: 0.45rem 0;
+}
+
+.coverage-label,
+.section-kicker {
+  color: #8abfe3;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.coverage-note {
+  max-width: 48rem;
+}
+
+.evidence-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.evidence-chip {
+  border-radius: 999px;
+  background: rgba(122, 212, 210, 0.12);
+  border: 1px solid rgba(122, 212, 210, 0.22);
+  color: #d8edf4;
+  font-family: "IBM Plex Mono", "SFMono-Regular", monospace;
+  font-size: 0.74rem;
+  padding: 0.35rem 0.6rem;
+}
+
+.muted-copy {
+  color: #9fb4c8;
+  margin: 0;
+}
+
+.facts {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+}
+
+.facts div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.facts dt {
+  color: #9fb4c8;
+  font-size: 0.85rem;
+}
+
+.facts dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.error-copy {
+  color: #ffb1b1;
+  margin: 0;
+}
+
+.state-panel {
+  max-width: 1100px;
+}
+
+.state-panel .panel-header {
+  align-items: flex-start;
+  margin-bottom: 0;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.success-copy {
+  color: #a7f3d0;
+  margin: 0;
+}
+
+.report-page {
+  max-width: none;
+  padding: 1.5rem;
+}
+
+.report-toolbar {
+  max-width: 1100px;
+  margin: 0 auto 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.analyst-note-panel,
+.report-delivery-panel {
+  max-width: 1100px;
+  margin: 0 auto 1rem;
+}
+
+.report-share-details {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+}
+
+.report-share-details div {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.report-share-details dt {
+  color: var(--muted);
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.report-share-details dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.report-shell {
+  border-radius: 24px;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.public-demo-page {
+  max-width: 1180px;
+}
+
+.public-demo-hero {
+  border: 1px solid var(--border-panel);
+  border-radius: 6px;
+  background: var(--surface-panel-alt);
+  display: grid;
+  gap: 1.5rem;
+  margin-bottom: 1.25rem;
+  overflow: hidden;
+  padding: clamp(1.25rem, 3vw, 2rem);
+  position: relative;
+}
+
+.public-demo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.public-demo-proof-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  margin-bottom: 1.25rem;
+}
+
+.proof-card {
+  border: 1px solid var(--border-panel);
+  border-radius: 6px;
+  background: var(--surface-panel-alt);
+  padding: 1.1rem;
+}
+
+.proof-card strong {
+  display: block;
+  font-size: 2.2rem;
+  margin: 0.4rem 0;
+}
+
+.public-demo-story {
+  margin-bottom: 1.25rem;
+}
+
+.story-list {
+  color: #d9e6f1;
+  line-height: 1.65;
+  margin: 0;
+  padding-left: 1.3rem;
+}
+
+.story-list li + li {
+  margin-top: 0.45rem;
+}
+
+.success-signal {
+  border-left: 3px solid #7ad4d2;
+  margin: 0.75rem 0 0;
+  padding: 0.2rem 0 0.2rem 1rem;
+}
+
+.success-signal p {
+  color: #f4fbff;
+  font-size: clamp(1rem, 1.8vw, 1.3rem);
+  line-height: 1.55;
+  margin: 0.35rem 0 0;
+}
+
+.public-demo-report-shell {
+  display: grid;
+  gap: 1rem;
+}
+
+.public-demo-toolbar {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.public-demo-toolbar h2 {
+  margin: 0.25rem 0 0;
+}
+
+.demo-report-frame {
+  border: 1px solid rgba(122, 212, 210, 0.16);
+  border-radius: 24px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.28);
+  min-height: 920px;
+  overflow: hidden;
+  width: 100%;
+}
+
+@media (max-width: 720px) {
+  main.auth-main,
+  main.public-main {
+    padding: 2rem 1rem 3rem;
+  }
+
+  .report-page {
+    padding: 1rem;
+  }
+
+  .dashboard-grid,
+  .workspace-grid,
+  .marketplace-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .panel-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .card-topline {
+    flex-direction: column;
+  }
+
+  .public-demo-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .demo-report-frame {
+    min-height: 780px;
+  }
+}
+
+@media (max-width: 480px) {
+  main.auth-main,
+  main.public-main {
+    padding: 1.25rem 0.75rem 2.5rem;
+  }
+
+  .panel,
+  .metric-card,
+  .coverage-card,
+  .proof-card {
+    padding: 1rem;
+  }
+
+  .action-row > *,
+  .inline-form > *,
+  .primary-button,
+  .secondary-button,
+  .link-button {
+    min-height: 44px;
+  }
+
+  .action-row > *,
+  .inline-form > * {
+    flex: 1 1 100%;
+  }
+
+  .compact-action-row > * {
+    flex: 0 1 auto;
+  }
+
+  .compact-action-row code {
+    flex: 1 1 100%;
+  }
+
+  .segmented {
+    width: 100%;
+  }
+
+  .segment {
+    flex: 1;
+    min-height: 44px;
+  }
+
+  .list-card {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .marketplace-metrics,
+  .marketplace-filters,
+  .metric-grid,
+  .trust-detail-grid,
+  .trust-principles,
+  .audit-toolbar,
+  .coverage-grid,
+  .public-demo-proof-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .metric-card strong,
+  .coverage-card strong,
+  .proof-card strong {
+    font-size: 1.6rem;
+  }
+
+  .status-pill {
+    white-space: normal;
+  }
+}
+
+.app-header {
+  background: rgba(8, 11, 17, 0.9);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.app-header-inner {
+  align-items: center;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  margin: 0 auto;
+  max-width: 1080px;
+  padding: 12px 24px;
+}
+
+.app-brand {
+  color: #f7fbff;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-decoration: none;
+}
+
+.app-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  justify-content: flex-end;
+}
+
+.app-nav a {
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  padding: 0.35rem 0.65rem;
+  text-decoration: none;
+  transition:
+    border-color 140ms ease,
+    color 140ms ease,
+    background 140ms ease;
+}
+
+.app-nav a:focus-visible,
+.app-nav a:hover {
+  background: rgba(122, 212, 210, 0.08);
+  border-color: rgba(122, 212, 210, 0.24);
+  color: #ffffff;
+}
+
+.app-nav a.is-active,
+.app-nav a[aria-current="page"] {
+  background: rgba(122, 212, 210, 0.14);
+  border-color: rgba(122, 212, 210, 0.32);
+  color: #f7fbff;
+}
+
+/* Align with PageShell horizontal rhythm (px-4 sm:px-6 lg:px-8); full-bleed
+   width so breadcrumbs share the same column edge as page content. */
+.app-breadcrumb {
+  margin: 0 auto;
+  max-width: none;
+  padding: 14px 1rem 0;
+}
+
+@media (min-width: 640px) {
+  .app-breadcrumb {
+    padding-inline: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .app-breadcrumb {
+    padding-inline: 2rem;
+  }
+}
+
+/* P09: findings Filters details — always show filter body on md+ even when
+   the <details> is closed (phone defaults closed behind "Filters"). */
+@media (min-width: 768px) {
+  details.findings-filters-details > summary {
+    display: none !important;
+  }
+
+  details.findings-filters-details > .findings-filters-body {
+    display: flex !important;
+  }
+}
+
+.app-breadcrumb ol {
+  align-items: center;
+  color: var(--subtle);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 0.82rem;
+  gap: 8px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.app-breadcrumb li {
+  align-items: center;
+  display: inline-flex;
+  gap: 8px;
+}
+
+.app-breadcrumb li + li::before {
+  /* Brand azure separators — legacy teal reserved for success/verified only [P01-17] */
+  color: rgba(60, 150, 255, 0.45);
+  content: "/";
+}
+
+.app-breadcrumb a {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.app-breadcrumb a:focus-visible,
+.app-breadcrumb a:hover {
+  color: #ffffff;
+  outline-color: rgba(60, 150, 255, 0.55);
+}
+
+.app-breadcrumb [aria-current="page"] {
+  color: var(--ink);
+}
+
+@media (max-width: 720px) {
+  .app-header-inner {
+    align-items: flex-start;
+    flex-direction: column;
+    padding-inline: 16px;
+  }
+
+  .app-nav {
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    max-width: 100%;
+    overflow-x: auto;
+    padding-bottom: 0.15rem;
+    scrollbar-color: rgba(122, 212, 210, 0.45) transparent;
+  }
+
+  .app-breadcrumb {
+    padding-inline: 16px;
+  }
+}
+
+/* Product surfaces: findings, signal activity, missions, attack-path depth,
+   and fix verification. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.error-banner-inline {
+  margin: 0;
+  border-radius: 12px;
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  background: rgba(248, 113, 113, 0.12);
+  color: #fecaca;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
+}
+
+.path-step-list {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.3rem;
+  color: #cbd5e1;
+  font-size: 0.85rem;
+}
+
+.attack-path-depth,
+.finding-path-proof,
+.remediation-verification {
+  border-top: 1px solid rgba(148, 163, 184, 0.14);
+  padding-top: 0.75rem;
+}
+
+.verification-result {
+  border: 1px solid rgba(122, 212, 210, 0.28);
+  background: rgba(122, 212, 210, 0.06);
+}
+
+.evidence-chip--new {
+  background: rgba(134, 239, 172, 0.16);
+  border-color: rgba(134, 239, 172, 0.4);
+  color: #bbf7d0;
+}
+
+.job-lookup {
+  border-top: 1px solid rgba(148, 163, 184, 0.14);
+  padding-top: 0.75rem;
+}
+
+.list-card.is-active {
+  border-color: rgba(122, 212, 210, 0.45);
+  box-shadow: 0 0 0 1px rgba(122, 212, 210, 0.25);
+}
+
+/* --------------------------------------------------------------------------
+   Global reduced-motion (P08 / ICP-P3-3): kill transitions & animations when
+   the operator prefers reduced motion. Complements motion-safe: utilities.
+   -------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Canonical Periscan design-system bridge [P01-1]
+
+   Product chrome classes (.panel, .primary-button, .status-pill, …) are
+   DEPRECATED. New UI must use apps/web/src/ui kit primitives + tailwind.css
+   tokens. This bridge keeps unmigrated markup on the same visual tokens so
+   operators do not see two products. Remove shims only after full migration;
+   then re-enable Tailwind preflight (see tailwind.css).
+   -------------------------------------------------------------------------- */
+
+.periscan-app-shell {
+  background: var(--surface-void);
+}
+
+.skip-link {
+  border: 1px solid #4d9bff;
+  border-radius: 5px;
+  background: var(--signal-blue, #3c96ff);
+  color: #04120d;
+}
+
+.panel,
+.metric-card,
+.list-card,
+.coverage-card,
+.proof-card,
+.verification-result,
+.error-banner-inline {
+  border-color: var(--border-panel);
+  border-radius: 6px;
+  background: var(--surface-panel-alt);
+  box-shadow: none;
+}
+
+.panel--elevated,
+.public-demo-hero {
+  border-color: var(--border-panel);
+  border-radius: 6px;
+  background: var(--surface-panel-alt);
+}
+
+.panel-header h2,
+.panel-header h3,
+.card-topline h3,
+.auth-panel h1,
+.hero-panel h1 {
+  font-family: "IBM Plex Sans", system-ui, sans-serif;
+  letter-spacing: -0.01em;
+}
+
+.eyebrow,
+.section-kicker,
+.coverage-label,
+.metadata-grid dt,
+.detail-grid dt {
+  color: var(--subtle);
+  font-family: "IBM Plex Sans", system-ui, sans-serif;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.headline {
+  font-family: "IBM Plex Sans", system-ui, sans-serif;
+  letter-spacing: -0.01em;
+}
+
+.subcopy,
+.muted-copy,
+.field span,
+.metric-card span,
+.facts dt {
+  color: var(--muted);
+}
+
+.field input,
+.field select,
+.field textarea,
+.inline-form input {
+  border-color: var(--border-input);
+  border-radius: 4px;
+  background: var(--surface-input);
+  color: var(--ink);
+  transition:
+    border-color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus,
+.inline-form input:focus {
+  border-color: var(--signal-blue);
+  box-shadow: 0 0 0 3px rgba(60, 150, 255, 0.18);
+  outline: none;
+}
+
+.primary-button,
+.secondary-button,
+.link-button,
+.segment {
+  border-radius: 5px;
+}
+
+.primary-button {
+  border: 1px solid #2563d4;
+  background: #2563d4;
+  box-shadow: none;
+  color: #ffffff;
+}
+
+.secondary-button,
+.link-button {
+  border: 1px solid #2b477f;
+  background: rgba(60, 150, 255, 0.06);
+  color: #cfe0ff;
+}
+
+.segmented {
+  border: 1px solid var(--border-input);
+  border-radius: 5px;
+  background: var(--surface-input);
+}
+
+.segment.is-active {
+  background: rgba(60, 150, 255, 0.14);
+  color: var(--ink);
+}
+
+.status-pill {
+  border-radius: 0;
+  background: transparent;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 0;
+  text-transform: uppercase;
+}
+
+.status-pill--ok,
+.success-copy {
+  color: var(--clear-teal);
+}
+
+.status-pill--error,
+.error-copy {
+  color: var(--risk-high);
+}
+
+.status-pill--pending {
+  color: var(--risk-medium);
+}
+
+.metric,
+.coverage-card {
+  border-color: var(--border-hairline-2);
+  border-radius: 0;
+  background: transparent;
+}
+
+.evidence-chip,
+.chip-list li,
+.chip-list span {
+  border-color: #2b477f;
+  border-radius: 4px;
+  background: rgba(60, 150, 255, 0.06);
+  color: #cfe0ff;
+}
+
+.code-block {
+  border: 1px solid var(--border-hairline-2);
+  border-radius: 4px;
+  background: var(--surface-input);
+  color: var(--ink);
+}
+
+.app-header {
+  border-color: #14224a;
+  background: rgba(8, 12, 24, 0.95);
+}
+
+.app-nav a {
+  border-radius: 4px;
+}
+
+.app-nav a:focus-visible,
+.app-nav a:hover,
+.app-nav a.is-active,
+.app-nav a[aria-current="page"] {
+  border-color: rgba(60, 150, 255, 0.35);
+  background: rgba(60, 150, 255, 0.1);
+}
+
+::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+
+::-webkit-scrollbar-track {
+  background: #070b16;
+}
+
+::-webkit-scrollbar-thumb {
+  border: 2px solid #070b16;
+  background: #17264c;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #22376b;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .panel,
+  .metric-card,
+  .list-card,
+  [class*="rounded-card"] {
+    transition:
+      border-color 150ms ease,
+      background-color 150ms ease,
+      transform 150ms ease;
+  }
+
+  .list-card:hover,
+  a .metric-card:hover {
+    border-color: var(--signal-blue);
+    transform: translateY(-1px);
+  }
+}
+
+.product-main table:not(.sr-only) {
+  width: 100%;
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+
+.product-main table:not(.sr-only) th {
+  border-bottom: 1px solid var(--border-hairline-2);
+  color: var(--subtle);
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.product-main table:not(.sr-only) td {
+  border-bottom: 1px solid #101f3d;
+  color: var(--muted);
+}
+
+.product-main table:not(.sr-only) th,
+.product-main table:not(.sr-only) td {
+  padding: 0.75rem 0.9rem;
+  text-align: left;
+}
+
+.product-main table:not(.sr-only) tbody tr {
+  transition: background-color 120ms ease;
+}
+
+.product-main table:not(.sr-only) tbody tr:hover {
+  background: rgba(60, 150, 255, 0.05);
+}
+
+/*
+ * UX-W7 / #101 — shared list/table density utilities.
+ * Works on real <table> and list workbenches (findings ul/li) via BEM hooks.
+ * Default density is compact (operator queue); comfortable for denser reading.
+ */
+.ps-table {
+  width: 100%;
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+
+.ps-table__header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-bottom: 1px solid var(--border-hairline-2, #16264a);
+  color: var(--subtle, #8fa4c4);
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.ps-table__row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border-bottom: 1px solid var(--border-hairline, #12203f);
+  transition: background-color 120ms ease;
+}
+
+.ps-table__row:last-child {
+  border-bottom: 0;
+}
+
+.ps-table__row:hover {
+  background: rgba(60, 150, 255, 0.05);
+}
+
+/* Compact: findings / ops queues */
+.ps-table--compact .ps-table__header {
+  padding: 0.45rem 1rem;
+}
+
+.ps-table--compact .ps-table__row {
+  padding: 0.55rem 1rem;
+  min-height: 2.5rem;
+}
+
+/* Comfortable: longer titles / multi-line secondary */
+.ps-table--comfortable .ps-table__header {
+  padding: 0.65rem 1rem;
+}
+
+.ps-table--comfortable .ps-table__row {
+  padding: 0.85rem 1rem;
+  min-height: 3.25rem;
+}
+
+/* Real tables can opt into the same density padding */
+table.ps-table--compact th,
+table.ps-table--compact td {
+  padding: 0.45rem 0.75rem;
+}
+
+table.ps-table--comfortable th,
+table.ps-table--comfortable td {
+  padding: 0.85rem 0.9rem;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--clear-teal);
+}
+
+@keyframes ps-modal {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.orchestration-flow-map {
+  background: #080d1c;
+}
+
+.orchestration-flow-grid {
+  display: grid;
+  min-height: 390px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-rows: repeat(5, 70px);
+  gap: 12px 16px;
+  align-content: center;
+  padding: 20px 64px;
+}
+
+.orchestration-flow-node {
+  grid-column: var(--flow-column);
+  grid-row: var(--flow-row);
+  align-self: center;
+  width: clamp(128px, 13vw, 168px);
+  min-height: 66px;
+  justify-self: center;
+  z-index: 1;
+}
+
+.orchestration-flow-signal {
+  border-color: color-mix(in srgb, var(--flow-tone) 72%, transparent);
+  background: color-mix(in srgb, var(--flow-tone) 10%, #0a1226);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--flow-tone) 22%, transparent);
+  color: var(--flow-tone);
+}
+
+.orchestration-flow-node[data-active="true"] .orchestration-flow-signal {
+  animation: ps-signal-breathe 1.8s ease-in-out infinite;
+}
+
+@keyframes ps-signal-breathe {
+  0%,
+  100% {
+    box-shadow: 0 0 8px color-mix(in srgb, var(--flow-tone) 20%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 20px color-mix(in srgb, var(--flow-tone) 55%, transparent);
+  }
+}
+
+@media (max-width: 767px) {
+  .orchestration-flow-map {
+    min-height: 0;
+  }
+
+  .orchestration-flow-grid {
+    min-height: 0;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    grid-auto-rows: auto;
+    gap: 8px;
+    padding: 12px;
+  }
+
+  .orchestration-flow-node {
+    grid-column: 1 !important;
+    grid-row: auto !important;
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orchestration-flow-node[data-active="true"] .orchestration-flow-signal {
+    animation: none;
+  }
+}
+
+/*
+ * Board narrative print stylesheet (P03/P10).
+ * Dark UI hurts projector/print board packs — force a light high-contrast
+ * palette for @media print only. Never invent certifications in print chrome.
+ */
+@media print {
+  @page {
+    margin: 12mm;
+    size: letter;
+  }
+
+  html,
+  body {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    color-scheme: light !important;
+  }
+
+  body {
+    background-image: none !important;
+    min-height: 0 !important;
+  }
+
+  .skip-link,
+  .periscan-app-shell aside,
+  .periscan-app-shell nav,
+  [data-testid="app-rail"],
+  .print\:hidden,
+  /* Hide operator triage noise from board projection / print packs. */
+  #needs-you,
+  [data-testid="needs-you"],
+  [data-print-hide="needs-you"],
+  [data-testid="needs-you-top-work"],
+  [data-testid="dashboard-primary-cta"] {
+    display: none !important;
+  }
+
+  main.product-main,
+  .executive-overview {
+    max-width: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .executive-overview {
+    gap: 10px !important;
+  }
+
+  .board-narrative,
+  [data-testid="board-narrative"],
+  [data-testid="honesty-trust-strip"],
+  [data-testid="pilot-success-criteria-banner"] {
+    /* Keep honestyTrust strip intact on board print (P10). */
+    break-inside: avoid;
+    page-break-inside: avoid;
+    background: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #0f172a !important;
+    box-shadow: none !important;
+  }
+
+  .board-narrative *,
+  [data-testid="board-narrative"] *,
+  [data-testid="honesty-trust-strip"] *,
+  [data-testid="pilot-success-criteria-banner"] * {
+    color: inherit;
+  }
+
+  .board-narrative .text-ink,
+  .board-narrative .text-muted,
+  .board-narrative .text-subtle,
+  [data-testid="honesty-trust-strip"] .text-ink,
+  [data-testid="honesty-trust-strip"] .text-muted,
+  [data-testid="honesty-trust-strip"] .text-subtle {
+    color: #0f172a !important;
+  }
+
+  .board-narrative .text-muted,
+  .board-narrative .text-subtle,
+  [data-testid="honesty-trust-strip"] .text-muted,
+  [data-testid="honesty-trust-strip"] .text-subtle {
+    color: #334155 !important;
+  }
+
+  .board-narrative .bg-bg,
+  .board-narrative .bg-surface,
+  [data-testid="honesty-trust-strip"] .bg-bg,
+  [data-testid="honesty-trust-strip"] .bg-surface {
+    background: #f8fafc !important;
+  }
+
+  .board-narrative .border-line,
+  [data-testid="honesty-trust-strip"] .border-line,
+  [data-testid="pilot-success-criteria-banner"] {
+    border-color: #cbd5e1 !important;
+  }
+
+  a {
+    color: #1d4ed8 !important;
+    text-decoration: none !important;
+  }
+
+  /* Prefer the one-screen narrative; collapse interactive tabs chrome. */
+  .executive-overview [role="tablist"] {
+    display: none !important;
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "name": "@periscan/worker",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/processor.ts"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx watch src/index.ts",
+    "lint": "eslint .",
+    "test": "vitest run src",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@periscan/connectors": "workspace:^",
+    "@periscan/db": "workspace:^",
+    "@periscan/evidence": "workspace:^",
+    "@periscan/model-gateway": "workspace:^",
+    "@periscan/modules": "workspace:^",
+    "@periscan/operators": "workspace:^",
+    "@periscan/shared": "workspace:^",
+    "@periscan/webhooks": "workspace:^",
+    "@prisma/client": "^6.19.3",
+    "bullmq": "^5.77.7",
+    "ioredis": "^5.11.0",
+    "pino": "^10.3.1"
+  }
+}

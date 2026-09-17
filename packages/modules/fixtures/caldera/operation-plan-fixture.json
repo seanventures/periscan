@@ -1,0 +1,15 @@
+{
+  "operationName": "Demo Advanced Adversarial Plan",
+  "adversaryId": "periscan-demo-plan",
+  "executionMode": "plan-import-only",
+  "abilities": [
+    {
+      "abilityId": "ability-discovery-001",
+      "techniqueId": "T1087",
+      "name": "Account discovery plan step",
+      "executor": "none",
+      "safeImportOnly": true
+    }
+  ],
+  "safetyNote": "Imported for planning evidence only. Periscan policy denies live advanced adversarial execution by default."
+}

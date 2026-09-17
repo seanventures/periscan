@@ -1,0 +1,52 @@
+{
+  "type": "bundle",
+  "id": "bundle--periscan-opencti-fixture",
+  "objects": [
+    {
+      "type": "vulnerability",
+      "id": "vulnerability--periscan-cve-2026-4242",
+      "created": "2026-06-18T12:00:00.000Z",
+      "name": "CVE-2026-4242",
+      "description": "Fixture OpenCTI vulnerability context for CVE-2026-4242 affecting a public web service. Related ATT&CK technique T1190.",
+      "labels": ["high", "internet-facing"],
+      "external_references": [
+        {
+          "source_name": "cve",
+          "external_id": "CVE-2026-4242",
+          "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-4242"
+        }
+      ]
+    },
+    {
+      "type": "indicator",
+      "id": "indicator--periscan-ioc-context",
+      "created": "2026-06-18T13:00:00.000Z",
+      "name": "Fixture phishing infrastructure",
+      "description": "Fixture context references a customer-provided note with api_key=fixture-secret-token-123456 and technique T1566.002. Periscan must redact sensitive values before storing evidence.",
+      "pattern": "[domain-name:value = 'login.bad.example'] OR [ipv4-addr:value = '203.0.113.42']",
+      "labels": ["medium", "phishing"],
+      "external_references": [
+        {
+          "source_name": "attack",
+          "external_id": "T1566.002",
+          "url": "https://attack.mitre.org/techniques/T1566/002/"
+        }
+      ]
+    },
+    {
+      "type": "report",
+      "id": "report--periscan-advisory-context",
+      "created": "2026-06-19T09:00:00.000Z",
+      "name": "Fixture advisory context without direct validation",
+      "description": "Advisory context for defensive readiness mapping. References ATT&CK T1059.001 but contains no proof that a customer control detected or blocked behavior.",
+      "labels": ["readiness"],
+      "external_references": [
+        {
+          "source_name": "attack",
+          "external_id": "T1059.001",
+          "url": "https://attack.mitre.org/techniques/T1059/001/"
+        }
+      ]
+    }
+  ]
+}

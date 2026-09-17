@@ -1,0 +1,290 @@
+name: Build Deployable Images
+
+# Builds and smoke-tests deployable images:
+#   - api            (Fastify control-plane API)
+#   - scan-executor  (SaaS server-side OSS toolkit: gitleaks/nuclei/trivy/osv/
+#                      prowler/promptfoo/pyrit/ffuf — permissive licenses only;
+#                      GPL legal-review tools are NOT in the default image)
+#   - runner-agent   (in-network AgentLocal toolkit: nmap/subfinder/httpx/dnsx/
+#                      kerbrute/netexec)
+#   - web            (Next.js API-driven UI shell)
+#
+# Each image is built then smoke-tested in-image (every bundled binary must
+# resolve + report a version; the scan-executor additionally runs
+# `pnpm tools:check` and asserts legal-review GPL tools are absent). Images are
+# pushed to GHCR only on a version tag. Do not build/push the
+# `runtime-legal-review` stage from this workflow.
+#
+# NOTE: this workflow REQUIRES a Docker daemon (provided by the GitHub-hosted
+# ubuntu runner via Buildx). It deliberately does NOT run any live offensive
+# tool — the smoke scripts only resolve binaries + report versions; live
+# offensive validation is the manual off-CI procedure in
+# docs/OFFENSIVE_KIT_LIVE_SMOKE.md.
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+    paths:
+      - "apps/api/**"
+      - "infra/docker/scan-executor.Dockerfile"
+      - "infra/docker/scan-executor-smoke.sh"
+      - "apps/runner-agent/**"
+      - "apps/web/**"
+      - "packages/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "packages/modules/src/toolchain.ts"
+      - ".github/workflows/images-build.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "apps/api/**"
+      - "infra/docker/scan-executor.Dockerfile"
+      - "infra/docker/scan-executor-smoke.sh"
+      - "apps/runner-agent/**"
+      - "apps/web/**"
+      - "packages/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "packages/modules/src/toolchain.ts"
+      - ".github/workflows/images-build.yml"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  api:
+    name: api image (build + smoke)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build api (load locally for smoke)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          load: true
+          tags: periscan-api:ci
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,mode=max,scope=api
+
+      - name: In-image smoke test
+        run: docker run --rm periscan-api:ci sh -c "test -f apps/api/src/server.ts && pnpm --filter @periscan/api exec tsx -e \"console.log('api runtime ok')\""
+
+      - name: Login to GHCR
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Metadata
+        if: startsWith(github.ref, 'refs/tags/v')
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/seanheiney/periscan-api
+          tags: |
+            type=semver,pattern={{version}}
+            type=sha
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Push on tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          platforms: linux/amd64
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,mode=max,scope=api
+
+  scan-executor:
+    name: scan-executor image (build + smoke)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build scan-executor (load locally for smoke)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: infra/docker/scan-executor.Dockerfile
+          # Default stage only — never bake GPL legal-review tools into CI/GHCR.
+          target: runtime
+          load: true
+          tags: periscan-scan-executor:ci
+          cache-from: type=gha,scope=scan-executor
+          cache-to: type=gha,mode=max,scope=scan-executor
+
+      - name: In-image smoke test
+        run: docker run --rm periscan-scan-executor:ci bash infra/docker/scan-executor-smoke.sh
+
+      - name: Login to GHCR
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Metadata
+        if: startsWith(github.ref, 'refs/tags/v')
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/seanheiney/periscan-scan-executor
+          tags: |
+            type=semver,pattern={{version}}
+            type=sha
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Push on tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: infra/docker/scan-executor.Dockerfile
+          target: runtime
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          platforms: linux/amd64
+          cache-from: type=gha,scope=scan-executor
+          cache-to: type=gha,mode=max,scope=scan-executor
+
+  runner-agent:
+    name: runner-agent image (build + smoke)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build runner-agent (load locally for smoke)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: apps/runner-agent/Dockerfile
+          load: true
+          tags: periscan-runner-agent:ci
+          cache-from: type=gha,scope=runner-agent
+          cache-to: type=gha,mode=max,scope=runner-agent
+
+      - name: In-image smoke test
+        run: docker run --rm periscan-runner-agent:ci bash apps/runner-agent/runner-agent-smoke.sh
+
+      - name: Login to GHCR
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Metadata
+        if: startsWith(github.ref, 'refs/tags/v')
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/seanheiney/periscan-runner-agent
+          tags: |
+            type=semver,pattern={{version}}
+            type=sha
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Push on tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: apps/runner-agent/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          platforms: linux/amd64
+          cache-from: type=gha,scope=runner-agent
+          cache-to: type=gha,mode=max,scope=runner-agent
+
+  web:
+    name: web image (build + smoke)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build web (load locally for smoke)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          load: true
+          tags: periscan-web:ci
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,mode=max,scope=web
+
+      - name: In-image smoke test
+        # Confirm the production build is baked in and the runtime is present.
+        run: docker run --rm periscan-web:ci sh -c "test -f apps/web/.next/BUILD_ID && node --version"
+
+      - name: Login to GHCR
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Metadata
+        if: startsWith(github.ref, 'refs/tags/v')
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/seanheiney/periscan-web
+          tags: |
+            type=semver,pattern={{version}}
+            type=sha
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Push on tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          platforms: linux/amd64
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,mode=max,scope=web

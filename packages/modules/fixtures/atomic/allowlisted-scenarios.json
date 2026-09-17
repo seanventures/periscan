@@ -1,0 +1,16 @@
+[
+  {
+    "techniqueId": "T1595",
+    "name": "Active Discovery Safety Simulation",
+    "tactic": "Discovery",
+    "expectedBehavior": "Detected",
+    "dryRunCommand": "Invoke-AtomicTest T1595 -ShowDetailsBrief"
+  },
+  {
+    "techniqueId": "T1087",
+    "name": "Account Discovery Dry Run",
+    "tactic": "Discovery",
+    "expectedBehavior": "Logged",
+    "dryRunCommand": "Invoke-AtomicTest T1087 -ShowDetailsBrief"
+  }
+]

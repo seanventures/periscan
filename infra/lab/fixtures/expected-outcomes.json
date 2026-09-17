@@ -1,0 +1,32 @@
+{
+  "schema": "periscan-lab-expected-v1",
+  "profile": {
+    "exposed": {
+      "edge": { "http_missing_security_headers": "Validated" },
+      "app": { "http_missing_security_headers": "Validated", "http_insecure_cookies": "Validated" },
+      "data": { "open_records": true }
+    },
+    "hardened": {
+      "edge": { "security_headers": "present" },
+      "app": { "security_headers": "present" },
+      "data": { "records_require_auth": true }
+    }
+  },
+  "multiHop": {
+    "path": ["edge.lab.range.test", "app.lab.range.test", "data.lab.range.test"],
+    "fullyMeasuredRequires": "runner or control-plane hop receipts with evidence IDs on every edge"
+  },
+  "canary": {
+    "markerPattern": "periscan-*",
+    "mocksiem": {
+      "nativeSearch": "GET /v1/events?marker=",
+      "splunkExport": "POST /services/search/jobs/export",
+      "productObserve": "splunk connector observeControl mockMode=false → correlationMatched"
+    },
+    "claimSafety": {
+      "drvClaimClass": "benign_marker_only",
+      "fullAttackLibrary": false,
+      "realDataExfiltrated": false
+    }
+  }
+}
