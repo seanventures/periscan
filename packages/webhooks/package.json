@@ -15,7 +15,7 @@
     "@periscan/policy": "workspace:^",
     "@periscan/shared": "workspace:^",
     "@prisma/client": "^6.19.3",
-    "bullmq": "^5.77.7",
+    "bullmq": "^6.3.6",
     "zod": "^4.1.12"
   }
 }
