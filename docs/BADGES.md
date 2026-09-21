@@ -22,8 +22,8 @@ mark. Lettering is outlined IBM Plex so GitHub does not need the webfont.
 run with evidence. This repository has no such dogfood run yet — keep
 not-measured until one exists.
 
-README fold is owned separately. Link these files later; do not invent a
-live badge endpoint to go with them.
+README points here instead of embedding the mark in the GitHub fold.
+Do not invent a live badge endpoint to go with them.
 
 ---
 

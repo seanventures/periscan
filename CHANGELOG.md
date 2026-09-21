@@ -4,7 +4,59 @@ Operator-facing notes for Periscan product snapshots. API contract versions live
 
 ## Unreleased
 
-**After Community GA v0.12.0.** Product [`LICENSE`](LICENSE) is **Apache-2.0**. Community edition is the open-core **validation slice**, not a full-BAS product.
+**After Community GA v0.12.0.** Work on this integrate branch after the tagged Community GA snapshot. **Not a `v0.12.1` tag.** Do not retag `v0.12.0`. Product [`LICENSE`](LICENSE) is **Apache-2.0**. Community edition is the open-core **validation slice**, the current first-hour pack in the BAS/AEV product program. See **0.12.1** below for first-hour ICP and public-chrome closeout.
+
+- BAS/AEV: qualified Atomic Linux argv now executes for customers (PERISCAN-586). Runner-agent runs allowlisted `/bin/hostname`, `/bin/env`, `/bin/date` with hashed stdout and fail-closed YAML/shell. Campaign bind `live=true` is customerQueueable for those three GUIDs. Other Atomic tests stay denied. Community first-hour remains Gitleaks. Detector correlation remains NotMeasured.
+- BAS local qualification (PERISCAN-586): pinned Atomic T1082 Hostname Discovery in a disposable, isolated Docker container with a measured receipt; reviewed Linux-safe argv on T1082 (`/bin/hostname`, `/bin/env`) plus T1124 system time (`/bin/date`) at the same source pin; campaign-compiler adapter contract (pin, GUID, OS, prerequisites, cleanup, expected telemetry); fail-closed for non-allowlisted YAML. Unqualified Atomic stays denied (`denied starts never queue`, imports are not executions). Detector correlation remains NotMeasured.
+- BAS/AEV: customer-managed isolated Caldera operations adapter foundation with a pinned stockpile discovery ability set, create/start/stop/ingest/cancel lifecycle, result normalization, and mock-HTTP tests (PERISCAN-587). `liveSupported` / `startable` stay false; denied live starts still queue nothing. Wave 2 pins one additional reviewed stockpile discovery ability: Current User (`bd527b63-9f9e-46e0-9816-b8434d2b8989`, T1033). Unreviewed abilities still cannot execute. Qualified start (`queueCalderaQualifiedStart`) queues a bounded allowlisted discovery ability against a customer-managed isolated Caldera API when the pin is startable, qualified, tenant-authorized, policy Allowed, and reviewed (`jobsQueued=1`). Unqualified, unreviewed, unauthorized, live-offensive, or not-startable pins still queue nothing. `caldera.advanced_adversarial` `liveSupported` stays false. `PERISCAN_LIVE_OFFENSIVE=1` is not an enablement switch.
+- BAS/AEV: Metasploit reviewed check allowlist (PERISCAN-589) with exact framework pin `6.4.0`, typed `RHOSTS`/`RPORT`, and a fixture/plan compiler that distinguishes vulnerability presence from check support. Wave 2 adds one additional non-destructive presence probe: `auxiliary/scanner/http/http_version` (T1046). `liveSupported` stays false; a method named `check` is not exploitability; denied live starts still queue nothing.
+- BAS/AEV: qualified Metasploit *check* start helper (`apps/api/src/services/bas-metasploit-start.ts`). When the start gate marks an allowlisted pin startable, only a fixture/lab `check` runs (`http_version` and other allowlisted rows). `claimKind` is `vulnerability_presence` or `check_supported`; `check()` alone is never `measured_exploitability`. Not startable, console, extra `THREADS`, `PAYLOAD`, or exploit/run still `jobsQueued: 0`. Global `liveSupported` stays false.
+- BAS/AEV: SharpHound collection profiles compile as least-privilege LDAP-read plans with bounded targets, mandatory redaction, and GPL-3.0 RequiresLegalReview (PERISCAN-588). BloodHound graph-import edges stay hypotheses, not exploitation. Live AD collection remains default-deny. Wave 2 requires a fourth redaction bound: `redactLapsPasswords` (LAPS `ms-Mcs-AdmPwd` / gMSA `msDS-ManagedPassword` from ObjectProps). Disabling that redaction fails closed. Collector stays blocked; `liveSupported` stays false. Qualified start (`startBasSharpHoundCollection`) queues a recorded bounded collection plan only when the start gate is startable, LAPS redaction is on, and targets are scoped (`jobsQueued=1`). Startable false or LAPS false queues nothing. Live AD still requires tenant authorization and does not execute the GPL collector. SharpHound stays Engine Lab, not the Community default pack. Collection is not exploitation (no DCSync / credential theft).
+- BAS/AEV: Engine Lab Infection Monkey discover remainder (PERISCAN-591). Qualified start (`queueInfectionMonkeyDiscoverStart` / `startBasInfectionMonkeyDiscover`) records a discover-only plan of verified-scope hosts as promote-to-scope candidates when the pin is startable, qualified, tenant-authorized, and policy Allowed (`jobsQueued=1`). Unqualified, Community-default, live-offensive, ransomware, and credential-harvest still `jobsQueued=0`. GPL-3.0 `RequiresLegalReview`. `liveSupported` stays false. `PERISCAN_LIVE_OFFENSIVE=1` is not an enablement switch. Not in the Community default pack or image.
+- BAS/AEV: Strix Apache-2.0 findings-import remainder (PERISCAN-583). Qualified start (`queueStrixImportStart` / `startBasStrixImport`) records an **import-only** plan when the pin is startable, qualified, tenant-authorized, and policy Allowed (`jobsQueued=1`). Cloud-shell, live exploit, unqualified, unauthorized, Community-default, and ControlPlane still `jobsQueued=0`. Import is not executed coverage (`executed: false`, `executable: false`). `liveSupported` stays false. `PERISCAN_LIVE_OFFENSIVE=1` is not an enablement switch. Not Community first-hour.
+- BAS/AEV: Rustinel observe/import remainder. Qualified start (`queueRustinelObserveImportStart` / `startBasRustinelObserveImport`) records an **observe/import** plan when the pin is startable, qualified, tenant-authorized, and policy Allowed (`jobsQueued=1`). Live agent, unqualified, unauthorized, YAML-eval, and Community-default still `jobsQueued=0`. Apache-2.0 Community-eligible, not Community start. DRL `rustinel-rules` stay fail-closed in the Community pack. `liveSupported` stays false. `PERISCAN_LIVE_OFFENSIVE=1` is not an enablement switch.
+- BAS/AEV: Engine Lab Vigolium remaining (PERISCAN-591). Qualified start (`queueVigoliumImportStart` / `startBasVigoliumImport`) records an **import-only** audit plan when the pin is startable, qualified, authorized, verified-scope, and policy Allowed (`jobsQueued=1`). Live attack planning, unverified scope, unauthorized, unqualified, Community-default, and not-startable still `jobsQueued=0`. AGPL-3.0 is **Blocked** (never installable; not a RequiresLegalReview path — TruffleHog is the only named AGPL exception). Import is not executed. `liveSupported` stays false. `PERISCAN_LIVE_OFFENSIVE=1` is not an enablement switch. Not in the Community default pack or image.
+- BAS/AEV: Nuclei safe-exposure / ZAP baseline remaining (PERISCAN-589). Qualified start (`queueNucleiZapQualifiedStart` / `startBasNucleiZapSafeScan`) records an **import/safe-scan** plan when a safe-baseline, fingerprint, headers, metadata, or zap-baseline pin is startable, qualified, tenant-authorized, and policy Allowed (`jobsQueued=1`). Unqualified, unauthorized, exploit templates, internet-wide, Community-default, and first-hour still `jobsQueued=0`. Import is not executed coverage (`executed: false`, `executable: false`). `liveSupported` stays false. Compile still does not start ExternalPoA. `PERISCAN_LIVE_OFFENSIVE=1` is not an enablement switch. Not Community first-hour (Gitleaks stays the first-hour door). Pins stay Nuclei **v3.8.0** / templates **v10.4.4** / ZAP **2.17.0**.
+- BAS/AEV: authenticated `POST /api/v1/control-sources/:id/email-delivery-canary-proof` (PERISCAN-590 / 591). Compiles/evaluates the Wave 1 email delivery canary. Qualified + authorized + scoped + policy Allowed + MailHog lab sink records a lab-sink plan (`jobsQueued=1`) that still does not send internet mail. Denied, unscoped, Gmail/O365, live SMTP, Community start, and `PERISCAN_LIVE_OFFENSIVE=1` stay `jobsQueued=0`. `liveSupported` stays false. Not Community start. Never real mailbox or data exfil.
+- BAS/AEV: Falco observe remainder (PERISCAN-590). Qualified start (`queueFalcoObserveStart` / `startBasFalcoObserve`) records **observe-only** findings from a fixture/lab Falco JSON alert load when the pin is startable, qualified, tenant-authorized, and policy Allowed (`jobsQueued=1`). Live kernel, unqualified, unauthorized, and Community-default still `jobsQueued=0`. `falco.rules_validate` stays the Community rules-lint module. Observe is not an executed exploit. `liveSupported` stays false. `PERISCAN_LIVE_OFFENSIVE=1` is not an enablement switch. Not Community first-hour (Gitleaks remains the door).
+
+- BAS/AEV: immutable tenant-scoped Atomic/Caldera content versions, authenticated registration/list/detail APIs, hash conflict detection, transactional audit and Postgres row-level isolation (PERISCAN-585). Imported metadata remains unreviewed and non-executable.
+
+## 0.12.1 — 2026-09-21 (not tagged)
+
+Panel closeout on `swarm/integrate-5-loop` after Community GA v0.12.0. **Not tagged.** Do not retag `v0.12.0`.
+
+- In-app + public panel re-run 2026-09-21: in-app **3.9 hold**, public **2.8 hold**.
+- Home omits VALIDATED as the top finding after a measured Fixed retest.
+- Community mission status is explicit (`Community mission Completed`) so a parent does not look RUNNING after Gitleaks evidence.
+- Full Community pack is under **More engines (catalog)** — remaining catalog engines, not first-hour `start now`.
+- Node `engines.node` is `>=24.0.0` (floor unchanged).
+
+## 0.12.1 — 2026-09-17 (not tagged)
+
+First-hour ICP closeout (PERISCAN-490). Private tree (`swarm/ga-public-chrome`). **Not tagged.** Do not retag `v0.12.0`.
+
+### Community first-hour proof loop
+
+- Home **Proof eyebrow** (not Command center).
+- After the first Community finding, UI keeps **one primary CTA/verb** (no competing doors).
+- **Watch** polls Community runs at **1s** and stays for evidence instead of bouncing away.
+- GitHub URL refuse shows **git clone** then paste the local absolute path (clone hint).
+- Finding rows show **path + rule**; row click opens detail.
+- Skip-link is hidden until focus and does not cover the wordmark.
+- Clone-first **README** / **FAQ** (proof fold, local path + Gitleaks-class first hour).
+- Public-chrome closeout (`docs/qa/ux-validation-2026-09-17.md`): README first screen is **one job** (authorized local path → Gitleaks-class first hour → Fixed after retest); clone+inspect primary; ASV/CTEM/engine mall below the fold; BAS is qualification-required, not a live exploit library.
+- **SECURITY.md** first paragraph is title-only `[SECURITY]` + **72h** ack SLA. PVR unused (SETTLED).
+- `install.sh` dry-run names **nvm/fnm** when the shell is Node 20; does not silently continue on 20. `package.json` `engines.node` is `>=24.0.0`.
+- **SECURITY** intake first; drop proprietary Dependabot lead note.
+- GHSA highs: bump **xmldom** and **deepmerge-ts**.
+- Analyst **scorecard** skips missing excluded **lab-runs** evidence.
+- Installer prints local-path first-hour **next-step** after install.
+
+### Still not this drop
+
+- Not a retag of `v0.12.0`. Not a `v0.12.1` tag yet.
+- Live Atomic / Caldera / SharpHound adapters still require qualification.
 
 ## 0.12.0 — 2026-09-16
 
@@ -33,7 +85,7 @@ Plane: PERISCAN-522 (Community live pack), PERISCAN-523 (copyleft opt-in), PERIS
 ### Engine Lab package manager (PERISCAN-524)
 
 - 14 packs / ≥138 unique OSS tool IDs in `packages/shared/src/security-tool-packs.ts`.
-- Engine Lab UI: pack tabs, per-tool Install/Uninstall, pack-level Install/Uninstall. Theater (Atomic / Caldera / SharpHound / sqlmap / Metasploit) is never Community-start and is not installable as validation.
+- Engine Lab UI: pack tabs, per-tool Install/Uninstall, pack-level Install/Uninstall. Theater (Atomic / Caldera / SharpHound / sqlmap / Metasploit) was excluded from Community start in this release and is not installable as validation.
 - Prisma `ThirdPartyToolInstallJobAction` gains `Uninstall`. `POST /api/v1/third-party-tools/:toolId/uninstall` plus `buildOpenSourceToolUninstallPlan`.
 
 ### Community live pack (PERISCAN-522)
@@ -75,7 +127,7 @@ Long-diverged Codex/AI histories (500–1000 unique commits, ~1300 behind `main`
 ### Engines and honesty
 
 - Default pack: Gitleaks, Trivy, OSV, Grype, Syft, first-party DNS/TLS/HTTP depth, ZAP, Nuclei (second mission), Prowler on Connected AWS (`product === "AWS"`), MIT recon/nmap when a runner is enrolled.
-- Engine Lab labels Community / Legal review / Catalog only. Atomic, Caldera, SharpHound, sqlmap, and Metasploit are never Community.
+- Engine Lab labels Community / Legal review / Catalog only. Atomic, Caldera, SharpHound, sqlmap, and Metasploit were excluded from this Community release.
 - Prowler uses stored Connected AWS integration credentials at execution time. Secrets are not written onto `validationRun.target`.
 - Live `periscan.dns_resolution_check` against `example.com` (no fixtureMode) produces evidence.
 
@@ -111,7 +163,7 @@ Scope is what landed on `main` after `origin/main` (`7107afdb`, lab Phase 1 scaf
 
 - `gitleaks.repo_secrets` runs the real Gitleaks image (`detect --pipe`). Docker does not bind-mount the repo (avoids Desktop file-sharing failures).
 - `grype.repo_vulnerability_scan` is a live repo CVE inventory (PassiveReadOnly). Catalog sims (`grype.cve_scan`, Semgrep planning modules) stay **non-executable**.
-- Missing engines return `ToolUnavailable` / Inconclusive. They do not invent findings. Offensive packs (live Atomic, Caldera, SharpHound) stay off.
+- Missing engines return `ToolUnavailable` / Inconclusive. They do not invent findings. Atomic, Caldera and SharpHound live adapters were not qualified in this release.
 
 ### `startMission` runner routing
 
