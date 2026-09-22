@@ -1,5 +1,9 @@
 # Security policy
 
+Report a vulnerability as a **title-only** GitHub issue prefixed **`[SECURITY]`** (no public PoC). Maintainers acknowledge within **72 hours** and aim to fix or disclose within **90 days**. This project does **not** use GitHub private vulnerability reporting (PVR) or GitHub Actions as intake. There is no public `security@` mailbox — do not guess one.
+
+> **BAS/AEV program:** [docs/BAS_AEV_PROGRAM.md](docs/BAS_AEV_PROGRAM.md) — qualified open-source simulation, emulation and evidence-backed validation (PERISCAN-583).
+
 ## Reporting a vulnerability
 
 If you believe you have found a security issue in Periscan (control plane, web,
@@ -16,9 +20,8 @@ runner, policy gates, or dependency supply chain):
 4. **Do not** attach live exploit PoCs, ransomware, credential dumps, or
    weaponized payloads.
 
-This project does **not** use GitHub private vulnerability reporting (PVR) or
-GitHub Actions as intake. There is no public `security@` mailbox — do not guess
-one. Title-only `[SECURITY]` issues are the intake path (SETTLED).
+Title-only `[SECURITY]` issues are the intake path (SETTLED). GitHub PVR stays
+off — do not enable it for this repo.
 
 **Coordinated disclosure:** we aim to acknowledge a `[SECURITY]` issue within
 **72 hours** and to ship a fix or disclose within **90 days**, unless we agree
@@ -33,8 +36,8 @@ Periscan only validates **customer-authorized, verified scope**. See
 - No destructive tests, real data exfiltration, credential theft, or persistence
 - Denied tasks must never be queued
 - **Fixed** requires a verification event
-- Live Atomic / Caldera / SharpHound and similar offensive live packs stay off
-  unless a separate legal/safety program is approved
+- BAS adapters require reviewed scenarios, pinned versions, policy gates,
+  bounded execution, cancellation and cleanup verification
 
 A vulnerability report does not waive those rules.
 
@@ -52,5 +55,5 @@ A vulnerability report does not waive those rules.
 
 Use the local lab (`pnpm lab:up`, `pnpm lab:dev`) and verified lab scopes only.
 Do not use Periscan to probe systems you do not own or lack written
-authorization to test. Do not ask maintainers to enable live Atomic, Caldera,
-SharpHound, or other SETTLED-off capabilities as part of a disclosure.
+authorization to test. Adapter qualification and policy apply to research runs
+as well as customer runs.

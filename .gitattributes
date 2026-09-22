@@ -1,0 +1,2 @@
+# Preserve the exact upstream bytes used by the Atomic source-integrity check.
+packages/modules/src/fixtures/atomic/T1082.yaml -text whitespace=-blank-at-eol

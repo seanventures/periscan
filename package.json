@@ -7,6 +7,7 @@
     "pnpm": "9.15.0"
   },
   "scripts": {
+    "bas:scope:check": "node --test scripts/bas-scope-check.test.mjs && node scripts/bas-scope-check.mjs",
     "analyst:score:check": "node scripts/analyst-score-gate.mjs",
     "build": "pnpm -r --if-present build",
     "clean:build": "bash ./scripts/clean-build-artifacts.sh",
@@ -69,7 +70,8 @@
     "connectors:qual:dry-run": "tsx scripts/connector-production-qual-dry-run.ts",
     "typecheck": "pnpm --filter @periscan/db run db:generate && pnpm -r --if-present typecheck",
     "lab:sync": "bash ./scripts/sync-staging-to-datassd1.sh",
-    "lab:pull-staging": "bash ./scripts/pull-from-datassd1.sh"
+    "lab:pull-staging": "bash ./scripts/pull-from-datassd1.sh",
+    "bas:qualify:local": "tsx scripts/qualify-bas-local.ts"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.11.3",
@@ -77,7 +79,7 @@
     "@playwright/test": "^1.51.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
-    "@types/node": "^25.9.1",
+    "@types/node": "20.19.43",
     "@types/react": "^19.2.16",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.4",
@@ -89,10 +91,12 @@
     "tsx": "^4.23.1",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.60.1",
-    "vitest": "4.1.11"
+    "vitest": "^4.1.11"
   },
   "pnpm": {
     "overrides": {
+      "@types/node": "20.19.43",
+      "@vitest/mocker": "4.1.11",
       "@xmldom/xmldom": "0.8.15",
       "baseline-browser-mapping": "2.11.0",
       "brace-expansion": "5.0.9",
@@ -106,8 +110,7 @@
       "sharp": "0.35.4",
       "shell-quote": "1.10.0",
       "undici": "7.29.0",
-      "vitest": "4.1.11",
-      "@vitest/mocker": "4.1.11"
+      "vitest": "4.1.11"
     }
   }
 }

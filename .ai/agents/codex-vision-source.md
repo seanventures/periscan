@@ -17,7 +17,7 @@ Work:
   report surfaces.
 - Mapped continuous validation domains to schedules, controls, paths, AI apps,
   remediation verification, reopened-state behavior, and shared contracts.
-- Verified the anti-scanner/pentest/BAS claim through primary UX/report
+- Verified the evidence-backed BAS/AEV claim through primary UX/report
   no-raw-output evidence.
 - Verified third-party tool expansion gates through certification, governance,
   runtime, runner, policy, safety, and API-visible report evidence.

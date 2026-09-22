@@ -2,12 +2,13 @@
 
 Root [`LICENSE`](./LICENSE) is **Apache-2.0** (founder decision 2026-08-30).
 Community edition is the open-core **validation slice**. Hosted SaaS / MSSP /
-marketplace stay commercial product. This is not full BAS or live offensive.
+marketplace stay commercial product. Full BAS/AEV is the authorized development objective in [BAS_AEV_PROGRAM.md](docs/BAS_AEV_PROGRAM.md); current package contents remain explicitly qualified.
 
 Settled axiom: [`docs/SETTLED.md`](./docs/SETTLED.md). Plan (not a flip):
 [`docs/OPEN_SOURCE_PROJECT_PLAN.md`](./docs/OPEN_SOURCE_PROJECT_PLAN.md).
 Package tags (scaffold): [`docs/OPEN_SOURCE_LICENSE_MATRIX.md`](./docs/OPEN_SOURCE_LICENSE_MATRIX.md).
 Offering: [`COMMUNITY.md`](./COMMUNITY.md). Contribution law: [`GOVERNANCE.md`](./GOVERNANCE.md).
+CISO / enterprise admin: [`docs/ENTERPRISE.md`](./docs/ENTERPRISE.md).
 
 ---
 
@@ -18,7 +19,7 @@ Offering: [`COMMUNITY.md`](./COMMUNITY.md). Contribution law: [`GOVERNANCE.md`](
 | Core control plane (API, policy, evidence graph, runner protocol, Community web) | **Apache-2.0** | Root `LICENSE` + `NOTICE` |
 | Lab, safe/passive modules, connector *interfaces* | Apache-2.0 | Engines keep **upstream SPDX** |
 | Hosted multi-tenant SaaS, SSO/SCIM as a managed product, MSSP portfolio, premium catalogs, support SLAs | Commercial | Product, not a second LICENSE file here |
-| Live Atomic / Caldera / SharpHound / sqlmap / Metasploit | **Never default** | Catalog theater; not installable as validation |
+| Atomic / Caldera / SharpHound / Metasploit adapters | Qualification required | Edition eligibility follows tested implementation and license review |
 
 ---
 

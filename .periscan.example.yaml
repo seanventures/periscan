@@ -7,7 +7,7 @@
 #
 # YAML cannot replace DNS TXT, .periscan-authorization, or Owner
 # attestation. It cannot enable Atomic, Caldera, SharpHound, sqlmap, or
-# Metasploit. It is not a LICENSE flip and not full BAS.
+# Metasploit. BAS execution eligibility requires scenario qualification.
 #
 # Schema + parser: packages/shared/src/community-as-code.ts
 # Docs: docs/PERISCAN_YAML.md

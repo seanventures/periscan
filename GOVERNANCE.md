@@ -95,7 +95,7 @@ PRs and issues that do any of the following are closed without merging:
 
 | Reject | Why |
 | --- | --- |
-| Enable live Atomic / Caldera / SharpHound / sqlmap / Metasploit / ffuf as Community validation | Safety floor; catalog theater only |
+| Enable an unqualified adapter or scenario | Implementation, policy, license and lab evidence are required |
 | Silent AGPL / SSPL / BSL / Commons Clause / PolyForm intake | License policy; fail closed |
 | Mark **Fixed** without a verification event | Ontology: closure law |
 | Rewrite root `LICENSE` or claim “we are open source now” | Not a LICENSE flip |
@@ -107,8 +107,8 @@ PRs and issues that do any of the following are closed without merging:
 | Live ransomware, credential theft, persistence, uncontrolled exploit chaining | `SECURITY_BOUNDARIES.md` |
 | Invented customer refs, ARR, or Production connector certification | Zero public refs |
 
-Safety-sensitive capabilities require a separate legal SOW and dual runtime
-gates — not a drive-by PR. See [`docs/SETTLED.md`](./docs/SETTLED.md) TELLs.
+BAS/AEV contributions are in scope. Follow the per-adapter and per-scenario
+qualification requirements in [`docs/BAS_AEV_PROGRAM.md`](docs/BAS_AEV_PROGRAM.md).
 
 ---
 

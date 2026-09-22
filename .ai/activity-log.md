@@ -66,7 +66,7 @@ tests/modules/prd-audit-gate.test.ts tests/modules/coordination-docs.test.ts`
 - Closed `GAP-VISION-SOURCE-COVERAGE-001`: added
   `tests/modules/prd-vision-coverage.test.ts`, which parses PRD section 1
   directly and maps the validation/proof-layer claim, six Product Vision
-  questions, continuous-validation domains, anti-scanner/pentest/BAS
+  questions, continuous-validation domains, evidence-backed BAS/AEV
   positioning, and third-party-tool certification gate to API/service/report/UX
   evidence.
 - Runtime behavior changed: none; this is PRD audit hardening to prevent broad
@@ -1312,7 +1312,7 @@ pnpm verify` PASS with lint, typecheck, workspace tests, production build,
 - Continued autonomously after the release-status cleanup and selected the implementation-status table because it still labeled implemented/tested Integration registry, Validation modules, and Frontier Gateway rows as `In progress`.
 - Updated `docs/IMPLEMENTATION_STATUS.md` to mark those rows `Done` while preserving customer/live prerequisites for credentials, provider setup, verified scopes, runner deployment validation, blocked advanced tooling, and legal/customer decisions.
 - Updated older `.ai/gap-backlog.md` live summaries so they no longer direct agents toward repo-owned P1 or release-blocking P2 work already closed in the integration branch.
-- Updated `docs/PRODUCTION_READINESS.md` so payment processor selection and live BAS enablement are classified as explicit out-of-scope/deployment-managed decisions, not missing repository implementation.
+- Updated `docs/PRODUCTION_READINESS.md` so payment processor selection is deployment-managed; BAS adapter implementation is tracked under PERISCAN-583.
 - Updated root `PRODUCTION_READINESS.md` so runner, integrations/modules, reports/evidence packs, and observability rows reflect first-customer-ready repo evidence instead of older readiness wording, and neutralized archived P2 poll snapshots in `.ai/codex-handoff.md` so they cannot be mistaken for active agent work.
 - Validation: `git diff --check` PASS; stale implementation-table status grep PASS (no active `In progress`/`Not started`/`Blocked` rows); stale open P1/P2/agent-running summary grep PASS (no matches); full `DATABASE_URL=postgresql://periscan:periscan@127.0.0.1:5434/periscan PERISCAN_TEST_DATABASE_URL=postgresql://periscan:periscan@127.0.0.1:5434/periscan pnpm verify` PASS with lint, typecheck, workspace tests, production build, runner and runner lab, OSS toolchain check, license inventory/policy tests, Prisma generate/validate/migrate deploy, E2E 22/22, security 22/22, high+ audit fatal gate, production audit, and acceptance 100 files / 118 tests. `apps/web/next-env.d.ts` build drift was restored to the tracked production routes reference after the run.
 
@@ -1652,7 +1652,7 @@ pnpm verify` PASS with lint, typecheck, workspace tests, production build,
 
 - Branch: `codex/integrate-validated-pr-stack`, tracking origin.
 - Continued autonomously from the runner deployment/customer-agent backlog after deferring ConnectWise Automate until a narrow customer-configured read-only REST integration contract could be implemented safely.
-- Closed `PRD-RunnerDeploymentSafetyDocs`: runner deployment docs now list all implemented safe internal checks, the Kubernetes manifest link is portable, runner spec/acceptance criteria no longer imply reachability-only execution, and `docs/PRD_SELF_CONTAINED_RUNNER.md` is explicitly marked historical/superseded so it cannot override the current no reverse SSH/no arbitrary tunnel/no live SharpHound-Caldera-Atomic policy.
+- Closed `PRD-RunnerDeploymentSafetyDocs`: runner deployment docs now list all implemented safe internal checks, the Kubernetes manifest link is portable, runner spec/acceptance criteria no longer imply reachability-only execution, and `docs/PRD_SELF_CONTAINED_RUNNER.md` is explicitly marked historical/superseded so it cannot override the current outbound signed-task transport and BAS adapter qualification requirements.
 - Validation: `bash -n scripts/validate-runner-deploy.sh` PASS, `pnpm test:runner:deploy` PASS, `pnpm test:modules -- open-source-workstream-docs` PASS, `pnpm --filter @periscan/shared test -- runner` PASS, and `git diff --check` PASS.
 
 ---

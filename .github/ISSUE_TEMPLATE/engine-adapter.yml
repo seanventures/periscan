@@ -8,7 +8,7 @@ body:
       value: |
         **This is the first useful PR.** Walkthrough: [docs/ADAPTER_FIRST_PR.md](https://github.com/seanventures/periscan/blob/main/docs/ADAPTER_FIRST_PR.md). Policy: [GOVERNANCE.md](https://github.com/seanventures/periscan/blob/main/GOVERNANCE.md).
 
-        Community start is permissive SPDX only. Safe first holes: **cfn-lint**, **tflint**, **parliament**. Live Atomic / Caldera / SharpHound / sqlmap / Metasploit are rejected.
+        Community start is permissive SPDX only. Safe first holes: **cfn-lint**, **tflint**, **parliament**. Atomic, Caldera, SharpHound/BloodHound and Metasploit adapters are welcome with qualification evidence.
   - type: input
     id: tool-name
     attributes:
@@ -78,7 +78,7 @@ body:
           required: true
         - label: I will run pnpm licenses:check, pnpm modules:certify, and module tests.
           required: true
-        - label: This is not Atomic / Caldera / SharpHound / sqlmap / Metasploit / live offensive chaining.
+        - label: The adapter has bounded authorized behavior, cancellation and verified cleanup.
           required: true
         - label: This is not silent AGPL/SSPL/BSL intake and not a Fixed-without-verify shortcut.
           required: true

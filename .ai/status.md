@@ -1,5 +1,13 @@
 # Periscan Autonomous Status
 
+## 2026-09-17 — current BAS / AEV implementation direction
+
+Full BAS/AEV development is authorized by the owner. The current handoff is
+[`docs/BAS_AEV_AGENT_HANDOFF.md`](../docs/BAS_AEV_AGENT_HANDOFF.md), with the
+feature matrix and Plane PERISCAN-583–592. Continue implementation in disposable
+local labs; production execution eligibility is earned per adapter/scenario.
+Current runtime denials and dated release notes are not development restrictions.
+
 ## Codex Full PRD Completion Gate Closure - 2026-06-28
 
 **Branch:** `codex/runner-mtls-certificate-alignment`.
@@ -1487,7 +1495,7 @@ dependency audits, and acceptance 100 files / 123 tests.
 
 **Branch:** `codex/integrate-validated-pr-stack` tracking origin.
 **Requirement:** `PRD-ReleaseTraceability` / `PRD-API-First` customer-readiness docs must not mark implemented, tested API-first subsystems as active engineering gaps.
-**Work completed:** Aligned `docs/IMPLEMENTATION_STATUS.md` with the current traceability and release evidence by marking Integration registry, Validation modules, and Frontier Gateway as `Done` in the status table while preserving live-customer prerequisites for credentials, provider setup, verified scopes, runner deployment validation, and legal/customer decisions. Cleaned older `.ai/gap-backlog.md` live-summary rows and `.ai/status.md` historical poll snapshots so they no longer direct agents toward P1/P2 work already closed in the integration branch. Updated `docs/PRODUCTION_READINESS.md` so payment processor selection and live BAS enablement are documented as explicit out-of-scope/deployment-managed decisions, not missing repo implementation. Updated root `PRODUCTION_READINESS.md` status rows so runner, integrations/modules, reports/evidence packs, and observability reflect first-customer-ready repo evidence instead of older readiness wording.
+**Work completed:** Aligned `docs/IMPLEMENTATION_STATUS.md` with the current traceability and release evidence by marking Integration registry, Validation modules, and Frontier Gateway as `Done` in the status table while preserving live-customer prerequisites for credentials, provider setup, verified scopes, runner deployment validation, and legal/customer decisions. Cleaned older `.ai/gap-backlog.md` live-summary rows and `.ai/status.md` historical poll snapshots so they no longer direct agents toward P1/P2 work already closed in the integration branch. Updated `docs/PRODUCTION_READINESS.md` so payment processor selection is documented as deployment-managed and BAS adapter implementation is tracked under PERISCAN-583. Updated root `PRODUCTION_READINESS.md` status rows so runner, integrations/modules, reports/evidence packs, and observability reflect first-customer-ready repo evidence instead of older readiness wording.
 **Validation:** `git diff --check` PASS; `rg "^\\| [^|]+\\| In progress|^\\| [^|]+\\| Not started|^\\| [^|]+\\| Blocked" docs/IMPLEMENTATION_STATUS.md` PASS (no matches); targeted stale open P1/P2/agent-running summary grep PASS (no matches); full `DATABASE_URL=postgresql://periscan:periscan@127.0.0.1:5434/periscan PERISCAN_TEST_DATABASE_URL=postgresql://periscan:periscan@127.0.0.1:5434/periscan pnpm verify` PASS with lint, typecheck, workspace tests, production build, runner and runner lab, OSS toolchain check, license inventory/policy tests, Prisma generate/validate/migrate deploy, E2E 22/22, security 22/22, high+ audit fatal gate, production audit, and acceptance 100 files / 118 tests.
 
 ## Codex Release Status Truthfulness Slice - 2026-06-23
@@ -1760,7 +1768,7 @@ dependency audits, and acceptance 100 files / 123 tests.
 
 **Branch:** `codex/integrate-validated-pr-stack` tracking `origin/codex/integrate-validated-pr-stack`.
 **Requirement:** `PRD-RunnerDeploymentSafetyDocs` from the Internal Runner, customer deployment, safety-boundary, API-first runner dispatch, and release-validation contracts.
-**Work completed:** Closed a runner deployment/documentation drift risk. Runner customer docs now list all implemented safe modules and task dispatch endpoints, the Kubernetes deployment README link is portable inside the repo, acceptance criteria and runner spec no longer imply reachability-only execution, and the self-contained/offensive runner PRD is explicitly marked historical/superseded so it cannot override the current no reverse SSH/no arbitrary tunnel/no live SharpHound-Caldera-Atomic policy.
+**Work completed:** Closed a runner deployment/documentation drift risk. Runner customer docs now list all implemented safe modules and task dispatch endpoints, the Kubernetes deployment README link is portable inside the repo, acceptance criteria and runner spec no longer imply reachability-only execution, and the self-contained/offensive runner PRD is explicitly marked historical/superseded so it cannot override the current outbound signed-task transport and BAS adapter qualification requirements.
 **Validation:** `bash -n scripts/validate-runner-deploy.sh` PASS, `pnpm test:runner:deploy` PASS, `pnpm test:modules -- open-source-workstream-docs` PASS, `pnpm --filter @periscan/shared test -- runner` PASS, and `git diff --check` PASS.
 
 ## Codex Kaseya VSA Connector Slice - 2026-06-20

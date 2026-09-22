@@ -1,11 +1,13 @@
 # Contributing to Periscan
 
+> **BAS/AEV program:** [docs/BAS_AEV_PROGRAM.md](docs/BAS_AEV_PROGRAM.md) — qualified open-source simulation, emulation and evidence-backed validation (PERISCAN-583).
+
 Public clone, issues, and PRs:
 **https://github.com/seanventures/periscan**
 
 Apache-2.0. Community edition is the **validation slice** (authorized scope,
-policy, safe OSS engines, evidence). It is not full BAS, automated pentest,
-or a CNAPP replacement. See [`COMMUNITY.md`](./COMMUNITY.md),
+policy, qualified OSS engines, evidence). Contributions toward full BAS/AEV
+are welcome under the adapter qualification program. See [`COMMUNITY.md`](./COMMUNITY.md),
 [`OPEN_CORE.md`](./OPEN_CORE.md), [`GOVERNANCE.md`](./GOVERNANCE.md).
 
 ## What to file (20 seconds)
@@ -17,8 +19,9 @@ or a CNAPP replacement. See [`COMMUNITY.md`](./COMMUNITY.md),
 | An OSS tool to wrap as a module | [Engine adapter](https://github.com/seanventures/periscan/issues/new?template=engine-adapter.yml) — **first useful PR** |
 | A vulnerability in Periscan | [`SECURITY.md`](./SECURITY.md) — title-only `[SECURITY]` issue, **no PoCs** |
 
-Do not file requests to enable live Atomic / Caldera / SharpHound / sqlmap /
-Metasploit. Those issues and PRs are closed.
+Atomic, Caldera, SharpHound/BloodHound and Metasploit adapter proposals are
+welcome. Include scenario scope, typed inputs, policy gates, cleanup, licensing
+and lab evidence using [the BAS/AEV program](docs/BAS_AEV_PROGRAM.md).
 
 ## Clone
 
@@ -101,7 +104,7 @@ AGPL / SSPL / BSL / Commons Clause / PolyForm are blocked.
 - Add tests for schemas, services, routes, modules, policy, and evidence you
   touch.
 - **Fixed** still requires a verification event. Denied tasks still never queue.
-- Do not enable live Atomic / Caldera / SharpHound / sqlmap / Metasploit.
+- Qualify each BAS adapter and scenario with policy, cleanup and lab evidence.
 - Do not rewrite Prisma schema/migrations wholesale or change runner transport
   away from outbound HTTPS signed-task polling.
 - Do not rewrite root `LICENSE`.

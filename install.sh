@@ -55,6 +55,8 @@ Already cloned:
   bash scripts/periscan.sh install
   bash scripts/periscan.sh start
 
+Need Node ${NODE_MAJOR_MIN} (.nvmrc) and Docker. Node 20/22 fail the major check.
+nvm install ${NODE_MAJOR_MIN} && nvm use    # or: fnm install ${NODE_MAJOR_MIN} && fnm use
 Local deps: ${COMPOSE_FILE}
 Clone: ${CLONE_URL} (default dest ${DEFAULT_HOME})
 Docker: ${DOCKER_DESKTOP_URL}
@@ -133,6 +135,12 @@ node_major() {
   node -p "process.versions.node.split('.')[0]" 2>/dev/null || echo "0"
 }
 
+node_floor_hint() {
+  echo "hint: Community requires Node ${NODE_MAJOR_MIN} (.nvmrc). Node 20/22 will not start compose or migrate."
+  echo "hint: nvm install ${NODE_MAJOR_MIN} && nvm use    # or: fnm install ${NODE_MAJOR_MIN} && fnm use"
+  echo "hint: dry-run does not silently continue on Node 20. Install will fail closed until this shell is ${NODE_MAJOR_MIN}."
+}
+
 ensure_git() {
   if command -v git >/dev/null 2>&1; then
     echo "check: git $(git --version | awk '{print $3; exit}')"
@@ -160,11 +168,13 @@ ensure_node() {
       return 0
     fi
     echo "check: node $(node -v) NEED>=${NODE_MAJOR_MIN}"
+    node_floor_hint
   else
     echo "check: node MISSING (need major>=${NODE_MAJOR_MIN})"
+    node_floor_hint
   fi
   if is_dry_run; then
-    echo "plan: install Node ${NODE_MAJOR_MIN} (see .nvmrc)"
+    echo "plan: install Node ${NODE_MAJOR_MIN} (see .nvmrc). Dry-run does not silently continue on Node 20."
     return 0
   fi
   export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
@@ -180,11 +190,11 @@ ensure_node() {
     echo "==> brew install node@${NODE_MAJOR_MIN}"
     brew install "node@${NODE_MAJOR_MIN}" || brew install node
   else
-    fail "Node ${NODE_MAJOR_MIN} is required (see .nvmrc). Install from https://nodejs.org"
+    fail "Node ${NODE_MAJOR_MIN} is required (see .nvmrc). nvm install ${NODE_MAJOR_MIN} && nvm use. Install will not silently continue on Node 20. https://nodejs.org"
   fi
   major="$(node_major)"
   if [[ "$major" -lt "$NODE_MAJOR_MIN" ]]; then
-    fail "Node ${NODE_MAJOR_MIN} is required. This shell has $(node -v 2>/dev/null || echo missing)."
+    fail "Node ${NODE_MAJOR_MIN} is required (see .nvmrc). This shell has $(node -v 2>/dev/null || echo missing). nvm install ${NODE_MAJOR_MIN} && nvm use. Install will not silently continue on Node 20."
   fi
   echo "check: node $(node -v) (major>=${NODE_MAJOR_MIN})"
 }
@@ -441,7 +451,7 @@ print_report() {
 }
 
 print_first_hour_next() {
-  echo "Next: open the printed URL, create an account, git clone YOUR repo, paste the absolute path (not github.com/org/repo). First hour runs Gitleaks. Fixed only after a retest."
+  echo "Next: open the printed URL, create an account, git clone YOUR repo, paste the absolute path (not github.com/org/repo). Default start runs Gitleaks. Keep proving. Fixed only after a retest."
 }
 
 start_apps() {

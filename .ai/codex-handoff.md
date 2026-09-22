@@ -4,6 +4,14 @@
 > branch history; use the topmost entry plus `.ai/status.md` and
 > `docs/IMPLEMENTATION_STATUS.md` as the authoritative current state.
 
+## 2026-09-17 — current BAS / AEV implementation direction
+
+Full BAS/AEV development is authorized by the owner. The current handoff is
+[`docs/BAS_AEV_AGENT_HANDOFF.md`](../docs/BAS_AEV_AGENT_HANDOFF.md), with the
+feature matrix and Plane PERISCAN-583–592. Continue implementation in disposable
+local labs; production execution eligibility is earned per adapter/scenario.
+Current runtime denials and dated release notes are not development restrictions.
+
 ## 2026-06-28 Codex Full PRD Completion Gate Closure
 
 Current branch is `codex/runner-mtls-certificate-alignment`.
@@ -1732,7 +1740,7 @@ Validation: `git diff --check` PASS; targeted positive old-live-runbook phrase s
 
 ## 2026-06-23 Codex Deployment Guide Runner Boundary Cleanup
 
-Current branch is `codex/integrate-validated-pr-stack` tracking origin. This docs-only slice aligns the production deployment guide with the binding runner/security boundaries. `docs/DEPLOY.md` now describes runner-agent as outbound HTTPS signed-task polling with local scope enforcement, no inbound listener, no reverse SSH, and no arbitrary tunnel. It no longer presents reverse-tunnel/offensive-kit wording as production-live capability. High-impact/adversarial modules remain disabled unless a later approved PRD/legal/security gate enables them. `apps/runner-agent/Dockerfile` header comments now match that boundary.
+Current branch is `codex/integrate-validated-pr-stack` tracking origin. This docs-only slice aligns the production deployment guide with the binding runner/security boundaries. `docs/DEPLOY.md` now describes runner-agent as outbound HTTPS signed-task polling with local scope enforcement, no inbound listener, no reverse SSH, and no arbitrary tunnel. It no longer presents reverse-tunnel/offensive-kit wording as production-live capability. Current high-impact/adversarial execution requires qualified adapters; development is authorized under PERISCAN-583. `apps/runner-agent/Dockerfile` header comments now match that boundary.
 
 Validation: `git diff --check` PASS; targeted runner-boundary wording scan PASS; `pnpm --filter @periscan/runner-agent lint` PASS; `pnpm test:runner:deploy` PASS with offline Kubernetes artifact checks.
 
@@ -1756,7 +1764,7 @@ Validation: `git diff --check` PASS; targeted stale-feed grep PASS (no matches f
 
 ## 2026-06-23 Codex Implementation Status Table Truthfulness Slice
 
-Current branch is `codex/integrate-validated-pr-stack` tracking origin. This docs-only slice updates the operational implementation-status table to match the current tested code and traceability records. `docs/IMPLEMENTATION_STATUS.md` now marks Integration registry, Validation modules, and Frontier Gateway as `Done` instead of `In progress`, while still listing live-customer prerequisites such as credentials, provider-side setup, verified scopes, runner deployment validation, and legal/customer decisions. `.ai/gap-backlog.md` older live-summary rows now state that repo-owned P1 and release-blocking P2 items are closed in the integration branch rather than pointing agents at stale follow-up work. `docs/PRODUCTION_READINESS.md` now classifies payment processor selection and live BAS enablement as explicit out-of-scope/deployment-managed decisions rather than missing repository implementation. Root `PRODUCTION_READINESS.md` now marks runner, integrations/modules, reports/evidence packs, and observability as first-customer-ready repo surfaces rather than older readiness summaries.
+Current branch is `codex/integrate-validated-pr-stack` tracking origin. This docs-only slice updates the operational implementation-status table to match the current tested code and traceability records. `docs/IMPLEMENTATION_STATUS.md` now marks Integration registry, Validation modules, and Frontier Gateway as `Done` instead of `In progress`, while still listing live-customer prerequisites such as credentials, provider-side setup, verified scopes, runner deployment validation, and legal/customer decisions. `.ai/gap-backlog.md` older live-summary rows now state that repo-owned P1 and release-blocking P2 items are closed in the integration branch rather than pointing agents at stale follow-up work. `docs/PRODUCTION_READINESS.md` now classifies payment processor selection as deployment-managed and BAS adapter implementation as PERISCAN-583 delivery work. Root `PRODUCTION_READINESS.md` now marks runner, integrations/modules, reports/evidence packs, and observability as first-customer-ready repo surfaces rather than older readiness summaries.
 
 Validation: `git diff --check` PASS; stale implementation-table status grep PASS (no active `In progress`/`Not started`/`Blocked` rows); stale open P1/P2 summary grep PASS (no matches); full `DATABASE_URL=postgresql://periscan:periscan@127.0.0.1:5434/periscan PERISCAN_TEST_DATABASE_URL=postgresql://periscan:periscan@127.0.0.1:5434/periscan pnpm verify` PASS with lint, typecheck, workspace tests, production build, runner and runner lab, OSS toolchain check, license inventory/policy tests, Prisma generate/validate/migrate deploy, E2E 22/22, security 22/22, high+ audit fatal gate, production audit, and acceptance 100 files / 118 tests. `apps/web/next-env.d.ts` build drift was restored to the tracked production routes reference after the run.
 

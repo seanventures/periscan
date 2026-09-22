@@ -1,5 +1,13 @@
 # Periscan .ai Gap Backlog
 
+## 2026-09-17 — current BAS / AEV implementation direction
+
+Full BAS/AEV development is authorized by the owner. The current handoff is
+[`docs/BAS_AEV_AGENT_HANDOFF.md`](../docs/BAS_AEV_AGENT_HANDOFF.md), with the
+feature matrix and Plane PERISCAN-583–592. Continue implementation in disposable
+local labs; production execution eligibility is earned per adapter/scenario.
+Current runtime denials and dated release notes are not development restrictions.
+
 ## 2026-06-28 Full PRD Completion Gate Closure
 
 - `GAP-COMPLETE-SELF-REFERENTIAL-GATE-001`: **Closed in this slice.** The
@@ -32,7 +40,7 @@
   mechanically tied to every Product Vision source claim.
   `tests/modules/prd-vision-coverage.test.ts` now parses section 1 and maps the
   validation/proof-layer claim, six customer questions, continuous-validation
-  domains, anti-scanner/pentest/BAS positioning, and third-party-tool
+  domains, evidence-backed BAS/AEV positioning, and third-party-tool
   certification gate to concrete API, service, report, UX, and governance
   evidence.
 

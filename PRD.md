@@ -1,6 +1,6 @@
 # Periscan PRD
 
-Periscan is a self-service Automated Security Validation platform.
+Periscan is a self-service Automated Security Validation platform with full BAS/AEV as an explicit product objective. The implementation program is [BAS / AEV](docs/BAS_AEV_PROGRAM.md) (PERISCAN-583).
 
 Periscan validates exposure, controls, attack paths, AI applications, and fixes,
 then turns the results into proof customers can use.
@@ -95,25 +95,20 @@ Find the path. Validate the risk. Prove it's fixed.
 
 ## Competitive positioning and capability answer
 
-**Category home is AEV/CTEM proof — not full multi-vector BAS.** Periscan is a
-measured exposure-validation and fix-verification layer that co-exists with CNAPP
-(Wiz), RBVM (Tenable), optional BAS libraries, and enterprise telemetry. It does
-**not** sell “replace CNAPP,” “replace RBVM,” “full BAS library parity,” or
-“automated pentest.” Durable GTM language lives in
-[docs/competitive/POSITIONING.md](docs/competitive/POSITIONING.md) and
-[docs/competitive/BATTLECARDS.md](docs/competitive/BATTLECARDS.md).
+**Category direction is integrated BAS / AEV / CTEM validation and proof.** Build
+qualified OSS-backed simulation, emulation, exposure verification and measured
+retesting under [the BAS/AEV program](docs/BAS_AEV_PROGRAM.md). Atomic, Caldera,
+SharpHound/BloodHound and Metasploit are explicit integration targets. Completed coverage must be proven scenario by scenario. Co-exist with CNAPP, RBVM and enterprise telemetry.
 
-Capability research may study ASV/CTEM and adjacent vendors (Picus, Pentera,
-XM Cyber, Cymulate, RidgeBot, Tenable, Horizon3, SafeBreach, Wiz). That research
-is **not** a mandate to enter head-to-head full-BAS bake-offs. Honest,
-code-verified coverage of headline capabilities is tracked in
-[docs/COMPETITIVE_COVERAGE_MATRIX.md](docs/COMPETITIVE_COVERAGE_MATRIX.md); the
-differentiated answer to each capability is in
-[docs/COMPETITIVE_FEATURE_STRATEGY.md](docs/COMPETITIVE_FEATURE_STRATEGY.md).
+Current coverage remains in
+[docs/COMPETITIVE_COVERAGE_MATRIX.md](docs/COMPETITIVE_COVERAGE_MATRIX.md).
+Customer language follows [POSITIONING](docs/competitive/POSITIONING.md):
+distinguish the development target from the shipped release and never invent
+parity or measured results.
 
 - The differentiator is **proof, not claims**: every verdict is measured-or-heuristic-labeled, "Fixed" flips only on a re-run measurement, runner results are Ed25519-signed and server-verified, and evidence is tamper-evident. Where the platform simulates, it must say "simulated" — never emit a fabricated number.
 - **Co-exist recipes:** Wiz → Attack Path → Remediation (CNAPP inventory in; path/fix proof out). Tenable finds → Periscan validates & verifies fix (RBVM remains system of record).
-- **Pentera/Horizon3 gap is deliberate:** governed continuous validation with a hard safety floor that never lifts — not automated pentest ([SECURITY_BOUNDARIES.md](SECURITY_BOUNDARIES.md)).
+- **Close BAS/AEV gaps deliberately:** governed, bounded validation with certified adapters and measured outcomes; retain the authorization and non-destructive boundaries in [SECURITY_BOUNDARIES.md](SECURITY_BOUNDARIES.md).
 - **Analyst placement:** Visionaries / Contender on vision is correct until Ability to Execute moves via references, measured multi-hop default demos, and closed control-validation loops — not more vision docs ([docs/competitive/POSITIONING.md](docs/competitive/POSITIONING.md) §5).
 - **No fabricated capability numbers may reach a user.** The `Math.random`-seeded "swarm"/kill-chain metrics (fabricated template/swarm counts, placeholder technique ids) must be removed or hard-quarantined as an explicit dev-only "simulation preview"; they are a completion blocker, not a feature.
 - Genuinely measured-and-real today (lead with these): exposure/risk scoring + trends (EXV), measured HTTP/TLS/DNS validation loop, measured fix-verification + automated revalidation that can honestly demote a stale "Fixed", MSSP multi-tenancy + isolation, ~106 real integration clients, and the explicit exploitability/measured-vs-heuristic prioritization model.

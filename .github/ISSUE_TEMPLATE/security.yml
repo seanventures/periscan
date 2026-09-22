@@ -1,11 +1,13 @@
 name: Security
-description: Title-only [SECURITY] vulnerability intake. No public PoC.
+description: Vulnerability in Periscan — use this form (title-only [SECURITY], no PoC). Not a product bug.
 title: "[SECURITY] "
 labels: ["security"]
 body:
   - type: markdown
     attributes:
       value: |
+        **This is the vulnerability intake path.** Product bugs that are not vulns → Bug template.
+
         **Public intake is title-only.** Do **not** paste exploit details, PoCs, payloads, credentials, or customer data in this issue.
 
         Maintainers acknowledge within **72 hours** and aim to fix or disclose within **90 days** (see [SECURITY.md](https://github.com/seanventures/periscan/blob/main/SECURITY.md)).

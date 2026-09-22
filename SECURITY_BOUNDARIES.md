@@ -18,44 +18,24 @@ Periscan only validates customer-authorized scope.
 - The internal runner must be outbound-only and scope-limited.
 - The internal runner must use outbound HTTPS with bearer-token authentication over TLS by default; reverse SSH tunnels are not part of the default product design.
 
-## Safety floor (do not erode for BAS peer pressure) — P12-19
+## Governed BAS / AEV development — PERISCAN-583
 
-Periscan’s Completeness of Vision strength includes an explicit **non-destructive
-AEV floor**. Do **not** weaken these rules to chase “attack realism” claims from
-BAS peers:
+Full BAS/AEV and qualified Atomic, Caldera, SharpHound/BloodHound and Metasploit
+integrations are authorized development objectives. The [BAS/AEV
+program](docs/BAS_AEV_PROGRAM.md) defines implementation requirements. Authorization to develop is distinct
+from customer authorization to execute a particular scenario.
 
-- Live Atomic / Caldera / SharpHound / kill-chain / ransomware / malware / phishing
-  execution stays **disabled** unless a separate, approved legal and safety
-  program lands (see Agents.md “Do Not Touch”).
-- Prefer **measured, governed, evidence-linked** validation over library size or
-  offensive theater.
-- Publish what is simulated, what is measured, and what is never done; sell the
-  safety substitution catalog rather than matching uncontrolled BAS packs.
-- Denied tasks must never be queued; Fixed requires verification — these are
-  product guarantees, not optional marketing knobs.
+Promote each adapter and scenario only with pinned content, reviewed side
+effects, least privilege, verified scope, policy/approval binding, bounded
+execution, cancellation, cleanup verification and real lab evidence. Preserve
+signed outbound runner tasks and tenant isolation. No arbitrary shell or
+unrestricted tool-library dispatch from the API.
 
-## Wave D optional lab inject — SOW + dual gate (default off) — PERISCAN-460
-
-Closed inject→measure is **not** default product behavior. Control-plane API
-hard-refuses live inject (`control_live_execution_disabled`) so observe-only
-telemetry correlation remains the shipping path.
-
-Until **both** are true, do not enable inject product code:
-
-1. **Signed SOW** using
-   [`docs/competitive/WAVE_D_INJECT_SOW_TEMPLATE.md`](docs/competitive/WAVE_D_INJECT_SOW_TEMPLATE.md)
-   (authorization, verified scope, dual approvers, dry-run default, kill switch,
-   audit, finite duration, withdraw).
-2. **Dual product gates** at runtime: tenant inject policy flag **and** operator
-   approval; dry-run default; denied inject tasks never queue.
-
-**Never under Wave D:** live ransomware, credential spray, SharpHound collector,
-Caldera live, unrestricted Atomic live library, real data exfiltration.
-
-Docs consistency:
-[`docs/competitive/DEMO_OFFENSIVE_GUARDRAILS.md`](docs/competitive/DEMO_OFFENSIVE_GUARDRAILS.md)
-§ Wave D. Residual D1–D5 remain blocked on signed SOW — do not flip the hard
-disable to chase matrix SCV Leading.
+The current generic control inject API remains disabled
+(`control_live_execution_disabled`) until its governed implementation ships.
+Existing fixture/import-only modules remain non-executable. Update the runtime
+gates with the implementation and negative tests, not by changing catalog flags.
+Record customer execution scope with the [BAS execution authorization](docs/competitive/BAS_EXECUTION_AUTHORIZATION.md).
 
 ## Product enforcement expectations
 
@@ -76,21 +56,19 @@ console:
   FalsePositive/Suppressed) so SOC automation can annotate cases elsewhere.
 - Analyst dispositions never claim Fixed; Fixed remains verification-only.
 
-## Safe substitutes to build vs never build (P05-13)
+## Build scope and excluded behavior
 
-**Build (safe substitutes / proof layer):** multi-hop safe probes + receipts;
-endpoint marker / DNS canary BAS-lite; import-graph re-measure; fix re-proof;
-control observe closed loop; allowlisted external GET templates; Nuclei safe
-profiles; kill-chain **planner** (plan-only, non-executable stages).
+**Build:** qualified OSS adapters, scenario and campaign authoring, governed
+control stimulation, detection correlation, directory collection and identity
+path analysis, reviewed non-destructive validation checks, measured path
+receipts, canaries, remediation retests and evidence-backed reports.
 
-**Never build (live offense):** live ransomware encrypt; live credential spray
-against customer IdP; SharpHound collector in product; Metasploit exploit run;
-OT protocol write / Modbus coil flips; uncontrolled multi-stage agent; phishing
-payload delivery; malware staging; live Atomic / Caldera inject without a
-certified allowlist and policy architecture.
-
-**Partner, do not rebuild:** dark-web credential monitoring, crowdsourced HITL,
-deep OT lab packs.
+**Exclude:** customer-data destruction, ransomware encryption of customer
+files, credential theft or uncontrolled spray, persistent implants, evasion,
+real data exfiltration, OT writes and uncontrolled multi-stage chaining.
+Use synthetic data, dedicated test identities and reversible approved behavior
+for simulation. An engine's name does not determine eligibility; the specific
+adapter, scenario, target and side effects do.
 
 ## Safety drill (kill switch + denied-task visibility) (P06-19)
 

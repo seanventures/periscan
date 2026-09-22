@@ -8,7 +8,7 @@ body:
       value: |
         Product bug on **authorized** scope. **Do not** attach exploit PoCs, credentials, or third-party target data.
 
-        Vulnerability in Periscan itself → [SECURITY.md](https://github.com/seanventures/periscan/blob/main/SECURITY.md) (title-only `[SECURITY]` issue; no PoCs; we do not use GitHub private vulnerability reporting).
+        Vulnerability in Periscan itself → use the **[Security](https://github.com/seanventures/periscan/issues/new?template=security.yml)** template (title-only `[SECURITY]`; no PoCs; not GitHub PVR; no `security@`). Policy: [SECURITY.md](https://github.com/seanventures/periscan/blob/main/SECURITY.md).
   - type: dropdown
     id: surface
     attributes:
@@ -77,7 +77,7 @@ body:
       options:
         - label: I did not scan systems I do not own or lack written authorization to test.
           required: true
-        - label: This issue is not a request to enable live Atomic / Caldera / SharpHound / sqlmap / Metasploit.
+        - label: Any execution request includes verified scope and a qualified adapter.
           required: true
         - label: I will not paste secrets, customer data, or exploit payloads here.
           required: true

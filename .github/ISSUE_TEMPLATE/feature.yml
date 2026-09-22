@@ -1,12 +1,12 @@
 name: Feature
-description: Propose Community or product behavior (not live Atomic, not a LICENSE rewrite).
+description: Propose Community, BAS/AEV, or validation behavior.
 title: "[feature] "
 labels: ["enhancement"]
 body:
   - type: markdown
     attributes:
       value: |
-        Community edition is the open-core **validation slice**, not full BAS.
+        Community edition is the open-core entry point; full BAS/AEV development is in scope.
         First useful PR is an [engine adapter](https://github.com/seanventures/periscan/issues/new?template=engine-adapter.yml) — use that form if you are wrapping a tool.
 
         Read [COMMUNITY.md](https://github.com/seanventures/periscan/blob/main/COMMUNITY.md), [OPEN_CORE.md](https://github.com/seanventures/periscan/blob/main/OPEN_CORE.md), [GOVERNANCE.md](https://github.com/seanventures/periscan/blob/main/GOVERNANCE.md), and [docs/SETTLED.md](https://github.com/seanventures/periscan/blob/main/docs/SETTLED.md).
@@ -40,7 +40,7 @@ body:
     id: non-goals
     attributes:
       label: Explicit non-goals
-      description: What this must not become (full BAS, CNAPP replacement, LICENSE rewrite, Fixed-without-verify, live Atomic, …).
+      description: Describe scope limits, side effects, cleanup and unsupported claims.
     validations:
       required: true
   - type: checkboxes
@@ -50,13 +50,13 @@ body:
       options:
         - label: This is not a request to rewrite root LICENSE or announce that Periscan is open source.
           required: true
-        - label: This is not a request to enable live Atomic / Caldera / SharpHound / sqlmap / Metasploit.
+        - label: The proposal includes per-scenario policy and runtime qualification.
           required: true
         - label: This does not mark Fixed without a verification event.
           required: true
         - label: This does not put AGPL / SSPL / BSL / Commons Clause / PolyForm on the default image or Community start.
           required: true
-        - label: This does not claim full BAS, automated pentest, certification, or CNAPP/RBVM replacement.
+        - label: Shipped capability claims are backed by measured evidence.
           required: true
         - label: Denied tasks still never queue; product-visible data stays real or honest-empty.
           required: true
