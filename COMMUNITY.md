@@ -2,10 +2,11 @@
 
 Authorize a **local clone** you own (or are contracted to test), run
 **Gitleaks-class secrets** first (`jobsQueued=1`), keep evidence, and mark
-**Fixed** only after retest. That is the Community first hour.
+**Fixed** only after retest. Keep this board running.
 
-Community edition is the Apache-2.0 **validation slice** — not full BAS, not
-automated pentest, not a Nuclei wrapper, not a Wiz / Tenable replacement.
+Community edition currently ships the Apache-2.0 **validation slice**. Full
+BAS/AEV is an authorized [development objective](docs/BAS_AEV_PROGRAM.md);
+qualified adapters and edition policy determine future pack membership.
 
 Source is **Apache-2.0** ([`LICENSE`](./LICENSE), [`OPEN_CORE.md`](./OPEN_CORE.md)).
 
@@ -26,8 +27,8 @@ Contract: `packages/shared/src/community-edition.ts`
   ([`docs/ADAPTER_FIRST_PR.md`](./docs/ADAPTER_FIRST_PR.md),
   [`CONTRIBUTING.md`](./CONTRIBUTING.md))
 
-Not for: unauthorized scanning, live ransomware theater, or “make us look like
-Cymulate.”
+Not for unauthorized scanning or destructive tests. BAS coverage claims require
+measured evidence for the supported scenarios.
 
 ---
 
@@ -44,8 +45,8 @@ bash scripts/periscan.sh start
 
 Open the printed URL. Create an account. **Authorize a local clone path** —
 `git clone <your-repo>` on this machine, then paste the **absolute path** —
-not `github.com/org/repo`. First hour is **Gitleaks-class secrets**
-(`jobsQueued=1`). Remediations stay **Open** until verify.
+not `github.com/org/repo`. Default start is **Gitleaks-class secrets**
+(`jobsQueued=1`). Remediations stay **Open** until verify. Schedule the next run.
 
 Secondary one-paste (inspect `install.sh` first):
 
@@ -84,7 +85,7 @@ verified scope
 
 ## Pack (installable catalog)
 
-Not first-hour default. First hour is **Gitleaks-class secrets** (`jobsQueued=1`).
+Not the default start. Default start is **Gitleaks-class secrets** (`jobsQueued=1`).
 The list below is a second control.
 
 Permissive SPDX only (MIT / Apache-2.0 / BSD-3-Clause / NPSL) plus first-party
@@ -97,8 +98,9 @@ Nuclei **second mission**, Prowler on Connected AWS, YARA / Falco **rules lint**
 recon when a runner is enrolled.
 
 **Not Community start:** GPL/LGPL (Semgrep, testssl, Nikto, …) → Engine Lab +
-license accept. Atomic, Caldera, SharpHound, sqlmap, Metasploit → catalog
-theater. Never installable as validation.
+license accept. Atomic, Caldera, SharpHound and Metasploit are planned BAS
+adapters; current catalog/import status does not make them executable. sqlmap
+is not available for live validation.
 
 ---
 
@@ -108,24 +110,36 @@ theater. Never installable as validation.
 - Denied tasks **never** queue
 - **Fixed** requires a verification event
 - No destructive tests, exfil, credential theft, or persistence
-- Live Atomic / Caldera / SharpHound / sqlmap / Metasploit stay off without a
-  separate legal SOW
+- BAS adapters become executable only after implementation, scenario review,
+  policy, licensing, cleanup and lab qualification gates pass
 - Runner transport is **outbound HTTPS signed-task polling**
 
 [`SECURITY_BOUNDARIES.md`](./SECURITY_BOUNDARIES.md) ·
 [`SECURITY.md`](./SECURITY.md) · [`docs/SETTLED.md`](./docs/SETTLED.md)
 
+## CTEM in Periscan
+
+In this product, CTEM is a **proof layer on authorized scope**
+(Scope → Discover → Prioritize → Validate → Mobilize → Verify). That loop maps
+to operator **Authorize → Verify**. It is **not** a Microsoft CTEM replacement.
+Periscan has a full BAS/AEV development program. Scenario execution requires
+qualified adapters and measured evidence.
+
+Community start is still **Gitleaks-class secrets** (`jobsQueued=1`) on an
+authorized local path. Keep proving after that run. **Live Atomic** requires a qualified adapter before execution. Hosted product and MSSP
+portfolio are commercial.
+
 ## Honest language
 
 | Say                                              | Do not say                                         |
 | ------------------------------------------------ | -------------------------------------------------- |
-| Authorized local path + Gitleaks-class first hour | Full BAS platform / multi-vector BAS like Cymulate |
+| Authorized local path + Gitleaks-class default start | Claim full BAS delivery from the current Community start |
 | Fixed only after re-validation                   | Mark Fixed from ticket sync                        |
 | Measured exposure validation with evidence       | Automated pentest / autonomous red team            |
 | Co-exist with CNAPP (Wiz) and RBVM (Tenable)     | Replace your CNAPP / replace Tenable               |
 | Apache-2.0 Community validation slice            | We are open source now                             |
 
-CTEM program views are commercial / later — not Community first hour.
+CTEM program views are commercial / later — not Community start.
 
 Contract: `CLAIM_LANGUAGE_CATALOG` in `packages/shared/src/claim-deny-list.ts`.
 
@@ -137,6 +151,7 @@ Short map. Not a README fold. Not a LICENSE flip.
 
 | Want | File |
 | --- | --- |
+| Community vs commercial (CISO / admin) | [`docs/ENTERPRISE.md`](./docs/ENTERPRISE.md) |
 | FAQ | [`docs/FAQ.md`](./docs/FAQ.md) |
 | How to use it | [`docs/USING.md`](./docs/USING.md) |
 | Install / start / update | [`scripts/periscan.sh`](./scripts/periscan.sh) (`install`, `start`, `update`, `down`) |

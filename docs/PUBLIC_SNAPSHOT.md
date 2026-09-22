@@ -17,9 +17,9 @@ logs. It is **not** a visibility flip of the private product remote.
 
 ## GitHub About (public repo settings)
 
-GitHub has **no API** for the social preview image. After each snapshot,
-if the card is missing or stale, upload
-[`docs/images/github-social-preview.png`](../docs/images/github-social-preview.png)
+GitHub has **no API** for the social preview image. **Maintainer:** after each
+snapshot, if the card is missing or stale, upload
+[`docs/images/github-social-preview.png`](./images/github-social-preview.png)
 (1280×640) at
 [Settings → Social preview](https://github.com/seanventures/periscan/settings).
 
@@ -28,9 +28,23 @@ Other About fields are set on `seanventures/periscan` (do not flip
 
 | Field | Value |
 | --- | --- |
+| Homepage | `https://github.com/seanventures/periscan#start` |
 | Description | Prove authorized exposures with evidence. Apache-2.0 Community validation slice. Fixed only after a retest. |
-| Topics | `security` `ctem` `asv` `appsec` `validation` `evidence` `secrets-scanning` `gitleaks` `apache-2-0` `open-core` |
+| Topics | `security` `appsec` `validation` `evidence` `secrets-scanning` `gitleaks` `apache-2-0` `open-core` |
 | Wiki / Projects / Discussions | off (empty tabs look unfinished) |
 | Issues | on |
 | Private vulnerability reporting | off |
 | Secret scanning + push protection | on (free on public) |
+
+## Dependabot lockfile (must include)
+
+Every public orphan snapshot **must include** the current `pnpm-lock.yaml`
+plus the workspace pins (`package.json`, `apps/tui/package.json`). GitHub
+Dependabot on `seanventures/periscan` reads the lockfile on `main`. Omitting
+it, or copying an old one, keeps **GHSA-82fw-gwwq-j7x9** mediums open
+(`vitest` ×2 / `@vitest/mocker`) even when this private tree already
+resolves **vitest@4.1.11** and **@vitest/mocker@4.1.11**.
+
+Do not retag `v0.12.0`. The next snapshot is what closes public alerts
+#1 / #9 / #10. Do not dismiss those as test-only while a patched lockfile
+exists to ship. `docs/PUBLIC_TREE.md` must not exclude `pnpm-lock.yaml`.

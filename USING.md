@@ -1,7 +1,9 @@
 # Using Periscan (local)
 
 Operator notes for a clone. The GitHub fold lives in [`README.md`](README.md).
-Offering copy: [`COMMUNITY.md`](COMMUNITY.md). Step-by-step loop: [`docs/USING.md`](docs/USING.md).
+Local/self-host (Node 24, pnpm, Docker, compose, ports, doctor):
+[`docs/SETUP.md`](docs/SETUP.md). Offering copy: [`COMMUNITY.md`](COMMUNITY.md).
+Step-by-step loop: [`docs/USING.md`](docs/USING.md).
 
 ## Preferred start
 
@@ -20,8 +22,8 @@ bash scripts/periscan.sh start
 
 Open the printed URL. Create an account. **Authorize a local clone path** —
 `git clone <your-repo>` on this machine, then paste the **absolute path**
-(not a hosted `github.com/org/repo` URL). First hour is **Gitleaks-class
-secrets** (`jobsQueued=1`). Remediations stay Open until a retest verifies.
+(not a hosted `github.com/org/repo` URL). Default start is **Gitleaks-class
+secrets** (`jobsQueued=1`). Remediations stay Open until a retest verifies. Keep proving.
 
 Secondary one-paste (inspect `install.sh` first):
 
@@ -83,7 +85,7 @@ POST /api/v1/community/validation-runs/:missionId/remediations
 ```
 
 HTTP 200 on start is not “jobs queued” — read `jobsQueued` and `mission.status`.
-First hour on a verified repo is **Gitleaks-class secrets** (`jobsQueued=1`).
+Default start on a verified repo is **Gitleaks-class secrets** (`jobsQueued=1`).
 Nuclei is a **second mission** (External PoA). Do not put it in the primary
 `moduleIds`. Changelog: [`docs/CHANGELOG-API.md`](docs/CHANGELOG-API.md).
 

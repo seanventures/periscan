@@ -2,9 +2,9 @@
 
 **Prove authorized exposures are real — and only mark them Fixed when a retest says so.**
 
-**One job:** authorized local path → Gitleaks-class first hour → **Fixed after retest**.
+**Keep proving:** authorized local path → Gitleaks-class → **Fixed after retest**.
 
-Community edition is the Apache-2.0 **validation slice**: authorized local clone, policy, Gitleaks-class secrets (`jobsQueued=1`), evidence. **Fixed** only after a retest. Full BAS/AEV is the [development objective](docs/BAS_AEV_PROGRAM.md); this first-hour pack is the current shipped entry point. Not a Wiz / Tenable replacement. Not a live exploit library.
+Community edition is the Apache-2.0 **validation slice**: authorized local clone, policy, Gitleaks-class secrets (`jobsQueued=1`), evidence. **Fixed** only after a retest. Full BAS/AEV is the [development objective](docs/BAS_AEV_PROGRAM.md); this Community start is the current shipped entry point. Not a Wiz / Tenable replacement. Not a live exploit library.
 
 **For:** AppSec, platform, and security engineers who **own** the target, or are **contracted to test** it.
 
@@ -23,7 +23,7 @@ Need **Node 24** ([`.nvmrc`](.nvmrc)) and **Docker**. pnpm 9.15.0 via Corepack.
   <img src="docs/images/shot-finding-row.png" alt="Validated finding with evidence in the Findings workbench — local path and rule on the row. Remediations stay Open until a retest; Fixed only after that verification event." width="720" />
 </p>
 
-<p align="center"><em>First-hour story: authorize a local clone → Gitleaks-class secrets finding with evidence → remediate → retest. <strong>Fixed</strong> only after the retest clears it.</em></p>
+<p align="center"><em>Keep proving: authorize a local clone → Gitleaks-class secrets finding with evidence → remediate → retest. <strong>Fixed</strong> only after the retest clears it. Schedule the next run.</em></p>
 
 ## Start
 
@@ -39,7 +39,7 @@ bash scripts/periscan.sh start
 Then in the UI — one job:
 
 1. **Authorize a local clone path** — `git clone <your-repo>` on the machine running Periscan, then paste the **absolute path**. A hosted `github.com/org/repo` URL is not a control-plane path. (The UI refuses the URL and shows the clone command — paste the path after clone.)
-2. **Run Community validation** — first hour is **Gitleaks-class secrets** (`jobsQueued=1`). Not the full pack. Not the engine mall below.
+2. **Run Community validation** — default start is **Gitleaks-class secrets** (`jobsQueued=1`). Not the full pack. Not the engine mall below. Keep the board running.
 3. Open remediations from **that** mission. They stay **Open** until a retest produces a verification event. Creating a ticket is not Fixed.
 
 <p align="center">
@@ -129,7 +129,7 @@ This is the product, not a missing checkbox.
 
 ## Compared to what you already run
 
-**Community first hour** is Gitleaks-class secrets (`jobsQueued=1`) on an authorized local clone. The broader program is BAS/AEV plus authorized validation — not an ASV/CTEM platform in a box, and not a live exploit library.
+**Community start** is Gitleaks-class secrets (`jobsQueued=1`) on an authorized local clone. Keep proving: review, re-verify, schedule the next run. The broader program is BAS/AEV plus authorized validation — not an ASV/CTEM platform in a box, and not a live exploit library.
 
 |                                | CLI scanners       | Aggregators (DefectDojo) | CNAPP / RBVM         | BAS / auto-pentest | **Periscan**                              |
 | ------------------------------ | ------------------ | ------------------------ | -------------------- | ------------------ | ----------------------------------------- |
@@ -149,11 +149,11 @@ Nuclei is a first-class **engine** (second mission, allowlisted safe profiles). 
 
 Self-hosted **validation slice**: verified scope + policy + permissive SPDX engines + first-party checks + evidence. Load binaries in **Engine Lab → Install + enable Community pack**.
 
-First hour on a verified repo is **Gitleaks-class secrets** (`jobsQueued=1`). The table below is the **installable catalog** — a second control, not the start button. BAS adapters (Atomic / Caldera / SharpHound / Metasploit) need qualification; this is not a live exploit library.
+Default start on a verified repo is **Gitleaks-class secrets** (`jobsQueued=1`). The table below is the **installable catalog** — a second control, not the start button. BAS adapters (Atomic / Caldera / SharpHound / Metasploit) need qualification; this is not a live exploit library.
 
 Not live Atomic / Caldera / Metasploit / sqlmap. Source is **Apache-2.0**; third-party engines keep their own SPDX.
 
-| Pack                      | Installable catalog (not first-hour default)                                                                            |
+| Pack                      | Installable catalog (not the default start)                                                                             |
 | ------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | Secrets                   | Gitleaks, detect-secrets, git-secrets, secretlint, Talisman, Whispers                                                   |
 | SCA                       | Trivy, OSV-Scanner, Grype, pip-audit, govulncheck, cargo-audit, retire.js, Nancy, Dependency-Check                      |
@@ -214,7 +214,7 @@ Root [`LICENSE`](./LICENSE) is **Apache-2.0**. Community edition is the open-cor
 
 | Doc | What it covers |
 | --- | --- |
-| [SETUP](docs/SETUP.md) | Prerequisites, install, first-hour local path, Fixed-via-verify |
+| [SETUP](docs/SETUP.md) | Prerequisites, install, local path, Gitleaks-class start, Fixed-via-verify |
 | [FAQ](FAQ.md) | Short claim-safe answers |
 | [USING](USING.md) | Ports, HTTP proof loop, lab hops |
 | [SECURITY](SECURITY.md) | Vulnerability intake (title-only `[SECURITY]`, no PoC) |
