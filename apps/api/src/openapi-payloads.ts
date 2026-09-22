@@ -1,3 +1,4 @@
+import { BasContentPreviewInputSchema, BasContentPreviewSchema, RegisterBasContentInputSchema, RegisterBasContentResultSchema, BasContentVersionSchema, BasContentVersionListSchema, PromoteBasContentInputSchema, PromoteBasContentResultSchema } from "@periscan/shared";
 /**
  * Payload-level OpenAPI enrichment.
  *
@@ -31,7 +32,7 @@ import {
   AttackPathMeasurementStateSchema,
   AttackPathValidationPlanSchema,
   AttackPathVerificationRequestSchema,
-  AttackTechniqueSchema,
+  AttackTechniqueWithCoverageSchema,
   LaunchPathEdgeValidationInputSchema,
   PathEdgeReceiptSchema,
   PathEdgeValidationLaunchResultSchema,
@@ -59,6 +60,36 @@ import {
   CreateValidationStimulusResponseSchema,
   ValidationStimulusSchema,
   ControlValidationScenarioDefinitionSchema,
+  BasAtomicScenarioCatalogItemSchema,
+  BasAtomicScenarioRunInputSchema,
+  BasAtomicScenarioRunResultSchema,
+  BasControlPlaneScenarioSchema,
+  StartBasScenarioInputSchema,
+  StartBasScenarioResultSchema,
+  CompileBasCampaignInputSchema,
+  CompileBasCampaignResultSchema,
+  StartBasCampaignInputSchema,
+  StartBasCampaignResultSchema,
+  ExternalAssessmentCompileInputSchema,
+  ExternalAssessmentCompileResultSchema,
+  ExternalAssessmentStartInputSchema,
+  ExternalAssessmentStartResultSchema,
+  ExternalAssessmentToolOutputInputSchema,
+  ExternalAssessmentMappedResultsSchema,
+  ExternalAssessmentAttachScheduleInputSchema,
+  ExternalAssessmentAttachScheduleResultSchema,
+  CancelBasCampaignInputSchema,
+  CancelBasCampaignResultSchema,
+  BasCampaignPlanSchema,
+  BasCampaignListSchema,
+  QualifyBasPackInputSchema,
+  QualifyBasPackResultSchema,
+  AuthorizeBasPackInputSchema,
+  AuthorizeBasPackResultSchema,
+  DangerOperatorGateSchema,
+  AtomicTestCatalogSchema,
+  StartAtomicTestInputSchema,
+  StartAtomicTestResultSchema,
   ApplyThirdPartyToolUpdateRequestSchema,
   CreateContextBundleInputSchema,
   DismissThirdPartyToolUpdateRequestSchema,
@@ -97,6 +128,7 @@ import {
   ComplianceGovernanceMultiFrameworkSummarySchema,
   MultiFrameworkComplianceExportInputSchema,
   MultiFrameworkComplianceExportResultSchema,
+  SnapshotComplianceCoverageSchema,
   DeploymentStatusResponseSchema,
   DataResidencyOptionsSchema,
   DueScheduleRunSummarySchema,
@@ -104,6 +136,10 @@ import {
   EngagementResultSchema,
   EngagementCollaborationReadResponseSchema,
   EngagementCollaborationSnapshotSchema,
+  CreateEnterpriseSiteInputSchema,
+  UpdateEnterpriseSiteInputSchema,
+  EnterpriseSiteSchema,
+  SecurityFeedOperatorItemSchema,
   InitializeEngagementWorkspaceInputSchema,
   UpsertEngagementCollaboratorInputSchema,
   CreateEngagementCollaborationEventInputSchema,
@@ -342,6 +378,10 @@ import {
   VerifyEmailSchema,
   VerifyScopeInputSchema
 } from "./app.js";
+import {
+  EmailDeliveryCanaryProofInputSchema,
+  EmailDeliveryCanaryProofResultSchema
+} from "./services/email-delivery-canary.js";
 
 type JsonSchema = Record<string, unknown>;
 type OpenApiQueryParameter = {
@@ -1137,6 +1177,32 @@ function buildPayloadRegistry(): Record<string, OpenApiPayloadEntry> {
     },
     getThirdPartyTool: { response: out(ThirdPartyToolSchema) },
     checkThirdPartyTool: { response: out(ThirdPartyToolSchema) },
+    registerBasContent: { request: inp(RegisterBasContentInputSchema), response: out(RegisterBasContentResultSchema) },
+    getBasContentVersion: { response: out(BasContentVersionSchema) },
+    listBasContentVersions: withQueryParameters(out(BasContentVersionListSchema), [
+      { name: "provider", in: "query", required: false, schema: { type: "string", enum: ["AtomicRedTeam", "Caldera"] } },
+      { name: "limit", in: "query", required: false, schema: { type: "integer", minimum: 1, maximum: 50, default: 25 } },
+      uuidQueryParameter("cursor", "Last content version ID from the previous page.")
+    ]),
+    promoteBasContent: { request: inp(PromoteBasContentInputSchema), response: out(PromoteBasContentResultSchema) },
+    previewBasContent: { request: inp(BasContentPreviewInputSchema), response: out(BasContentPreviewSchema) },
+    compileBasCampaign: { request: inp(CompileBasCampaignInputSchema), response: out(CompileBasCampaignResultSchema) },
+    startBasCampaign: { request: inp(StartBasCampaignInputSchema), response: out(StartBasCampaignResultSchema) },
+    compileExternalAssessment: { request: inp(ExternalAssessmentCompileInputSchema), response: out(ExternalAssessmentCompileResultSchema) },
+    startExternalAssessment: { request: inp(ExternalAssessmentStartInputSchema), response: out(ExternalAssessmentStartResultSchema) },
+    ingestExternalAssessmentResults: { request: inp(ExternalAssessmentToolOutputInputSchema), response: out(ExternalAssessmentMappedResultsSchema) },
+    attachExternalAssessmentToSchedule: { request: inp(ExternalAssessmentAttachScheduleInputSchema), response: out(ExternalAssessmentAttachScheduleResultSchema) },
+    cancelBasCampaign: { request: inp(CancelBasCampaignInputSchema), response: out(CancelBasCampaignResultSchema) },
+    getBasCampaign: { response: out(BasCampaignPlanSchema) },
+    listBasCampaigns: { response: out(BasCampaignListSchema) },
+    qualifyBasPack: { request: inp(QualifyBasPackInputSchema), response: out(QualifyBasPackResultSchema) },
+    authorizeBasPack: { request: inp(AuthorizeBasPackInputSchema), response: out(AuthorizeBasPackResultSchema) },
+    getBasDangerOperatorGate: { response: out(DangerOperatorGateSchema) },
+    listAtomicTests: { response: out(AtomicTestCatalogSchema) },
+    startAtomicTest: {
+      request: inp(StartAtomicTestInputSchema),
+      response: out(StartAtomicTestResultSchema)
+    },
     validateThirdPartyToolIntake: {
       request: inp(ToolIntakeManifestRequestSchema),
       response: out(ToolIntakeValidationReportSchema)
@@ -1608,8 +1674,10 @@ function buildPayloadRegistry(): Record<string, OpenApiPayloadEntry> {
     },
 
     // --- MITRE ATT&CK and operators ---
-    listAttackTechniques: { response: listOf(out(AttackTechniqueSchema)) },
-    getAttackTechnique: { response: out(AttackTechniqueSchema) },
+    listAttackTechniques: {
+      response: listOf(out(AttackTechniqueWithCoverageSchema))
+    },
+    getAttackTechnique: { response: out(AttackTechniqueWithCoverageSchema) },
     listOperators: { response: listOf(out(OperatorProfileSchema)) },
     listOperatorRecommendationRecords: {
       response: listOf(out(OperatorRecommendationRecordSchema))
@@ -2021,6 +2089,20 @@ function buildPayloadRegistry(): Record<string, OpenApiPayloadEntry> {
     listControlValidationScenarios: {
       response: listOf(out(ControlValidationScenarioDefinitionSchema))
     },
+    listBasAtomicScenarios: {
+      response: listOf(out(BasAtomicScenarioCatalogItemSchema))
+    },
+    runBasAtomicScenario: {
+      request: inp(BasAtomicScenarioRunInputSchema),
+      response: out(BasAtomicScenarioRunResultSchema)
+    },
+    listBasControlPlaneScenarios: {
+      response: listOf(out(BasControlPlaneScenarioSchema))
+    },
+    startBasScenario: {
+      request: inp(StartBasScenarioInputSchema),
+      response: out(StartBasScenarioResultSchema)
+    },
     getControlRuleCoverage: {
       response: out(ControlRuleCoverageSummarySchema)
     },
@@ -2033,7 +2115,7 @@ function buildPayloadRegistry(): Record<string, OpenApiPayloadEntry> {
       response: out(ControlRuleCoverageSummarySchema)
     },
     validateControlSource: { request: inp(ValidateControlSourceInputSchema) },
-    // Wave B: allowlisted benign-marker emit→observe DRV proof (not full BAS).
+    // Wave B: allowlisted benign-marker emit→observe DRV proof (marker-only coverage).
     // Shared Zod pins drvClaimClass=benign_marker_only and fullAttackLibrary=false.
     runDetectionMarkerProof: {
       request: inp(DetectionMarkerProofInputSchema),
@@ -2043,6 +2125,11 @@ function buildPayloadRegistry(): Record<string, OpenApiPayloadEntry> {
     runDnsExfilCanaryProof: {
       request: inp(DnsExfilCanaryProofInputSchema),
       response: out(DnsExfilCanaryProofResultSchema)
+    },
+    // Email delivery canary: compile/evaluate; MailHog lab sink only; never real SMTP.
+    runEmailDeliveryCanaryProof: {
+      request: inp(EmailDeliveryCanaryProofInputSchema),
+      response: out(EmailDeliveryCanaryProofResultSchema)
     },
     listSafetyEquivalentPacks: {
       response: out(SafetyEquivalentPacksResponseSchema)
@@ -2055,6 +2142,9 @@ function buildPayloadRegistry(): Record<string, OpenApiPayloadEntry> {
     },
     getPartnerCapabilityHonesty: {
       response: out(PartnerCapabilityHonestySchema)
+    },
+    getComplianceCoverage: {
+      response: out(SnapshotComplianceCoverageSchema)
     },
     getComplianceGovernanceSummary: {
       response: out(ComplianceGovernanceMultiFrameworkSummarySchema)
@@ -2165,6 +2255,19 @@ function buildPayloadRegistry(): Record<string, OpenApiPayloadEntry> {
     },
     registerRunner: { request: inp(RunnerRegistrationRequestSchema) },
     listRunners: { response: listOf(out(RunnerRecordSchema)) },
+    listEnterpriseSites: { response: listOf(out(EnterpriseSiteSchema)) },
+    createEnterpriseSite: {
+      request: inp(CreateEnterpriseSiteInputSchema),
+      response: out(EnterpriseSiteSchema),
+      responseStatus: "201"
+    },
+    updateEnterpriseSite: {
+      request: inp(UpdateEnterpriseSiteInputSchema),
+      response: out(EnterpriseSiteSchema)
+    },
+    listSecurityFeeds: {
+      response: listOf(out(SecurityFeedOperatorItemSchema))
+    },
     listRunnerTransportDecisions: {
       response: listOf(out(RunnerTransportDecisionSchema))
     },

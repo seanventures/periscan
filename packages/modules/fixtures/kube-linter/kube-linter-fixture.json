@@ -1,0 +1,44 @@
+{
+  "Reports": [
+    {
+      "Diagnostic": {
+        "Message": "container \"web\" has no CPU request or limit specified",
+        "Check": "unset-cpu-requirements"
+      },
+      "Object": {
+        "K8sObject": {
+          "Namespace": "default",
+          "Name": "fixture-web",
+          "GroupVersionKind": {
+            "Group": "apps",
+            "Version": "v1",
+            "Kind": "Deployment"
+          }
+        },
+        "Metadata": {
+          "FilePath": "deploy.yaml"
+        }
+      }
+    },
+    {
+      "Diagnostic": {
+        "Message": "container \"web\" is not using a read-only root filesystem",
+        "Check": "read-only-root-fs"
+      },
+      "Object": {
+        "K8sObject": {
+          "Namespace": "default",
+          "Name": "fixture-web",
+          "GroupVersionKind": {
+            "Group": "apps",
+            "Version": "v1",
+            "Kind": "Deployment"
+          }
+        },
+        "Metadata": {
+          "FilePath": "deploy.yaml"
+        }
+      }
+    }
+  ]
+}

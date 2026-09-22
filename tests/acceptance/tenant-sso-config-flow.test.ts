@@ -73,6 +73,9 @@ describe("tenant OIDC SSO configuration acceptance flow", () => {
         clientSecretSet: true,
         emailDomainAllowlist: ["example.com", "security.example.com"],
         enforced: false,
+        jitDefaultRole: "Viewer",
+        jitEmailDomains: [],
+        jitEnabled: false,
         providerType: "OIDC",
         status: "Enabled",
         tenantId

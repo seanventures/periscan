@@ -346,9 +346,14 @@ export function MissionsWorkbench() {
         className="rounded-control border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-ink"
         role="status"
       >
-        <strong className="font-semibold">Labs / not mounted on product routes.</strong>{" "}
+        <strong className="font-semibold">
+          Labs / not mounted on product routes.
+        </strong>{" "}
         Multi-type mission control lives here for tests and future wiring only.
-        The live <Link className="font-medium text-brand underline" href="/missions">Validate</Link>{" "}
+        The live{" "}
+        <Link className="font-medium text-brand underline" href="/missions">
+          Validate
+        </Link>{" "}
         rail mounts the guided Validation Snapshot workflow.
       </div>
       <Card
@@ -382,6 +387,16 @@ export function MissionsWorkbench() {
                 <option value="FixVerification">FixVerification</option>
               </select>
             </label>
+            {newMissionType === "ControlValidation" ? (
+              <p
+                role="status"
+                data-testid="control-validation-honesty"
+                className="text-[11px] leading-4 text-muted"
+              >
+                ControlValidation is a benign canary / marker-only coverage.
+                drvClaimClass stays benign_marker_only.
+              </p>
+            ) : null}
             {(newMissionType === "AIAppValidation" ||
               newMissionType === "ControlValidation" ||
               newMissionType === "FixVerification") && (
@@ -425,7 +440,8 @@ export function MissionsWorkbench() {
                         className="ml-1 px-1 bg-amber-50 rounded text-amber-700"
                         title="T3/O3: projected after this non-snap create+run (mirrors schedules)"
                       >
-                        dynamic projected +1 run/pack remaining: runs {runs + 1} packs {packs + 1}
+                        dynamic projected +1 run/pack remaining: runs {runs + 1}{" "}
+                        packs {packs + 1}
                       </span>
                     );
                   })()}
@@ -732,8 +748,33 @@ export function MissionsWorkbench() {
                               ){recentPack.modelSessionId ? " +model" : ""}
                               {recentPack.verificationOutcome ? " · " : ""}
                               {/* Pack UX nav polish: consistent View pack / CTEM / export links + direct packId support in missions too */}
-                              {recentPack.evidencePackId && <a href={`/reports?evidencePackId=${recentPack.evidencePackId}`} className="ml-1 underline text-brand text-[9px]">View pack</a>}
-                              {recentPack.evidencePackId && <> | <a href="/threat-center" className="underline text-brand text-[9px]">View CTEM</a> | <a href={`/api/v1/reports/${recentPack.evidencePackId}/export`} className="underline text-brand text-[9px]">View export</a></>}
+                              {recentPack.evidencePackId && (
+                                <a
+                                  href={`/reports?evidencePackId=${recentPack.evidencePackId}`}
+                                  className="ml-1 underline text-brand text-[9px]"
+                                >
+                                  View pack
+                                </a>
+                              )}
+                              {recentPack.evidencePackId && (
+                                <>
+                                  {" "}
+                                  |{" "}
+                                  <a
+                                    href="/threat-center"
+                                    className="underline text-brand text-[9px]"
+                                  >
+                                    View CTEM
+                                  </a>{" "}
+                                  |{" "}
+                                  <a
+                                    href={`/api/v1/reports/${recentPack.evidencePackId}/export`}
+                                    className="underline text-brand text-[9px]"
+                                  >
+                                    View export
+                                  </a>
+                                </>
+                              )}
                               {recentPack.verificationOutcome ? (
                                 <span
                                   className={

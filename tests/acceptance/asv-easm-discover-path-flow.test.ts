@@ -229,7 +229,7 @@ describe("ASV/EASM discover path acceptance (Swarm S5)", () => {
       const internalScope = await app.inject({
         cookies: authCookies(cookie),
         method: "POST",
-        payload: { scopeType: "InternalNetwork", value: "corp-lan-asv" },
+        payload: { scopeType: "InternalNetwork", value: "10.20.0.0/24" },
         url: "/api/v1/scopes"
       });
       expect(internalScope.statusCode).toBe(201);
@@ -301,6 +301,18 @@ describe("ASV/EASM discover path acceptance (Swarm S5)", () => {
       const runnerId = registerResponse.json().credentials.runnerId as string;
       const runnerAuthToken = registerResponse.json().credentials
         .runnerAuthToken as string;
+
+      const siteResponse = await app.inject({
+        cookies: authCookies(cookie),
+        method: "POST",
+        payload: {
+          cidrs: ["10.20.0.0/24"],
+          name: "ASV EASM lab site",
+          runnerIds: [runnerId]
+        },
+        url: "/api/v1/enterprise-sites"
+      });
+      expect(siteResponse.statusCode).toBe(201);
 
       // --- Discover task: allowlisted recon only ---
       const hostDiscovery = await app.inject({

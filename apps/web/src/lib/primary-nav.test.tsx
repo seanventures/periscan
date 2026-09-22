@@ -3,6 +3,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { LABS_DESTINATION_HREFS, LABS_DESTINATIONS } from "./labs-portal";
+import { OPERATE_SCREEN_JOBS } from "./operate-screen-jobs";
 import {
   PRIMARY_NAV,
   PRIMARY_NAV_ITEMS,
@@ -42,6 +43,7 @@ describe("PRIMARY_NAV (Proof OS / UX-W10 Labs portal-only)", () => {
     expect(hrefs).not.toContain("/shift");
     expect(hrefs).not.toContain("/attack-paths");
     expect(hrefs).not.toContain("/executive");
+    expect(hrefs).not.toContain("/ctem");
     expect(hrefs).not.toContain("/reports");
     expect(hrefs).not.toContain("/mssp");
     expect(hrefs).not.toContain("/labs");
@@ -120,6 +122,7 @@ describe("PRIMARY_NAV (Proof OS / UX-W10 Labs portal-only)", () => {
         "/integrations",
         "/runners",
         "/engines",
+        "/security-feeds",
         "/schedules",
         "/assets",
         "/external-validation",
@@ -128,6 +131,7 @@ describe("PRIMARY_NAV (Proof OS / UX-W10 Labs portal-only)", () => {
         "/shift",
         "/attack-paths",
         "/executive",
+        "/ctem",
         "/reports"
       ])
     );
@@ -140,6 +144,7 @@ describe("PRIMARY_NAV (Proof OS / UX-W10 Labs portal-only)", () => {
     expect(operateHrefs).not.toContain("/integrations");
     expect(operateHrefs).not.toContain("/schedules");
     expect(operateHrefs).not.toContain("/executive");
+    expect(operateHrefs).not.toContain("/ctem");
   });
 
   it("demotes Executive / Reports / Connect / Paths off Operate (JOBS-SIMPLE)", () => {
@@ -147,11 +152,16 @@ describe("PRIMARY_NAV (Proof OS / UX-W10 Labs portal-only)", () => {
     const setup = PRIMARY_NAV.find((g) => g.label === "Setup")!;
     expect(operate.items.find((i) => i.href === "/executive")).toBeUndefined();
     expect(operate.items.find((i) => i.href === "/reports")).toBeUndefined();
-    expect(operate.items.find((i) => i.href === "/integrations")).toBeUndefined();
-    expect(operate.items.find((i) => i.href === "/attack-paths")).toBeUndefined();
+    expect(
+      operate.items.find((i) => i.href === "/integrations")
+    ).toBeUndefined();
+    expect(
+      operate.items.find((i) => i.href === "/attack-paths")
+    ).toBeUndefined();
     expect(setup.items.find((i) => i.href === "/executive")?.label).toBe(
       "Executive"
     );
+    expect(setup.items.find((i) => i.href === "/ctem")?.label).toBe("CTEM");
     expect(setup.items.find((i) => i.href === "/integrations")?.label).toBe(
       "Connect"
     );
@@ -205,13 +215,17 @@ describe("PRIMARY_NAV (Proof OS / UX-W10 Labs portal-only)", () => {
         expect.objectContaining({ href: "/schedules", label: "Schedule" })
       ])
     );
-    expect(PRIMARY_NAV_ITEMS.find((i) => i.href === "/workflows")).toBeUndefined();
+    expect(
+      PRIMARY_NAV_ITEMS.find((i) => i.href === "/workflows")
+    ).toBeUndefined();
   });
 
   it("labels inventory Assets & ownership at /assets; Scope is authorize (P07-2)", () => {
     const assets = PRIMARY_NAV_ITEMS.find((i) => i.href === "/assets");
     expect(assets?.label).toBe("Assets & ownership");
-    expect(PRIMARY_NAV_ITEMS.find((i) => i.href === "/data-fabric")).toBeUndefined();
+    expect(
+      PRIMARY_NAV_ITEMS.find((i) => i.href === "/data-fabric")
+    ).toBeUndefined();
     const scope = PRIMARY_NAV.find((g) => g.label === "Operate")!.items.find(
       (i) => i.href === "/scopes"
     );
@@ -226,6 +240,30 @@ describe("PRIMARY_NAV (Proof OS / UX-W10 Labs portal-only)", () => {
           label: "Getting started"
         })
       ])
+    );
+  });
+
+  it("states one Operate job per spine screen and keeps CTEM under Setup", () => {
+    const operate = PRIMARY_NAV.find((g) => g.label === "Operate")!;
+    const setup = PRIMARY_NAV.find((g) => g.label === "Setup")!;
+    for (const job of OPERATE_SCREEN_JOBS) {
+      const group = job.href === "/schedules" ? setup : operate;
+      expect(group.items.find((item) => item.href === job.href)?.hint).toBe(
+        job.job
+      );
+    }
+    expect(operate.items.find((item) => item.href === "/schedules")).toBeUndefined();
+    expect(
+      setup.items.find((item) => item.href === "/getting-started")?.hint
+    ).not.toMatch(/Connect\s*→/u);
+    expect(
+      setup.items.find((item) => item.href === "/getting-started")?.hint
+    ).toMatch(/Gitleaks/i);
+    expect(operate.items.map((item) => item.hint).join("\n")).not.toMatch(
+      /CTEM|command center|Connect a source/iu
+    );
+    expect(setup.items.find((item) => item.href === "/ctem")?.label).toBe(
+      "CTEM"
     );
   });
 
@@ -262,4 +300,23 @@ describe("PRIMARY_NAV (Proof OS / UX-W10 Labs portal-only)", () => {
     expect(isNavItemActive("/signal-activity", "/threat-center")).toBe(true);
     expect(isNavItemActive("/findings", "/threat-center")).toBe(false);
   });
+
+  it("treats /remediations as the Remediate list alias without stealing detail (P3-REMALIAS)", () => {
+    expect(isNavItemActive("/remediations", "/remediation")).toBe(true);
+    expect(isNavItemActive("/remediation", "/remediation")).toBe(true);
+    expect(
+      isNavItemActive(
+        "/remediation/080a115c-1111-4111-8111-111111111111",
+        "/remediation"
+      )
+    ).toBe(true);
+    expect(isNavItemActive("/findings", "/remediation")).toBe(false);
+    expect(
+      PRIMARY_NAV_ITEMS.find((item) => item.href === "/remediations")
+    ).toBeUndefined();
+    expect(
+      PRIMARY_NAV_ITEMS.find((item) => item.href === "/remediation")?.label
+    ).toBe("Remediate");
+  });
 });
+

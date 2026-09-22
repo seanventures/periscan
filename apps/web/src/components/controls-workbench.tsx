@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import type {
+  BasControlPlaneScenario,
   ControlRuleCoverageSnapshotPoint,
   ControlSource,
   DetectionMarkerProofResult,
@@ -11,6 +12,7 @@ import type {
   DnsExfilCanaryProofResult,
   Integration,
   Scope,
+  StartBasScenarioResult,
   ValidationStimulus,
   ValidationRun
 } from "@periscan/shared";
@@ -86,6 +88,10 @@ export function ControlsWorkbench() {
   const scopes = useApiResource(() => api.listScopes(), []);
   const runners = useApiResource(() => api.listRunners(), []);
   const stimuli = useApiResource(() => api.listValidationStimuli(), []);
+  const basScenarios = useApiResource(
+    () => api.listBasControlPlaneScenarios(),
+    []
+  );
 
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -171,6 +177,34 @@ export function ControlsWorkbench() {
         eyebrow="Validate"
         title="Controls"
         description="Compare expected control behaviors to SIEM/EDR telemetry observations per MITRE technique, then tune gaps. Dry-run validates are telemetry-only — they do not claim a closed inject→measure loop."
+        actions={
+          <>
+            <Link
+              href="/control-validation"
+              className={buttonClassName({ size: "sm", variant: "secondary" })}
+            >
+              ControlValidation workbench
+            </Link>
+            <Link
+              href="/bas"
+              className={buttonClassName({ size: "sm", variant: "secondary" })}
+            >
+              BAS operator workspace
+            </Link>
+            <Link
+              className={buttonClassName({ size: "sm", variant: "secondary" })}
+              href="/bas/scenarios"
+            >
+              Atomic catalog
+            </Link>
+            <Link
+              className={buttonClassName({ size: "sm", variant: "secondary" })}
+              href="/attack-navigator"
+            >
+              ATT&CK Navigator overlay
+            </Link>
+          </>
+        }
       />
 
       <div
@@ -197,14 +231,24 @@ export function ControlsWorkbench() {
           <strong className="font-medium text-ink">
             benign detection-marker proof
           </strong>{" "}
-          below closes one allowlisted <span className="font-mono text-[11px]">periscan-*</span>{" "}
-          emit→observe chain only — not a full ATT&amp;CK BAS library. The
-          governed exact-marker URL canary is a separate limited stimulus. Next
-          step: connect a SIEM/EDR source, verify scope, then run marker proof or
+          below closes one allowlisted{" "}
+          <span className="font-mono text-[11px]">periscan-*</span> emit→observe
+          chain only — not a full ATT&amp;CK BAS library. The governed
+          exact-marker URL canary is a separate limited stimulus. Next step:
+          connect a SIEM/EDR source, verify scope, then run marker proof or
           Observe telemetry; do not treat dry-run outcomes as library-wide
           control efficacy.
         </p>
       </div>
+
+      <BasScenarioStartPanel
+        scenarios={basScenarios.data ?? []}
+        scopes={scopes.data ?? []}
+        sources={sources.data ?? []}
+        loading={basScenarios.loading}
+        error={basScenarios.error}
+        onRetry={basScenarios.refetch}
+      />
 
       <DetectionMarkerProofPanel
         coverageItems={items}
@@ -493,6 +537,226 @@ function stimulusTone(stimulus: ValidationStimulus): StateTone {
  * Wave B DRV CTA: signed benign-marker emit→observe (not full ATT&CK BAS).
  * Calls POST /api/v1/control-sources/:id/detection-marker-proof.
  */
+function BasScenarioStartPanel({
+  error,
+  loading,
+  onRetry,
+  scenarios,
+  scopes,
+  sources
+}: {
+  error: string | null;
+  loading: boolean;
+  onRetry: () => void;
+  scenarios: BasControlPlaneScenario[];
+  scopes: Scope[];
+  sources: ControlSource[];
+}) {
+  const eligibleScopes = scopes.filter(
+    (scope) => scope.verificationStatus === "Verified"
+  );
+  const [scenarioId, setScenarioId] = useState("");
+  const [scopeId, setScopeId] = useState("");
+  const [sourceId, setSourceId] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [startError, setStartError] = useState<string | null>(null);
+  const [result, setResult] = useState<StartBasScenarioResult | null>(null);
+
+  const selectedScenarioId = scenarioId || scenarios[0]?.scenarioId || "";
+  const selectedScopeId = scopeId || eligibleScopes[0]?.scopeId || "";
+  const selectedSourceId = sourceId || sources[0]?.controlSourceId || "";
+
+  async function startScenario() {
+    if (!selectedScenarioId || !selectedScopeId) {
+      setStartError("Pick a scenario and a verified scope.");
+      return;
+    }
+    setBusy(true);
+    setStartError(null);
+    try {
+      const started = await api.startBasScenario({
+        controlSourceId: selectedSourceId || undefined,
+        scenarioId: selectedScenarioId,
+        scopeId: selectedScopeId
+      });
+      setResult(started);
+    } catch (caught) {
+      setStartError(
+        caught instanceof Error
+          ? caught.message
+          : "Couldn't start the scenario."
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Panel aria-labelledby="bas-scenario-start-title">
+      <div className="border-b border-line bg-[radial-gradient(circle_at_top_left,rgba(255,196,72,0.12),transparent_42%),linear-gradient(135deg,rgba(18,24,44,0.98),rgba(8,18,44,0.98))] px-4 py-4 sm:px-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="font-display text-[10px] font-semibold uppercase tracking-[0.16em] text-[#ffd27a]">
+              Policy-gated start
+            </p>
+            <h2
+              id="bas-scenario-start-title"
+              className="mt-1 font-display text-lg font-semibold text-ink"
+            >
+              Scenario start
+            </h2>
+            <p className="mt-1 max-w-2xl text-sm leading-6 text-muted">
+              Picking a scenario always mints a PolicyDecision. Benign marker
+              ControlValidation is queued. Live Atomic, Caldera, and Metasploit
+              return Denied and are never queued.
+            </p>
+          </div>
+          <StateBadge tone="approval" variant="outline" dot={false}>
+            denied never queued
+          </StateBadge>
+        </div>
+      </div>
+
+      {loading ? (
+        <LoadingSkeleton rows={2} />
+      ) : error ? (
+        <ErrorState message={error} onRetry={onRetry} />
+      ) : (
+        <div className="space-y-3 p-4">
+          <div className="flex flex-wrap items-end gap-2">
+            <label className="flex min-w-0 flex-1 flex-col gap-1 sm:max-w-xs">
+              <span className="font-display text-[10px] font-semibold uppercase tracking-[0.08em] text-subtle">
+                Scenario
+              </span>
+              <select
+                aria-label="BAS control-plane scenario"
+                value={selectedScenarioId}
+                onChange={(event) => setScenarioId(event.target.value)}
+                disabled={scenarios.length === 0}
+                className="rounded-control border border-line bg-surface px-2.5 py-1.5 text-xs text-ink outline-none focus:border-line-strong"
+              >
+                {scenarios.length === 0 ? (
+                  <option value="">No scenarios</option>
+                ) : (
+                  scenarios.map((scenario) => (
+                    <option
+                      key={scenario.scenarioId}
+                      value={scenario.scenarioId}
+                    >
+                      {scenario.title}
+                    </option>
+                  ))
+                )}
+              </select>
+            </label>
+            <label className="flex min-w-0 flex-1 flex-col gap-1 sm:max-w-xs">
+              <span className="font-display text-[10px] font-semibold uppercase tracking-[0.08em] text-subtle">
+                Verified scope
+              </span>
+              <select
+                aria-label="BAS scenario start scope"
+                value={selectedScopeId}
+                onChange={(event) => setScopeId(event.target.value)}
+                disabled={eligibleScopes.length === 0}
+                className="rounded-control border border-line bg-surface px-2.5 py-1.5 text-xs text-ink outline-none focus:border-line-strong"
+              >
+                {eligibleScopes.length === 0 ? (
+                  <option value="">Verified scope required</option>
+                ) : (
+                  eligibleScopes.map((scope) => (
+                    <option key={scope.scopeId} value={scope.scopeId}>
+                      {scope.scopeType} · {scope.value}
+                    </option>
+                  ))
+                )}
+              </select>
+            </label>
+            <label className="flex min-w-0 flex-1 flex-col gap-1 sm:max-w-xs">
+              <span className="font-display text-[10px] font-semibold uppercase tracking-[0.08em] text-subtle">
+                Control source
+              </span>
+              <select
+                aria-label="BAS scenario start control source"
+                value={selectedSourceId}
+                onChange={(event) => setSourceId(event.target.value)}
+                disabled={sources.length === 0}
+                className="rounded-control border border-line bg-surface px-2.5 py-1.5 text-xs text-ink outline-none focus:border-line-strong"
+              >
+                {sources.length === 0 ? (
+                  <option value="">Optional</option>
+                ) : (
+                  sources.map((source) => (
+                    <option
+                      key={source.controlSourceId}
+                      value={source.controlSourceId}
+                    >
+                      {source.provider} · {source.controlType}
+                    </option>
+                  ))
+                )}
+              </select>
+            </label>
+            <button
+              type="button"
+              onClick={() => void startScenario()}
+              disabled={busy || !selectedScenarioId || !selectedScopeId}
+              className={buttonClassName({ size: "sm", variant: "primary" })}
+            >
+              {busy ? "Evaluating policy…" : "Start scenario"}
+            </button>
+          </div>
+
+          {result ? (
+            <div
+              role="status"
+              aria-label="BAS scenario policy decision"
+              data-testid="bas-scenario-policy-receipt"
+              className="rounded-control border border-line bg-elevated p-3 text-sm"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line pb-2">
+                <p className="font-display text-[10px] font-semibold uppercase tracking-[0.14em] text-subtle">
+                  Policy decision
+                </p>
+                <StateBadge
+                  tone={result.queued ? "validated" : "missed"}
+                  dot={false}
+                >
+                  {result.outcome}
+                  {result.queued ? " · queued" : " · not queued"}
+                </StateBadge>
+              </div>
+              <dl className="mt-2 grid gap-1 font-mono text-[11px] text-ink">
+                <div className="flex flex-wrap gap-x-2">
+                  <dt className="text-subtle">policyDecisionId</dt>
+                  <dd>{result.policyDecisionId}</dd>
+                </div>
+                <div className="flex flex-wrap gap-x-2">
+                  <dt className="text-subtle">jobsQueued</dt>
+                  <dd>{result.jobsQueued}</dd>
+                </div>
+                {result.denyReason ? (
+                  <div className="flex flex-wrap gap-x-2">
+                    <dt className="text-subtle">deny reason</dt>
+                    <dd className="font-sans text-[12px] text-missed">
+                      {result.denyReason}
+                    </dd>
+                  </div>
+                ) : null}
+              </dl>
+            </div>
+          ) : null}
+
+          {startError ? (
+            <p role="alert" className="text-[11px] text-missed">
+              {startError}
+            </p>
+          ) : null}
+        </div>
+      )}
+    </Panel>
+  );
+}
+
 function DetectionMarkerProofPanel({
   coverageItems,
   onCompleted,
@@ -566,9 +830,10 @@ function DetectionMarkerProofPanel({
               Detection marker proof
             </h2>
             <p className="mt-1 max-w-2xl text-sm leading-6 text-muted">
-              Run one allowlisted <span className="font-mono text-[12px]">periscan-*</span>{" "}
-              process canary emit→SIEM/EDR observe chain with a single evidence
-              mission. This is{" "}
+              Run one allowlisted{" "}
+              <span className="font-mono text-[12px]">periscan-*</span> process
+              canary emit→SIEM/EDR observe chain with a single evidence mission.
+              This is{" "}
               <strong className="font-medium text-ink">
                 not a full ATT&amp;CK BAS library
               </strong>
@@ -745,16 +1010,15 @@ function DetectionMarkerProofPanel({
                     Claim class
                   </dt>
                   <dd className="mt-0.5">
-                    {result.drvClaimClass} · limited safe stimulus only — not
-                    full BAS
+                    {result.drvClaimClass} · measured marker coverage
                   </dd>
                 </div>
               </dl>
             </div>
           ) : (
             <p className="text-[12px] leading-5 text-muted">
-              No marker proof run yet. Requires a registered control source and a
-              verified InternalNetwork, ControlSource, Domain, or Subdomain
+              No marker proof run yet. Requires a registered control source and
+              a verified InternalNetwork, ControlSource, Domain, or Subdomain
               scope (API auto-selects when omitted).
             </p>
           )}
@@ -861,8 +1125,9 @@ function DnsExfilCanaryProofPanel({
               DNS-exfil detection canary
             </h2>
             <p className="mt-1 max-w-2xl text-sm leading-6 text-muted">
-              Emit one allowlisted <span className="font-mono text-[12px]">periscan-*</span>{" "}
-              DNS canary label and correlate SIEM/DNS-monitor observation. This is{" "}
+              Emit one allowlisted{" "}
+              <span className="font-mono text-[12px]">periscan-*</span> DNS
+              canary label and correlate SIEM/DNS-monitor observation. This is{" "}
               <strong className="font-medium text-ink">
                 detection class only — never real data exfiltration
               </strong>
@@ -1738,9 +2003,7 @@ function isControlGapStatus(
   status: DetectionRuleCoverageItem["status"]
 ): status is "LoggedOnly" | "NeedsTuning" | "Missed" {
   return (
-    status === "LoggedOnly" ||
-    status === "NeedsTuning" ||
-    status === "Missed"
+    status === "LoggedOnly" || status === "NeedsTuning" || status === "Missed"
   );
 }
 

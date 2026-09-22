@@ -26,13 +26,406 @@ import { nucleiStartCopy } from "./validation-community-status";
 /** 1s poll so a ~3s Gitleaks run is still a Watch beat. Never invent percent-complete. */
 export const COMMUNITY_RUN_POLL_INTERVAL_MS = 1_000;
 
+/** 1–2s measured Home Watch beat after jobsQueued=1 evidence. Not a percent. */
+export const COMMUNITY_HOME_WATCH_DWELL_MS = 1_500;
+
+/** Full walker: sample Home Watch as soon as evidence paints. Never waitIdle. */
+export const COMMUNITY_HOME_WATCH_WALKER_WAIT_IDLE_MS = 0;
+
+/** Sample window after first Watch + VALIDATED paint. Not a 1s poll. */
+export const COMMUNITY_HOME_WATCH_WALKER_HOLD_MS = 2_200;
+
+export const COMMUNITY_HOME_WATCH_WALKER_MIN_VISIBLE_MS = 1_000;
+
+export const COMMUNITY_HOME_WATCH_WALKER_MAX_VISIBLE_MS = 2_500;
+
+/** Dwell only for a still-fresh first-hour finding, not a returning visit. */
+export const COMMUNITY_HOME_WATCH_FRESH_MS = 5 * 60 * 1_000;
+
+/** sessionStorage key prefix: one 1.5s beat per findingId, not per Home remount. */
+export const COMMUNITY_HOME_WATCH_DWELL_STORAGE_PREFIX =
+  "periscan-home-watch-dwell:";
+
+export const COMMUNITY_RUN_WATCH_LABEL = "Watch";
+
 export const COMMUNITY_RUN_REVIEW_FINDINGS_LABEL = "Review findings";
 
 export const COMMUNITY_RUN_COMPLETED_FIXED_COPY =
   "Finished — Fixed still requires a retest.";
 
+const COMMUNITY_WATCH_STOP_STATUSES = new Set([
+  "Failed",
+  "DeniedByPolicy",
+  "Cancelled"
+]);
+
 export function communityRunIsInFlight(status: string): boolean {
   return status === "Queued" || status === "Running";
+}
+
+export function communityRunHasEvidence(input: {
+  missionEvidenceIds?: readonly string[] | null;
+  runs: readonly { evidenceIds?: readonly string[] | null }[];
+}): boolean {
+  if ((input.missionEvidenceIds?.length ?? 0) > 0) {
+    return true;
+  }
+  return input.runs.some((run) => (run.evidenceIds?.length ?? 0) > 0);
+}
+
+/** Keep a 1s Watch poll until evidence exists. Failed/denied runs stop. */
+export function communityWatchPollMs(input: {
+  status: string;
+  hasEvidence: boolean;
+}): number | undefined {
+  if (input.hasEvidence) {
+    return undefined;
+  }
+  if (COMMUNITY_WATCH_STOP_STATUSES.has(input.status)) {
+    return undefined;
+  }
+  return COMMUNITY_RUN_POLL_INTERVAL_MS;
+}
+
+export function formatCommunityFindingPathRule(finding: {
+  location?: string | null;
+  ruleId?: string | null;
+  title: string;
+}): string {
+  const location = finding.location?.trim();
+  const ruleId = finding.ruleId?.trim();
+  if (location && ruleId) {
+    return `${location} · ${ruleId}`;
+  }
+  return finding.title;
+}
+
+export function communityHomeWatchDwellRemainingMs(input: {
+  jobsQueued: number;
+  hasEvidence: boolean;
+  evidenceAtMs: number | null;
+  nowMs: number;
+  accumulatedVisibleMs?: number;
+}): number {
+  if (
+    input.jobsQueued !== 1 ||
+    !input.hasEvidence ||
+    input.evidenceAtMs == null
+  ) {
+    return 0;
+  }
+  const sessionMs = input.nowMs - input.evidenceAtMs;
+  if (!Number.isFinite(sessionMs) || sessionMs < 0) {
+    return COMMUNITY_HOME_WATCH_DWELL_MS;
+  }
+  const elapsed =
+    input.accumulatedVisibleMs != null
+      ? input.accumulatedVisibleMs + sessionMs
+      : sessionMs;
+  return Math.max(0, COMMUNITY_HOME_WATCH_DWELL_MS - elapsed);
+}
+
+export function communityHomeWatchAllowsAutoNav(input: {
+  jobsQueued: number;
+  hasEvidence: boolean;
+  evidenceAtMs: number | null;
+  nowMs: number;
+  accumulatedVisibleMs?: number;
+}): boolean {
+  return communityHomeWatchDwellRemainingMs(input) === 0;
+}
+
+export function communityHomeWatchShouldStart(input: {
+  jobsQueued: number;
+  hasEvidence: boolean;
+  findingCreatedAtMs: number | null;
+  nowMs: number;
+  source?: string | null;
+  displayValidationState?: string | null;
+}): boolean {
+  if (input.jobsQueued !== 1 || !input.hasEvidence) {
+    return false;
+  }
+  if (!input.source?.includes("gitleaks.repo_secrets")) {
+    return false;
+  }
+  if (input.displayValidationState !== "Validated") {
+    return false;
+  }
+  if (input.findingCreatedAtMs == null) {
+    return false;
+  }
+  const ageMs = input.nowMs - input.findingCreatedAtMs;
+  if (!Number.isFinite(ageMs) || ageMs > COMMUNITY_HOME_WATCH_FRESH_MS) {
+    return false;
+  }
+  return true;
+}
+
+export function communityHomeWatchDwellStorageKey(findingId: string): string {
+  return `${COMMUNITY_HOME_WATCH_DWELL_STORAGE_PREFIX}${findingId}`;
+}
+
+type HomeWatchDwellStorage = {
+  getItem(key: string): string | null;
+  setItem(key: string, value: string): void;
+};
+
+export type CommunityHomeWatchDwellRecord = {
+  startedAtMs: number;
+  visibleMs: number;
+};
+
+export type HomeWatchDwellSample = {
+  dwell_present?: boolean;
+  finding_locator?: string | null;
+  has_path_rule?: boolean;
+  has_percent?: boolean;
+  has_validated?: boolean;
+  header_sign_in?: boolean;
+  t_ms?: number;
+  watch_label?: string | null;
+};
+
+function clampHomeWatchVisibleMs(visibleMs: number): number {
+  if (!Number.isFinite(visibleMs) || visibleMs < 0) {
+    return 0;
+  }
+  return Math.min(COMMUNITY_HOME_WATCH_DWELL_MS, visibleMs);
+}
+
+export function parseCommunityHomeWatchDwellRecord(
+  raw: string | null | undefined,
+  nowMs?: number
+): CommunityHomeWatchDwellRecord | null {
+  if (!raw) {
+    return null;
+  }
+  try {
+    if (raw.trim().startsWith("{")) {
+      const parsed = JSON.parse(raw) as {
+        startedAtMs?: unknown;
+        visibleMs?: unknown;
+      };
+      const startedAtMs = Number(parsed.startedAtMs);
+      if (!Number.isFinite(startedAtMs)) {
+        return null;
+      }
+      return {
+        startedAtMs,
+        visibleMs: clampHomeWatchVisibleMs(Number(parsed.visibleMs))
+      };
+    }
+    const startedAtMs = Number(raw);
+    if (!Number.isFinite(startedAtMs)) {
+      return null;
+    }
+    const visibleMs =
+      nowMs != null && Number.isFinite(nowMs)
+        ? clampHomeWatchVisibleMs(nowMs - startedAtMs)
+        : 0;
+    return { startedAtMs, visibleMs };
+  } catch {
+    return null;
+  }
+}
+
+export function readCommunityHomeWatchDwellRecord(
+  storage: Pick<HomeWatchDwellStorage, "getItem"> | null | undefined,
+  findingId: string,
+  nowMs?: number
+): CommunityHomeWatchDwellRecord | null {
+  if (!storage || !findingId) {
+    return null;
+  }
+  try {
+    return parseCommunityHomeWatchDwellRecord(
+      storage.getItem(communityHomeWatchDwellStorageKey(findingId)),
+      nowMs
+    );
+  } catch {
+    return null;
+  }
+}
+
+export function writeCommunityHomeWatchDwellRecord(
+  storage: Pick<HomeWatchDwellStorage, "setItem"> | null | undefined,
+  findingId: string,
+  record: CommunityHomeWatchDwellRecord
+): void {
+  if (
+    !storage ||
+    !findingId ||
+    !Number.isFinite(record.startedAtMs) ||
+    !Number.isFinite(record.visibleMs)
+  ) {
+    return;
+  }
+  try {
+    storage.setItem(
+      communityHomeWatchDwellStorageKey(findingId),
+      JSON.stringify({
+        startedAtMs: record.startedAtMs,
+        visibleMs: clampHomeWatchVisibleMs(record.visibleMs)
+      })
+    );
+  } catch {
+    // Private mode / quota: this mount still dwells via in-memory start.
+  }
+}
+
+export function readCommunityHomeWatchDwellStartedAtMs(
+  storage: Pick<HomeWatchDwellStorage, "getItem"> | null | undefined,
+  findingId: string
+): number | null {
+  return (
+    readCommunityHomeWatchDwellRecord(storage, findingId)?.startedAtMs ?? null
+  );
+}
+
+export function writeCommunityHomeWatchDwellStartedAtMs(
+  storage: Pick<HomeWatchDwellStorage, "setItem"> | null | undefined,
+  findingId: string,
+  startedAtMs: number
+): void {
+  if (!storage || !findingId || !Number.isFinite(startedAtMs)) {
+    return;
+  }
+  try {
+    storage.setItem(
+      communityHomeWatchDwellStorageKey(findingId),
+      String(startedAtMs)
+    );
+  } catch {
+    // Private mode / quota: this mount still dwells via in-memory start.
+  }
+}
+
+export function accumulateCommunityHomeWatchDwellVisibleMs(input: {
+  accumulatedVisibleMs: number;
+  thisMountAtMs: number;
+  nowMs: number;
+}): number {
+  const sessionMs = input.nowMs - input.thisMountAtMs;
+  if (!Number.isFinite(sessionMs) || sessionMs < 0) {
+    return clampHomeWatchVisibleMs(input.accumulatedVisibleMs);
+  }
+  return clampHomeWatchVisibleMs(input.accumulatedVisibleMs + sessionMs);
+}
+
+export function resolveCommunityHomeWatchDwellStartedAtMs(input: {
+  shouldStart: boolean;
+  nowMs: number;
+  storedStartedAtMs: number | null;
+}): { startedAtMs: number | null; shouldPersist: boolean } {
+  if (!input.shouldStart) {
+    return { startedAtMs: input.storedStartedAtMs, shouldPersist: false };
+  }
+  if (input.storedStartedAtMs != null) {
+    return { startedAtMs: input.storedStartedAtMs, shouldPersist: false };
+  }
+  return { startedAtMs: input.nowMs, shouldPersist: true };
+}
+
+export function resolveCommunityHomeWatchDwellMount(input: {
+  shouldStart: boolean;
+  nowMs: number;
+  stored: CommunityHomeWatchDwellRecord | null;
+}): {
+  accumulatedVisibleMs: number;
+  shouldPersist: boolean;
+  startedAtMs: number | null;
+  thisMountAtMs: number | null;
+} {
+  if (!input.shouldStart) {
+    return {
+      accumulatedVisibleMs: input.stored?.visibleMs ?? 0,
+      shouldPersist: false,
+      startedAtMs: input.stored?.startedAtMs ?? null,
+      thisMountAtMs: null
+    };
+  }
+  if (input.stored == null) {
+    return {
+      accumulatedVisibleMs: 0,
+      shouldPersist: true,
+      startedAtMs: input.nowMs,
+      thisMountAtMs: input.nowMs
+    };
+  }
+  const accumulatedVisibleMs = clampHomeWatchVisibleMs(input.stored.visibleMs);
+  return {
+    accumulatedVisibleMs,
+    shouldPersist: false,
+    startedAtMs: input.stored.startedAtMs,
+    thisMountAtMs: input.nowMs
+  };
+}
+
+export function scoreHomeWatchDwellSamples(
+  samples: readonly HomeWatchDwellSample[]
+): {
+  dwell_observed: boolean;
+  dwell_ok: boolean;
+  finding_locator: string | null;
+  header_sign_in: boolean;
+  no_percent: boolean;
+  validated_path_rule_observed: boolean;
+  visible_span_ms: number;
+  watch_is_watch: boolean;
+} {
+  let firstVisibleAt: number | null = null;
+  let lastVisibleAt: number | null = null;
+  let firstValidatedPathAt: number | null = null;
+  let findingLocator: string | null = null;
+  for (const snap of samples) {
+    const tMs = Number(snap.t_ms);
+    if (!Number.isFinite(tMs)) {
+      continue;
+    }
+    if (snap.dwell_present) {
+      if (firstVisibleAt == null) {
+        firstVisibleAt = tMs;
+      }
+      lastVisibleAt = tMs;
+    }
+    if (snap.dwell_present && snap.has_validated && snap.has_path_rule) {
+      if (firstValidatedPathAt == null) {
+        firstValidatedPathAt = tMs;
+      }
+      if (!findingLocator && snap.finding_locator) {
+        findingLocator = snap.finding_locator;
+      }
+    }
+  }
+  const visibleSpanMs =
+    firstVisibleAt != null && lastVisibleAt != null
+      ? lastVisibleAt - firstVisibleAt
+      : 0;
+  const dwellObserved = firstVisibleAt != null;
+  const validatedPathRuleObserved = firstValidatedPathAt != null;
+  const watchIsWatch = samples.some(
+    (snap) => String(snap.watch_label || "").trim() === COMMUNITY_RUN_WATCH_LABEL
+  );
+  const noPercent = samples.every((snap) => !snap.has_percent);
+  const headerSignIn = samples.some((snap) => snap.header_sign_in === true);
+  return {
+    dwell_observed: dwellObserved,
+    dwell_ok:
+      dwellObserved &&
+      visibleSpanMs >= COMMUNITY_HOME_WATCH_WALKER_MIN_VISIBLE_MS &&
+      visibleSpanMs <= COMMUNITY_HOME_WATCH_WALKER_MAX_VISIBLE_MS &&
+      validatedPathRuleObserved &&
+      watchIsWatch &&
+      noPercent &&
+      !headerSignIn,
+    finding_locator: findingLocator,
+    header_sign_in: headerSignIn,
+    no_percent: noPercent,
+    validated_path_rule_observed: validatedPathRuleObserved,
+    visible_span_ms: visibleSpanMs,
+    watch_is_watch: watchIsWatch
+  };
 }
 
 export function communityRunElapsedLabel(
@@ -188,6 +581,16 @@ export function CommunityRunProgress({
     nucleiMissionId: communityRun.nucleiMissionId
   });
   const nucleiOutcome = nucleiStartCopy(communityRun);
+  const initialWatchPollMs = communityWatchPollMs({
+    status: communityRun.mission.status,
+    hasEvidence: communityRunHasEvidence({
+      missionEvidenceIds: communityRun.mission.evidenceIds,
+      runs: communityRun.runs
+    })
+  });
+  const [watchPollMs, setWatchPollMs] = useState<number | undefined>(
+    initialWatchPollMs
+  );
   const progress = useApiResource(
     () =>
       Promise.all(
@@ -200,12 +603,27 @@ export function CommunityRunProgress({
         })
       ),
     [communityRun.mission.missionId, communityRun.nucleiMissionId],
-    { refetchIntervalMs: COMMUNITY_RUN_POLL_INTERVAL_MS }
+    { refetchIntervalMs: watchPollMs }
+  );
+  const livePrimary = progress.data?.find(
+    (item) => item.group.kind === "primary"
   );
   const livePrimaryStatus =
-    progress.data?.find((item) => item.group.kind === "primary")?.mission
-      .status ?? communityRun.mission.status;
-  const watching = communityRunIsInFlight(livePrimaryStatus);
+    livePrimary?.mission.status ?? communityRun.mission.status;
+  const hasEvidence = communityRunHasEvidence({
+    missionEvidenceIds:
+      livePrimary?.mission.evidenceIds ?? communityRun.mission.evidenceIds,
+    runs: livePrimary?.runs ?? communityRun.runs
+  });
+  const nextWatchPollMs = communityWatchPollMs({
+    status: livePrimaryStatus,
+    hasEvidence
+  });
+  useEffect(() => {
+    setWatchPollMs(nextWatchPollMs);
+  }, [nextWatchPollMs]);
+  const watching =
+    communityRunIsInFlight(livePrimaryStatus) || nextWatchPollMs != null;
   const completed = livePrimaryStatus === "Completed";
   const nowMs = useWatchNowMs(watching);
 
@@ -218,9 +636,10 @@ export function CommunityRunProgress({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p
           id="community-run-progress-heading"
+          data-testid="community-run-watch"
           className="text-[12px] font-semibold text-ink"
         >
-          Community run status
+          {COMMUNITY_RUN_WATCH_LABEL}
         </p>
         <div className="flex flex-wrap items-center gap-2">
           <LiveUpdatePill

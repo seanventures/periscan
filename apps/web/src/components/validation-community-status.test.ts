@@ -151,7 +151,7 @@ describe("honest Community engine start count", () => {
         runnerAvailable: true,
         startableModuleIds: startable38
       })
-    ).toBe("38 engines start now · AWS needed for Prowler.");
+    ).toBe("Remaining catalog engines. Not the default start.");
     expect(
       communityStartNowCopy({
         cloudAwsAvailable: false,
@@ -226,7 +226,7 @@ describe("honest Community engine start count", () => {
         runnerAvailable: false,
         startableModuleIds: startable38
       })
-    ).toBe("38 engines start now · runner needed.");
+    ).toBe("Remaining catalog engines. Not the default start.");
     expect(
       communityStartRequestModuleIds({
         pack: "full",
@@ -494,8 +494,16 @@ describe("Validate add-scope surface", () => {
   });
 
   it("does not lead Validate with design-partner or Wave GTM copy", () => {
+    // P2-CTEMCOPY: first-hour job leads. AEV/CTEM stays below the header.
+    expect(flowSource).toContain("COMMUNITY_FIRST_HOUR_JOB_SENTENCE");
+    expect(flowSource).toContain('data-testid="validate-first-hour-lead"');
+    expect(flowSource).toContain("AEV_BAS_BOUNDARY_SENTENCE");
+    expect(flowSource).toContain('data-testid="validate-aev-bas-boundary"');
     expect(flowSource).toMatch(
-      /Authorize a verified scope, preview policy, then Run Community/
+      /Authorize a verified local path, preview\s+policy, then run Gitleaks-class/
+    );
+    expect(flowSource).not.toMatch(
+      /description=\{\s*<>\s*\{AEV_BAS_BOUNDARY_SENTENCE\}/
     );
     expect(flowSource).not.toContain("Path to first design partner");
     expect(flowSource).not.toContain("REFERENCE_FACTORY");
@@ -521,6 +529,15 @@ describe("Validate add-scope surface", () => {
     expect(flowSource).not.toContain("listIntegrations");
     expect(flowSource).not.toContain("listThirdPartyTools");
     expect(flowSource).not.toMatch(/VALIDATION_PROOF_STAGES/);
+  });
+
+  it("offers optional Prowler as a second primary next to Gitleaks, not full cloud BAS", () => {
+    expect(flowSource).toContain('data-testid="run-community-validation"');
+    expect(flowSource).toContain('data-testid="assess-connected-aws-prowler"');
+    expect(flowSource).toContain("COMMUNITY_FIRST_RUN_ASSESS_AWS_LABEL");
+    expect(flowSource).toContain("runOptionalProwler");
+    expect(flowSource).not.toMatch(/full cloud BAS/i);
+    expect(flowSource).not.toMatch(/PERISCAN_LIVE_OFFENSIVE=1/);
   });
 
   it("keeps Community as the primary run and collapses compose snapshot", () => {

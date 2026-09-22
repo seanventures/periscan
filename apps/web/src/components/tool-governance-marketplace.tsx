@@ -794,8 +794,8 @@ export function ToolGovernanceMarketplace() {
             not redistributed by Periscan
           </strong>
           . Use Review licenses & add to accept each SPDX and download the
-          official pin yourself. They are not Community-start. Atomic, Caldera,
-          SharpHound, sqlmap, and Metasploit stay catalog-only.
+          official pin yourself. Community-start eligibility is tracked separately. BAS adapters
+          require scenario qualification before execution becomes available.
         </p>
       </div>
 

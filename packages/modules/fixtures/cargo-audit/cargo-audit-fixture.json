@@ -1,0 +1,58 @@
+{
+  "database": {
+    "advisory-count": 99,
+    "last-commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "lockfile": {
+    "dependency-count": 12
+  },
+  "vulnerabilities": {
+    "found": true,
+    "count": 99,
+    "list": [
+      {
+        "advisory": {
+          "id": "RUSTSEC-2020-0071",
+          "package": "time",
+          "title": "Potential segfault in localtime_r invocations",
+          "description": "Trap secret AKIAIOSFODNN7EXAMPLE",
+          "date": "2020-11-18"
+        },
+        "package": {
+          "name": "time",
+          "version": "0.1.44",
+          "source": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      },
+      {
+        "advisory": {
+          "id": "RUSTSEC-2022-0004",
+          "package": "rustc-serialize",
+          "title": "Stack overflow in rustc_serialize when parsing crafted JSON",
+          "description": "-----BEGIN RSA PRIVATE KEY-----\nfixture\n-----END RSA PRIVATE KEY-----",
+          "date": "2022-01-01"
+        },
+        "package": {
+          "name": "rustc-serialize",
+          "version": "0.3.24",
+          "source": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      }
+    ]
+  },
+  "warnings": {
+    "unmaintained": [
+      {
+        "kind": "unmaintained",
+        "package": {
+          "name": "oldcrate",
+          "version": "1.0.0"
+        },
+        "advisory": {
+          "id": "RUSTSEC-2019-0036",
+          "description": "ghp_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      }
+    ]
+  }
+}

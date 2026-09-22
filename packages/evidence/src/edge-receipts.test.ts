@@ -256,6 +256,24 @@ describe("receiptMarksMeasured", () => {
       })
     ).toBe(false);
   });
+
+  it("does not treat BloodHound/SharpHound import receipts as Measured hop proof", () => {
+    const evidenceIds = [randomUUID()];
+    expect(
+      receiptMarksMeasured({
+        evidenceIds,
+        moduleId: "bloodhound.identity_pathing",
+        validationState: "Validated"
+      })
+    ).toBe(false);
+    expect(
+      receiptMarksMeasured({
+        evidenceIds,
+        moduleId: "sharphound",
+        validationState: "Exploitable"
+      })
+    ).toBe(false);
+  });
 });
 
 describe("resolvePathEdgeReceiptValidationState", () => {

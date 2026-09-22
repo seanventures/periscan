@@ -247,7 +247,7 @@ export function ScopeSafetyEditor({
           <input
             aria-label="Scope segment name"
             className={controlClass}
-            placeholder="Plant line 2, payment DMZ…"
+            placeholder="prod-account-alias"
             value={draft.segmentName ?? ""}
             onChange={(event) =>
               setDraft((current) => ({
@@ -308,7 +308,7 @@ export function ScopeSafetyEditor({
           <input
             aria-label="Scope classification tags"
             className={controlClass}
-            placeholder="scada, production, safety-critical"
+            placeholder="production, staging"
             value={tagsText}
             onChange={(event) => setTagsText(event.target.value)}
           />

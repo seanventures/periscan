@@ -1,0 +1,32 @@
+{
+  "summary": {
+    "fatal": 99,
+    "warn": 9,
+    "info": 2,
+    "pass": 7
+  },
+  "details": [
+    {
+      "code": "CIS-DI-0010",
+      "title": "Do not store secrets in ENVIRONMENT variables",
+      "level": "FATAL",
+      "alerts": [
+        "Suspicious ENV key found : AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE"
+      ]
+    },
+    {
+      "code": "CIS-DI-0001",
+      "title": "Create a user for the container",
+      "level": "WARN",
+      "alerts": [
+        "-----BEGIN RSA PRIVATE KEY-----\nfixture\n-----END RSA PRIVATE KEY-----"
+      ]
+    },
+    {
+      "code": "CIS-DI-0005",
+      "title": "Enable Content trust for Docker",
+      "level": "INFO",
+      "alerts": ["hashed_secret=fixture"]
+    }
+  ]
+}

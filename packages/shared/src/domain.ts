@@ -20,6 +20,8 @@ export const MembershipRoleSchema = z.enum([
   "MSSPOwner",
   "ClientAdmin"
 ]);
+/** JIT default membership role — Viewer by default, never Owner. */
+export const JitMembershipRoleSchema = MembershipRoleSchema.exclude(["Owner"]);
 export const ProductPersonaSchema = z.enum([
   "SecurityLeader",
   "SecurityEngineer",
@@ -709,7 +711,13 @@ export const JobStatusSchema = z.enum([
   "RequiresApproval",
   "Cancelled"
 ]);
-export const ScheduleFrequencySchema = z.enum(["Daily", "Weekly", "Monthly"]);
+export const ScheduleFrequencySchema = z.enum([
+  "Daily",
+  "Weekly",
+  "Monthly",
+  "Hourly",
+  "Continuous"
+]);
 export const ScheduleBlackoutWindowSchema = z.object({
   daysOfWeek: z.array(z.number().int().min(0).max(6)).min(1),
   endTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
@@ -966,6 +974,7 @@ export const AuditEventActionSchema = z.enum([
   "runner.task.rejected",
   "threat_advisory.imported",
   "user.invited",
+  "user.jit_provisioned",
   "role.changed",
   "member.removed",
   "finding.disposition_changed",
@@ -995,6 +1004,13 @@ export const AuditEventActionSchema = z.enum([
   "engagement.workspace.created",
   "engagement.collaborator.updated",
   "engagement.collaboration.event_added",
+  "bas.content_registered",
+  "bas.content_promoted",
+  "bas.campaign_compiled",
+  "bas.campaign_started",
+  "bas.campaign_cancelled",
+  "bas.pack_qualified",
+  "bas.pack_authorized",
   "scenario.compiled",
   "scenario.approved",
   "scenario.executed",
@@ -1082,7 +1098,9 @@ export const AuditEventActionSchema = z.enum([
   "async_operations.policy_configured",
   "async_operations.reconciled",
   "async_operations.recovery_prepared",
-  "async_operations.terminal_accepted"
+  "async_operations.terminal_accepted",
+  "user.scim_provisioned",
+  "user.scim_deprovisioned"
 ]);
 
 /**
@@ -1122,7 +1140,9 @@ export const TenantApiKeyCapabilitySchema = z.enum([
   "audit:read"
 ]);
 
-export type TenantApiKeyCapability = z.infer<typeof TenantApiKeyCapabilitySchema>;
+export type TenantApiKeyCapability = z.infer<
+  typeof TenantApiKeyCapabilitySchema
+>;
 export type TenantApiKeyScope = z.infer<typeof TenantApiKeyScopeSchema>;
 
 export const TenantApiKeySchema = z.object({
@@ -1424,6 +1444,12 @@ export const TenantSsoConfigSchema = TimestampedEntitySchema.extend({
   roleMappings: TenantSsoRoleMappingsSchema,
   /** Fallback role when mappings exist but no claim matches; null denies login. */
   defaultMappedRole: MembershipRoleSchema.nullish(),
+  /** Optional JIT create-on-first-SSO. Off by default; fail closed. */
+  jitEnabled: z.boolean().default(false),
+  /** JIT domain allowlist (independent of SSO login emailDomainAllowlist). */
+  jitEmailDomains: z.array(TenantSsoEmailDomainSchema).default([]),
+  /** Default membership role for JIT-created users. Never Owner. */
+  jitDefaultRole: JitMembershipRoleSchema.default("Viewer"),
   createdBy: IdSchema.nullish(),
   updatedBy: IdSchema.nullish()
 });
@@ -1442,7 +1468,10 @@ const BaseTenantSsoConfigInputSchema = z.object({
   redirectUri: z.url().nullable().optional(),
   roleClaimName: TenantSsoRoleClaimNameSchema.nullable().optional(),
   roleMappings: TenantSsoRoleMappingsSchema.optional(),
-  defaultMappedRole: MembershipRoleSchema.nullable().optional()
+  defaultMappedRole: MembershipRoleSchema.nullable().optional(),
+  jitEnabled: z.boolean().optional(),
+  jitEmailDomains: z.array(TenantSsoEmailDomainSchema).optional(),
+  jitDefaultRole: JitMembershipRoleSchema.optional()
 });
 
 const UpdateOidcTenantSsoConfigInputSchema =
@@ -1790,11 +1819,12 @@ export const TrustSafetyRunnerModelSchema = z.object({
 
 /**
  * Product honesty for enterprise identity lifecycle (P17-1 / P17-12).
- * Inbound SCIM for Periscan user memberships is intentionally NotConfigured
- * and not shipped. CyberArk/other connector SCIM is read-only inventory only.
- * "Advanced RBAC" means custom roles/ABAC — not the baseline multi-role set.
+ * Inbound SCIM Users/Groups ship as provisioning. A tenant without a SCIM
+ * token stays NotConfigured. JIT remains NotConfigured. CyberArk/other
+ * connector SCIM is read-only inventory only. "Advanced RBAC" means custom
+ * roles/ABAC — not the baseline multi-role set.
  */
-export const InboundScimStatusSchema = z.literal("NotConfigured");
+export const InboundScimStatusSchema = z.enum(["NotConfigured", "Ready"]);
 export const AdvancedRbacStatusSchema = z.literal("BaselineRolesOnly");
 
 export const TrustSafetyIdentityProvisioningSchema = z.object({
@@ -1805,20 +1835,20 @@ export const TrustSafetyIdentityProvisioningSchema = z.object({
     status: AdvancedRbacStatusSchema
   }),
   /**
-   * Overall IdP plane is Partial (SSO + force-MFA + claim→role ship; SCIM/JIT do not).
-   * Individual SCIM/JIT rows stay literal NotConfigured — never conflate with Partial.
+   * Overall IdP plane is Partial (SSO + force-MFA + claim→role + optional JIT +
+   * inbound SCIM ship). Not a certified full joiner/mover/leaver product.
    */
   planeStatus: z.literal("Partial"),
   planeStatusDetail: z.string().min(1),
   /** Sales-assisted provisioning SLA + order-form annex path (until inbound SCIM ships). */
   orderFormDoc: z.string().min(1),
   residualDoc: z.string().min(1),
-  /** JIT create-on-first-SSO is NotConfigured (P17-14). SSO remains invite-gated. */
+  /** Optional JIT create-on-first-SSO (P17-14). Off by default; domain allowlist + Viewer. */
   jitProvisioning: z.object({
     defaultRoleIfEnabled: z.literal("Viewer"),
     detail: z.string().min(1),
     requiresDomainAllowlist: z.literal(true),
-    status: z.literal("NotConfigured")
+    status: z.literal("Optional")
   }),
   scimInbound: z.object({
     discoveryPath: z.string().min(1),
@@ -1828,13 +1858,14 @@ export const TrustSafetyIdentityProvisioningSchema = z.object({
   })
 });
 
-export function buildIdentityProvisioningHonesty(): z.infer<
-  typeof TrustSafetyIdentityProvisioningSchema
-> {
+export function buildIdentityProvisioningHonesty(input?: {
+  inboundScimConfigured?: boolean;
+}): z.infer<typeof TrustSafetyIdentityProvisioningSchema> {
+  const inboundScimConfigured = input?.inboundScimConfigured === true;
   return {
     planeStatus: "Partial",
     planeStatusDetail:
-      "Partial IdP control plane: SSO (OIDC/SAML), force-MFA for password users, and IdP group→role claim mapping ship. Inbound SCIM and JIT membership remain NotConfigured — not a full enterprise joiner/mover/leaver product. Do not claim SCIM Production or full IdP lifecycle.",
+      "Partial IdP control plane: SSO (OIDC/SAML), force-MFA for password users, IdP group→role claim mapping, optional JIT create-on-first-SSO, and inbound SCIM Users/Groups. Not a certified full joiner/mover/leaver product. Do not claim Okta/Azure SCIM certification.",
     orderFormDoc: "docs/ENTERPRISE_IDENTITY_LIFECYCLE.md",
     residualDoc: "docs/ops/ENTERPRISE_TRUST_RESIDUAL_2026-07-31.md",
     advancedRbac: {
@@ -1847,18 +1878,27 @@ export function buildIdentityProvisioningHonesty(): z.infer<
     jitProvisioning: {
       defaultRoleIfEnabled: "Viewer",
       detail:
-        "Just-in-time (JIT) auto-create of tenant memberships on first SSO login is NotConfigured and not shipped. SSO requires an existing Active membership (admin invite or sales-assisted provisioning). If JIT ships later, it would use domain allowlist + default Viewer + audit user.jit_provisioned — prefer SCIM for disable/delete.",
+        "Optional JIT create-on-first-SSO is tenant opt-in (jitEnabled). Enable with a domain allowlist; first verified SSO for an unknown email creates an Active Viewer membership (or configured non-Owner role) and audits user.jit_provisioned. Disabled by default — otherwise SSO still requires a pre-provisioned Active membership (sso_user_not_provisioned). Prefer inbound SCIM for disable/delete.",
       requiresDomainAllowlist: true,
-      status: "NotConfigured"
+      status: "Optional"
     },
-    scimInbound: {
-      discoveryPath: "/api/v1/scim/v2/ServiceProviderConfig",
-      detail:
-        "Inbound SCIM 2.0 provisioning of Periscan users and groups is NotConfigured and not shipped. Provision members with admin invites or sales-assisted onboarding. Attach the sales-assisted provisioning SLA from docs/ENTERPRISE_IDENTITY_LIFECYCLE.md to enterprise order forms. Do not claim product SCIM Production for RFP questionnaires. Discovery stubs return HTTP 501 (not silent 404).",
-      inventoryConnectorsNote:
-        "CyberArk Identity SCIM and similar connectors are read-only external identity inventory only; they do not provision Periscan tenant memberships.",
-      status: "NotConfigured"
-    }
+    scimInbound: inboundScimConfigured
+      ? {
+          discoveryPath: "/api/v1/scim/v2/ServiceProviderConfig",
+          detail:
+            "Inbound SCIM 2.0 Users and Groups provision tenant memberships with a hashed tenant bearer token. Deprovision sets membership Inactive and retains evidence. Login remains SSO or password per tenant policy. Not Okta/Azure certified. JIT is optional and off by default.",
+          inventoryConnectorsNote:
+            "CyberArk Identity SCIM and similar connectors are read-only external identity inventory only; they do not provision Periscan tenant memberships.",
+          status: "Ready"
+        }
+      : {
+          discoveryPath: "/api/v1/scim/v2/ServiceProviderConfig",
+          detail:
+            "Inbound SCIM 2.0 Users/Groups are implemented at /api/v1/scim/v2, but this tenant has no SCIM token yet (inbound_scim_not_configured / NotConfigured). Issue a tenant SCIM bearer token to enable IdP provisioning. Unauthenticated probes return HTTP 401. Login remains SSO or password.",
+          inventoryConnectorsNote:
+            "CyberArk Identity SCIM and similar connectors are read-only external identity inventory only; they do not provision Periscan tenant memberships.",
+          status: "NotConfigured"
+        }
   };
 }
 
@@ -1918,8 +1958,7 @@ export function buildEnterpriseCommercialHonesty(input?: {
   return {
     auditStreaming: {
       continuousStreamStatus: "NotConfigured",
-      detail:
-        `Control-plane audit is pull-export only (CSV/JSON via /api/v1/audit-events/export, hard cap ${maxExportEvents} events per export; truncated exports report truncated=true). Continuous SIEM-native stream (Splunk HEC / Sentinel / OCSF pipeline for every security-relevant audit action) is NotConfigured and not shipped. Product outbound webhooks cover discrete proof-loop events (mission.*, remediation.verified, policy.denied, finding.disposition_changed) — not a full continuous audit bus. Keep offline legal-hold export.`,
+      detail: `Control-plane audit is pull-export only (CSV/JSON via /api/v1/audit-events/export, hard cap ${maxExportEvents} events per export; truncated exports report truncated=true). Continuous SIEM-native stream (Splunk HEC / Sentinel / OCSF pipeline for every security-relevant audit action) is NotConfigured and not shipped. Product outbound webhooks cover discrete proof-loop events (mission.*, remediation.verified, policy.denied, finding.disposition_changed) — not a full continuous audit bus. Keep offline legal-hold export.`,
       exportPath: "/api/v1/audit-events",
       maxExportEvents,
       status: "PullExportOnly",
@@ -2122,8 +2161,7 @@ export function buildMarketPresenceReadiness(input?: {
         {
           gateId: "G2",
           label: "≥3 production deploy partners",
-          status:
-            productionDesignPartnerReferenceCount >= 3 ? "Met" : "Open",
+          status: productionDesignPartnerReferenceCount >= 3 ? "Met" : "Open",
           notes: "Real tenants outside lab."
         },
         {
@@ -2181,7 +2219,6 @@ export function buildDesignPartnerMarketPresenceHonesty(input?: {
       "Tenant checklist and proof-loop counts are not customer references, Wave/MQ market presence, or five-session research scorecards. Public references require written consent outside this product."
   };
 }
-
 
 export const TrustSafetySummarySchema = z.object({
   auditLogPath: z.string().min(1),
@@ -2532,10 +2569,7 @@ export const BatchComplianceGovernanceResultSchema = z.object({
 export const MultiFrameworkComplianceExportInputSchema = z
   .object({
     audience: z.string().trim().min(1).max(200).default("Auditor"),
-    frameworks: z
-      .array(ComplianceFrameworkKeySchema)
-      .min(1)
-      .max(11),
+    frameworks: z.array(ComplianceFrameworkKeySchema).min(1).max(11),
     snapshotId: IdSchema,
     titlePrefix: z.string().trim().min(1).max(200).nullish()
   })
@@ -2559,6 +2593,50 @@ export const MultiFrameworkComplianceExportResultSchema = z.object({
   scorecardId: z.literal(80),
   snapshotId: IdSchema,
   tenantId: IdSchema
+});
+/** Measured evidence kinds a catalog control can depend on. */
+export const ComplianceEvidenceKindSchema = z.enum([
+  "measured-exposure-validation",
+  "control-detection-validation",
+  "fix-verification",
+  "ai-control-validation",
+  "attack-path-analysis",
+  "continuous-validation",
+  "evidence-integrity"
+]);
+export const ComplianceControlStatusSchema = z.enum([
+  "Met",
+  "Partial",
+  "Unmet"
+]);
+export const ComplianceControlCoverageSchema = z.object({
+  controlId: z.string().min(1),
+  evidencedBy: z.array(ComplianceEvidenceKindSchema).min(1),
+  evidenceIds: IdListSchema,
+  lastValidatedAt: TimestampSchema.nullable(),
+  missing: z.array(ComplianceEvidenceKindSchema),
+  satisfiedBy: z.array(ComplianceEvidenceKindSchema),
+  status: ComplianceControlStatusSchema,
+  title: z.string().min(1)
+});
+/**
+ * Snapshot-derived per-control coverage for a compliance evidence-support
+ * pack. Status is Met/Partial/Unmet from measured evidence kinds only —
+ * never certification, never Met without evidence.
+ */
+export const SnapshotComplianceCoverageSchema = z.object({
+  catalogVersion: z.string().min(1),
+  configured: z.boolean(),
+  controls: z.array(ComplianceControlCoverageSchema),
+  coverageRatio: z.number().min(0).max(1),
+  disclaimer: z.string().min(1),
+  displayName: z.string().min(1),
+  framework: ComplianceFrameworkKeySchema,
+  metCount: z.number().int().nonnegative(),
+  notCertification: z.literal(true),
+  partialCount: z.number().int().nonnegative(),
+  snapshotId: IdSchema.nullable(),
+  unmetCount: z.number().int().nonnegative()
 });
 export const TenantIsolationProofControlSchema = z.object({
   control: z.string().min(1),
@@ -3759,7 +3837,7 @@ export const CreateValidationStimulusResponseSchema = z.object({
 
 /**
  * Wave B: signed benign-marker emit→observe DRV product path.
- * Allowlisted `periscan-*` process canary only — not full ATT&CK BAS library.
+ * Allowlisted `periscan-*` process canary only — measured marker coverage.
  */
 export const DetectionMarkerProofInputSchema = z.object({
   expectedRule: z.string().min(1).optional(),
@@ -3790,7 +3868,7 @@ export const DetectionMarkerProofResultSchema = z.object({
   closedLoop: z.boolean(),
   /** Always benign-marker class — never full ATT&CK library inject. */
   drvClaimClass: z.literal("benign_marker_only"),
-  /** Always false: product refuses full ATT&CK BAS library claims. */
+  /** False for this marker-only response; library coverage requires qualified scenario evidence. */
   fullAttackLibrary: z.literal(false),
   markerId: z.string().min(1),
   mission: ValidationMissionSchema,
@@ -4214,7 +4292,6 @@ export const GraphNodeTypeSchema = z
     message:
       "nodeType must be an allowlisted bare type (e.g. ValidationRun, EvidenceArtifact, ValidationMission) or Family.Leaf form with a closed leaf catalog (e.g. Signal.Repository, Asset.CloudResource, Exposure.SecretExposure). Unknown Exposure/Identity/Secret/CloudResource leaves are rejected — use resolveGraphNodeType(). See GRAPH_NODE_BARE_TYPES and GRAPH_NODE_TYPE_FAMILIES (ontology v2)."
   });
-
 
 export const GraphNodeSchema = TenantScopedEntitySchema.extend({
   graphNodeId: IdSchema,
@@ -6040,6 +6117,7 @@ export const ScheduleDiffSchema = z.object({
 
 export const ScheduledRunResultSchema = z.object({
   diff: ScheduleDiffSchema,
+  jobsQueued: z.number().int().nonnegative().optional(),
   schedule: MissionScheduleSchema,
   snapshot: ValidationSnapshotSchema.nullish() // nullish for non-snapshot scheduled mission types (AI/Control/FixVerification)
 });
@@ -6802,7 +6880,9 @@ export type ProductActivationState = z.infer<
   typeof ProductActivationStateSchema
 >;
 export type ProductWorkQueue = z.infer<typeof ProductWorkQueueSchema>;
-export type ProductWorkQueueFeedItem = z.infer<typeof ProductWorkQueueFeedItemSchema>;
+export type ProductWorkQueueFeedItem = z.infer<
+  typeof ProductWorkQueueFeedItemSchema
+>;
 export type BlueShiftBrief = z.infer<typeof BlueShiftBriefSchema>;
 export type BlueShiftBriefBucket = z.infer<typeof BlueShiftBriefBucketSchema>;
 export type TenantMaturity = z.infer<typeof TenantMaturitySchema>;
@@ -7145,6 +7225,18 @@ export type MultiFrameworkComplianceExportInput = z.input<
 export type MultiFrameworkComplianceExportResult = z.infer<
   typeof MultiFrameworkComplianceExportResultSchema
 >;
+export type ComplianceEvidenceKind = z.infer<
+  typeof ComplianceEvidenceKindSchema
+>;
+export type ComplianceControlStatus = z.infer<
+  typeof ComplianceControlStatusSchema
+>;
+export type ComplianceControlCoverage = z.infer<
+  typeof ComplianceControlCoverageSchema
+>;
+export type SnapshotComplianceCoverage = z.infer<
+  typeof SnapshotComplianceCoverageSchema
+>;
 export type TenantIsolationProofControl = z.infer<
   typeof TenantIsolationProofControlSchema
 >;
@@ -7307,6 +7399,7 @@ export type CTEMProgramSummary = z.infer<typeof CTEMProgramSummarySchema>;
 export type TenantType = z.infer<typeof TenantTypeSchema>;
 export type UserStatus = z.infer<typeof UserStatusSchema>;
 export type MembershipRole = z.infer<typeof MembershipRoleSchema>;
+export type JitMembershipRole = z.infer<typeof JitMembershipRoleSchema>;
 export type ScopeType = z.infer<typeof ScopeTypeSchema>;
 export type ScopeVerificationStatus = z.infer<
   typeof ScopeVerificationStatusSchema

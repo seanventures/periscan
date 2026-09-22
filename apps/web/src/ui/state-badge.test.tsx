@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import axe from "axe-core";
 import { describe, expect, it } from "vitest";
 
 import type { AttackPath } from "@periscan/shared";
@@ -6,6 +7,7 @@ import type { AttackPath } from "@periscan/shared";
 import {
   AttackPathClaimBadge,
   SafetyLevelBadge,
+  ValidationStateBadge,
   formatSafetyLevelLabel
 } from "./state-badge";
 
@@ -90,6 +92,50 @@ describe("AttackPathClaimBadge SR labels [UX-W11]", () => {
     const badge = screen.getByText("Heuristic hypothesis");
     expect(badge.getAttribute("title") ?? "").toMatch(
       /recorded Validated vs evidence certainty Heuristic hypothesis/i
+    );
+  });
+});
+
+describe("labelled StateBadge is not a generic with aria-label (loop 15 Home)", () => {
+  it("ValidationStateBadge with aria-label is a status, not a generic span", async () => {
+    const { container } = render(
+      <ValidationStateBadge
+        state="Validated"
+        title="Validation state Validated"
+        aria-label="Validation state Validated"
+      />
+    );
+
+    const badge = screen.getByRole("status", {
+      name: "Validation state Validated"
+    });
+    expect(badge.tagName.toLowerCase()).toBe("span");
+    expect(badge).toHaveTextContent("Validated");
+
+    const results = await axe.run(container, {
+      runOnly: { type: "rule", values: ["aria-prohibited-attr"] }
+    });
+    expect(results.violations).toEqual([]);
+    expect(results.incomplete).toEqual([]);
+  });
+
+  it("unlabelled ValidationStateBadge stays generic; visible text is the name", () => {
+    render(<ValidationStateBadge state="Validated" />);
+    expect(
+      screen.queryByRole("status", { name: "Validated" })
+    ).not.toBeInTheDocument();
+    expect(screen.getByText("Validated").tagName.toLowerCase()).toBe("span");
+    expect(screen.getByText("Validated")).not.toHaveAttribute("aria-label");
+  });
+
+  it("AttackPathClaimBadge keeps claim-safe aria-label on a status role", () => {
+    render(<AttackPathClaimBadge attackPath={path("Validated")} />);
+    const badge = screen.getByRole("status", {
+      name: /claim-safe/i
+    });
+    expect(badge).toHaveAttribute(
+      "aria-label",
+      expect.stringMatching(/remapped from recorded Validated/i)
     );
   });
 });

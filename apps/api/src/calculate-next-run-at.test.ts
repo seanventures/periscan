@@ -27,6 +27,15 @@ describe("calculateNextRunAt", () => {
     );
   });
 
+  it("advances Hourly and Continuous by exactly one UTC hour", () => {
+    expect(calculateNextRunAt("Hourly", from).toISOString()).toBe(
+      "2026-06-15T13:00:00.000Z"
+    );
+    expect(calculateNextRunAt("Continuous", from).toISOString()).toBe(
+      "2026-06-15T13:00:00.000Z"
+    );
+  });
+
   it("does not mutate the input date", () => {
     const original = from.toISOString();
     calculateNextRunAt("Daily", from);

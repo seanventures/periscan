@@ -9,6 +9,7 @@ import type {
 } from "@periscan/connectors";
 import type { Integration } from "@periscan/shared";
 
+import { AEV_BAS_BOUNDARY_SENTENCE } from "../lib/aev-bas-copy";
 import { browserPeriscanApiClient as api } from "../lib/periscan-api-client";
 import { useApiResource } from "../hooks/use-api-resource";
 import {
@@ -200,8 +201,9 @@ export function IntegrationsMarketplace() {
           Integrations
         </h1>
         <p className="max-w-2xl text-sm text-muted">
-          The signal sources that feed validation. Connect a tool, see exactly
-          what Periscan reads, and keep it in sync — read-only by default.
+          {AEV_BAS_BOUNDARY_SENTENCE} The signal sources that feed validation.
+          Connect a tool, see exactly what Periscan reads, and keep it in sync —
+          read-only by default.
         </p>
         <div
           className="mt-3 max-w-2xl rounded-control border border-line bg-surface-2 px-3 py-2 text-xs text-muted"

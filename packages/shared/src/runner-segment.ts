@@ -1,7 +1,7 @@
 /**
  * P10-17 — Periscan Segment Runner profiles
  * ----------------------------------------
- * Field-installable appliance *profiles* (not a full BAS appliance):
+ * Field-installable appliance *profiles* (qualified module profiles):
  * baked allowlists, resource limits, and mTLS-required posture per network
  * segment class. Metering is by segment profile, not vague Enterprise SKUs.
  *
@@ -196,9 +196,11 @@ export function resolveModuleSegmentFamily(moduleId: string): string | null {
   // Reachability / TCP
   if (
     id === "runner.reachability_check" ||
+    id === "runner.port_connect_check" ||
     id === "periscan.tcp_reachability" ||
     id.endsWith(".reachability_check") ||
-    id.includes("reachability")
+    id.includes("reachability") ||
+    id.includes("port_connect")
   ) {
     return "reachability";
   }
@@ -206,10 +208,12 @@ export function resolveModuleSegmentFamily(moduleId: string): string | null {
   // DNS
   if (
     id === "runner.dns_resolution_check" ||
+    id === "runner.ptr_lookup_check" ||
     id === "periscan.dns_resolution_check" ||
     id === "recon.dns_probe" ||
     id.includes("dns_resolution") ||
-    id.includes("dns_probe")
+    id.includes("dns_probe") ||
+    id.includes("ptr_lookup")
   ) {
     return "dns-resolve";
   }

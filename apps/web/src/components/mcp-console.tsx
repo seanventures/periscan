@@ -151,8 +151,8 @@ export function McpConsole() {
             Offensive multi-agent BAS swarm orchestration is{" "}
             <strong className="text-ink">not</strong> exposed here — use
             governed Agent Workflows and the Model Gateway for policy-gated
-            analyst sessions. Live Atomic, Caldera, SharpHound, sqlmap, and
-            Metasploit stay off.
+            analyst sessions. Live BAS execution through MCP requires qualified adapters and
+            scenario-specific policy decisions.
           </p>
         </div>
       </Panel>

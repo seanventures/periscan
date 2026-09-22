@@ -685,4 +685,23 @@ describe("ProofLoopMap", () => {
       "Completed"
     );
   });
+
+  it("rail map can suppress Route the smallest fix so findings first-hour keeps one verb", () => {
+    const proven = afterCommunityGitleaksProof();
+    const { rerender } = render(
+      <ProofLoopMap activation={proven} variant="rail" />
+    );
+    const map = screen.getByTestId("proof-loop-map-rail");
+    expect(
+      within(map).getByRole("link", { name: /Route the smallest fix/u })
+    ).toHaveAttribute("href", "/remediation");
+
+    rerender(
+      <ProofLoopMap activation={proven} variant="rail" suppressNextAction />
+    );
+    expect(
+      within(map).queryByRole("link", { name: /Route the smallest fix/u })
+    ).not.toBeInTheDocument();
+    expect(within(map).getByLabelText("Proof-loop stages")).toBeInTheDocument();
+  });
 });

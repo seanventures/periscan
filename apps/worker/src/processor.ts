@@ -127,6 +127,67 @@ function getErrorSummary(error: unknown) {
   return error instanceof Error ? error.message : "Module execution failed.";
 }
 
+const OPEN_RUN_STATUSES = new Set([
+  "Accepted",
+  "Leased",
+  "Queued",
+  "Running"
+]);
+
+function runHasPersistedEvidence(run: {
+  evidenceIds?: readonly string[] | null;
+}): boolean {
+  return Array.isArray(run.evidenceIds) && run.evidenceIds.length > 0;
+}
+
+/**
+ * Sibling-run mission close. Keep in sync with
+ * apps/api/src/mission-run-aggregate.ts: 1-engine evidence Completes the parent;
+ * hybrid packs with Queued/Running siblings without evidence stay Running.
+ */
+function nextMissionStatusFromRuns(
+  runs: ReadonlyArray<{
+    evidenceIds?: readonly string[] | null;
+    status: string;
+  }>
+): "Completed" | "Failed" | "Queued" | "Running" {
+  if (runs.length === 0) {
+    return "Queued";
+  }
+  const hasFailed = runs.some((run) => run.status === "Failed");
+  const allCompleted = runs.every((run) => run.status === "Completed");
+  const hasActive = runs.some((run) =>
+    ["Running", "Leased", "Accepted"].includes(run.status)
+  );
+  const hasPartialProgress = runs.some((run) => run.status === "Completed");
+  const hasOpenWithoutEvidence = runs.some(
+    (run) =>
+      OPEN_RUN_STATUSES.has(run.status) && !runHasPersistedEvidence(run)
+  );
+  const allEvidenceComplete = runs.every(
+    (run) => run.status === "Completed" || runHasPersistedEvidence(run)
+  );
+  return hasFailed
+    ? "Failed"
+    : allCompleted || (allEvidenceComplete && !hasOpenWithoutEvidence)
+      ? "Completed"
+      : hasActive || hasPartialProgress
+        ? "Running"
+        : "Queued";
+}
+
+function unionRunEvidenceIds(
+  runs: ReadonlyArray<{ evidenceIds?: readonly string[] | null }>
+): string[] {
+  return [
+    ...new Set(
+      runs.flatMap((run) =>
+        Array.isArray(run.evidenceIds) ? [...run.evidenceIds] : []
+      )
+    )
+  ];
+}
+
 const NON_EXECUTABLE_JOB_STATUSES = new Set([
   "Cancelled",
   "Completed",
@@ -139,7 +200,16 @@ function getNonExecutableReason(execution: LoadedValidationJob): string | null {
     return `Job is ${execution.job.status}.`;
   }
   if (NON_EXECUTABLE_JOB_STATUSES.has(execution.mission.status)) {
-    return `Mission is ${execution.mission.status}.`;
+    const runOpen =
+      execution.run.status === "Queued" || execution.run.status === "Running";
+    const parentClosedOnEvidence =
+      execution.mission.status === "Completed" ||
+      execution.mission.status === "Failed";
+    // 1-engine close-on-evidence can stamp the parent Completed before
+    // markCompleted. A retry must still finish the open run.
+    if (!(runOpen && parentClosedOnEvidence)) {
+      return `Mission is ${execution.mission.status}.`;
+    }
   }
   if (NON_EXECUTABLE_JOB_STATUSES.has(execution.run.status)) {
     return `Validation run is ${execution.run.status}.`;
@@ -369,6 +439,12 @@ export function createMissionExecutionProcessor(
         );
 
         await store.attachEvidenceToPack?.(execution, evidenceIds);
+        // Attach evidence and close a 1-engine parent before signals/findings
+        // appear, so GET /findings ready cannot sit next to eternal Running.
+        if (evidenceIds.length > 0) {
+          await store.attachEvidenceIdsToRun?.(execution, evidenceIds);
+        }
+        await store.reconcileMissionStatus(execution.mission.missionId);
 
         const signals = attachGitleaksSecretToAssetPathIds(
           execution.run.moduleId,
@@ -391,10 +467,6 @@ export function createMissionExecutionProcessor(
           ...result,
           signals
         });
-        // Persist evidence IDs on the run (auto-apply + receipt linkage need them).
-        if (evidenceIds.length > 0) {
-          await store.attachEvidenceIdsToRun?.(execution, evidenceIds);
-        }
         // P05-1 parity with runner/control-plane: hop-bound completed runs
         // auto-apply edge receipts when evidence exists (best-effort).
         if (evidenceIds.length > 0) {
@@ -531,9 +603,12 @@ export class PrismaMissionExecutionStore implements MissionExecutionStore {
     const startedAt = new Date();
 
     await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-      await tx.validationMission.update({
+      await tx.validationMission.updateMany({
         where: {
-          missionId: execution.mission.missionId
+          missionId: execution.mission.missionId,
+          status: {
+            in: ["Draft", "Queued", "Running", "RequiresApproval"]
+          }
         },
         data: {
           startedAt,
@@ -1123,8 +1198,12 @@ export class PrismaMissionExecutionStore implements MissionExecutionStore {
   }
 
   async reconcileMissionStatus(missionId: string) {
-    const runs: Array<{ status: RunStatus }> =
+    const runs: Array<{ evidenceIds: string[]; status: RunStatus }> =
       await this.prisma.validationRun.findMany({
+        select: {
+          evidenceIds: true,
+          status: true
+        },
         where: {
           missionId
         }
@@ -1144,35 +1223,24 @@ export class PrismaMissionExecutionStore implements MissionExecutionStore {
       return;
     }
 
-    // A mission is only terminal once every run is terminal. A single failed
-    // run must NOT fail the mission while sibling runs are still queued.
-    const hasPending = runs.some(
-      (run) => run.status === "Queued" || run.status === "Running"
-    );
-    const hasFailed = runs.some((run) => run.status === "Failed");
-    const allCompleted = runs.every((run) => run.status === "Completed");
-    const nextStatus = hasPending
-      ? "Running"
-      : hasFailed
-        ? "Failed"
-        : allCompleted
-          ? "Completed"
-          : "Queued";
+    // A 41-engine pack stays Running while any sibling is still Queued/Running
+    // without evidence. A 1-engine first-hour run with evidence Completes.
+    const nextStatus = nextMissionStatusFromRuns(runs);
+    const isTerminal = nextStatus === "Completed" || nextStatus === "Failed";
 
     await this.prisma.validationMission.update({
       where: {
         missionId
       },
       data: {
-        completedAt:
-          !hasPending && (hasFailed || allCompleted) ? new Date() : null,
+        completedAt: isTerminal ? new Date() : null,
+        evidenceIds: unionRunEvidenceIds(runs),
         status: nextStatus
       }
     });
 
     const wasTerminal =
       mission.status === "Completed" || mission.status === "Failed";
-    const isTerminal = nextStatus === "Completed" || nextStatus === "Failed";
 
     if (!wasTerminal && isTerminal) {
       await emitWebhookEvent({

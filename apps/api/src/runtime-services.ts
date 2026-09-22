@@ -1,3 +1,9 @@
+import type { BasContentPreviewInput, BasContentPreview, RegisterBasContentInput, RegisterBasContentResult, BasContentVersion, BasContentVersionFilter, BasContentVersionList, PromoteBasContentInput, PromoteBasContentResult, CompileBasCampaignInput, CompileBasCampaignResult, StartBasCampaignInput, StartBasCampaignResult, CancelBasCampaignInput, CancelBasCampaignResult, BasCampaignPlan, BasCampaignList, QualifyBasPackInput, QualifyBasPackResult, AuthorizeBasPackInput, AuthorizeBasPackResult, DangerOperatorGate, AtomicTestCatalog, StartAtomicTestInput, StartAtomicTestResult } from "@periscan/shared";
+import { createBasContentRegistryServices } from "./services/bas-content-registry.js";
+import { createBasContentServices } from "./services/bas-content.js";
+import { createBasCampaignServices } from "./services/bas-campaign.js";
+import { createBasPackStartGateServices } from "./services/bas-pack-start-gate.js";
+import { createBasAtomicTestingServices } from "./services/bas-atomic-testing.js";
 import {
   createHash,
   createPrivateKey,
@@ -166,7 +172,10 @@ import type {
   ControlSource,
   CreateValidationStimulusInput,
   CreateValidationStimulusResponse,
+  StartBasScenarioInput,
+  StartBasScenarioResult,
   CreateScopeInput,
+  CreateEnterpriseSiteInput,
   CreateMissionScheduleInput,
   CreateControlGapRemediationInput,
   CreateRemediationInput,
@@ -278,6 +287,7 @@ import type {
   RunnerTaskResult,
   UpdateRunnerFleetPolicyInput,
   Scope,
+  EnterpriseSite,
   ScopeType,
   DueScheduleRunSummary,
   SignalEnvelope,
@@ -295,6 +305,7 @@ import type {
   ScheduleTiming,
   UpdateMissionScheduleInput,
   UpdateScopeClassificationInput,
+  UpdateEnterpriseSiteInput,
   ValidationMission,
   ValidationSnapshot,
   ValidationRun,
@@ -470,6 +481,7 @@ import type {
   ComplianceFrameworkKey,
   ComplianceGovernanceChange,
   ComplianceGovernanceInventory,
+  SnapshotComplianceCoverage,
   UpdateComplianceControlGovernanceInput,
   ConvertTenantTrialInput,
   StartTenantTrialInput,
@@ -550,6 +562,7 @@ import { withPathEdgeReceiptLock } from "./path-receipt-lock.js";
 import { createFindingsServices } from "./services/findings.js";
 import { createScheduleServices } from "./services/schedules.js";
 import { createScopeServices } from "./services/scopes.js";
+import { createEnterpriseSiteServices } from "./services/enterprise-sites.js";
 import { createIntegrationServices } from "./services/integrations.js";
 import { createSsoServices } from "./services/sso.js";
 import { createRunnerServices } from "./services/runner.js";
@@ -575,6 +588,7 @@ import {
 } from "./services/aws-marketplace.js";
 import { createModelFinOpsServices } from "./services/model-finops.js";
 import { createControlAiServices } from "./services/control-ai.js";
+import { createBasControlPlaneServices } from "./services/bas-control-plane.js";
 import { createControlStimulusServices } from "./services/control-stimuli.js";
 import {
   decryptIntegrationConfig,
@@ -585,6 +599,7 @@ import { createEngagementServices } from "./services/engagements.js";
 import { createEngagementCollaborationServices } from "./services/engagement-collaboration.js";
 import { createScenarioServices } from "./services/scenarios.js";
 import { createHybridExecutionCompilerServices } from "./services/hybrid-execution-compiler.js";
+import { createExternalAssessmentServices } from "./services/external-assessment.js";
 import type {
   CompileScenarioInput,
   CompileScenarioResponse,
@@ -593,6 +608,14 @@ import type {
   EngagementResult,
   EngagementRunRequest,
   ExecuteScenarioInput,
+  ExternalAssessmentAttachScheduleInput,
+  ExternalAssessmentAttachScheduleResult,
+  ExternalAssessmentCompileInput,
+  ExternalAssessmentCompileResult,
+  ExternalAssessmentMappedResults,
+  ExternalAssessmentStartInput,
+  ExternalAssessmentStartResult,
+  ExternalAssessmentToolOutputInput,
   InitializeEngagementWorkspaceInput,
   ScenarioBundle,
   ScenarioExecutionResult,
@@ -2674,7 +2697,23 @@ export interface AppServices {
     context: AuthenticatedContext,
     input: CompileHybridExecutionInput
   ): Promise<CompileHybridExecutionResponse>;
-  /** Passive multi-agent mission assembly (#29) — not BAS swarm. */
+  compileExternalAssessment(
+    context: AuthenticatedContext,
+    input: ExternalAssessmentCompileInput
+  ): Promise<ExternalAssessmentCompileResult>;
+  startExternalAssessment(
+    context: AuthenticatedContext,
+    input: ExternalAssessmentStartInput
+  ): Promise<ExternalAssessmentStartResult>;
+  ingestExternalAssessmentResults(
+    context: AuthenticatedContext,
+    input: ExternalAssessmentToolOutputInput
+  ): Promise<ExternalAssessmentMappedResults>;
+  attachExternalAssessmentToSchedule(
+    context: AuthenticatedContext,
+    input: ExternalAssessmentAttachScheduleInput
+  ): Promise<ExternalAssessmentAttachScheduleResult>;
+  /** Passive multi-agent mission assembly (#29) — passive planning. */
   assemblePassiveMultiAgentPlan(
     context: AuthenticatedContext,
     input: AssemblePassiveMultiAgentPlanInput
@@ -3749,6 +3788,21 @@ export interface AppServices {
   getThirdPartyToolLicenseSummary(
     context: AuthenticatedContext
   ): Promise<ThirdPartyToolLicenseSummary>;
+  registerBasContent(context: AuthenticatedContext, input: RegisterBasContentInput): Promise<RegisterBasContentResult>;
+  getBasContentVersion(context: AuthenticatedContext, basContentVersionId: string): Promise<BasContentVersion>;
+  listBasContentVersions(context: AuthenticatedContext, filter: BasContentVersionFilter): Promise<BasContentVersionList>;
+  promoteBasContent(context: AuthenticatedContext, basContentVersionId: string, input: PromoteBasContentInput): Promise<PromoteBasContentResult>;
+  previewBasContent(context: AuthenticatedContext, input: BasContentPreviewInput): Promise<BasContentPreview>;
+  compileBasCampaign(context: AuthenticatedContext, input: CompileBasCampaignInput): Promise<CompileBasCampaignResult>;
+  startBasCampaign(context: AuthenticatedContext, input: StartBasCampaignInput): Promise<StartBasCampaignResult>;
+  cancelBasCampaign(context: AuthenticatedContext, input: CancelBasCampaignInput): Promise<CancelBasCampaignResult>;
+  getBasCampaign(context: AuthenticatedContext, compiledDigest: string): Promise<BasCampaignPlan>;
+  listBasCampaigns(context: AuthenticatedContext): Promise<BasCampaignList>;
+  qualifyBasPack(context: AuthenticatedContext, input: QualifyBasPackInput): Promise<QualifyBasPackResult>;
+  authorizeBasPack(context: AuthenticatedContext, input: AuthorizeBasPackInput): Promise<AuthorizeBasPackResult>;
+  getBasDangerOperatorGate(context: AuthenticatedContext): Promise<DangerOperatorGate>;
+  listAtomicTests(context: AuthenticatedContext): Promise<AtomicTestCatalog>;
+  startAtomicTest(context: AuthenticatedContext, input: StartAtomicTestInput): Promise<StartAtomicTestResult>;
   validateThirdPartyToolIntake(
     context: AuthenticatedContext,
     input: ToolIntakeManifestRequest
@@ -3805,7 +3859,8 @@ export interface AppServices {
   ): Promise<DueScheduleRunSummary>;
   runSchedule(
     context: AuthenticatedContext,
-    scheduleId: string
+    scheduleId: string,
+    options?: { fireKind?: "calendar" | "drift" }
   ): Promise<ScheduledRunResult>;
   getSnapshot(
     context: AuthenticatedContext,
@@ -3957,6 +4012,13 @@ export interface AppServices {
   syncAwsMarketplaceMetering(
     context: AuthenticatedContext
   ): Promise<AwsMarketplaceMeteringSyncResult>;
+  getComplianceCoverage(
+    context: AuthenticatedContext,
+    input: {
+      framework: ComplianceFrameworkKey;
+      snapshotId?: string;
+    }
+  ): Promise<SnapshotComplianceCoverage>;
   getComplianceGovernance(
     context: AuthenticatedContext,
     framework: ComplianceFrameworkKey
@@ -4151,6 +4213,10 @@ export interface AppServices {
     context: AuthenticatedContext,
     input: CreateValidationStimulusInput
   ): Promise<CreateValidationStimulusResponse>;
+  startBasScenario(
+    context: AuthenticatedContext,
+    input: StartBasScenarioInput
+  ): Promise<StartBasScenarioResult>;
   dispatchValidationStimulus(
     context: AuthenticatedContext,
     stimulusId: string
@@ -4197,6 +4263,16 @@ export interface AppServices {
     options?: { limit?: number }
   ): Promise<EvidencePack[]>;
   listRunners(context: AuthenticatedContext): Promise<RunnerRecord[]>;
+  listEnterpriseSites(context: AuthenticatedContext): Promise<EnterpriseSite[]>;
+  createEnterpriseSite(
+    context: AuthenticatedContext,
+    input: CreateEnterpriseSiteInput
+  ): Promise<EnterpriseSite>;
+  updateEnterpriseSite(
+    context: AuthenticatedContext,
+    siteId: string,
+    input: UpdateEnterpriseSiteInput
+  ): Promise<EnterpriseSite>;
   listSchedules(context: AuthenticatedContext): Promise<MissionSchedule[]>;
   listSignalTriggerActivity(
     context: AuthenticatedContext,
@@ -4753,6 +4829,7 @@ export const AUDIT_ACTION_TO_DB = {
   "runner.task.rejected": "runner_task_rejected",
   "threat_advisory.imported": "threat_advisory_imported",
   "user.invited": "user_invited",
+  "user.jit_provisioned": "user_jit_provisioned",
   "role.changed": "role_changed",
   "member.removed": "member_removed",
   "finding.disposition_changed": "finding_disposition_changed",
@@ -4783,6 +4860,13 @@ export const AUDIT_ACTION_TO_DB = {
   "engagement.collaborator.updated": "engagement_collaborator_updated",
   "engagement.collaboration.event_added":
     "engagement_collaboration_event_added",
+  "bas.content_registered": "bas_content_registered",
+  "bas.content_promoted": "bas_content_promoted",
+  "bas.campaign_compiled": "bas_campaign_compiled",
+  "bas.campaign_started": "bas_campaign_started",
+  "bas.campaign_cancelled": "bas_campaign_cancelled",
+  "bas.pack_qualified": "bas_pack_qualified",
+  "bas.pack_authorized": "bas_pack_authorized",
   "scenario.compiled": "scenario_compiled",
   "scenario.approved": "scenario_approved",
   "scenario.executed": "scenario_executed",
@@ -4877,7 +4961,9 @@ export const AUDIT_ACTION_TO_DB = {
   "async_operations.policy_configured": "async_operations_policy_configured",
   "async_operations.reconciled": "async_operations_reconciled",
   "async_operations.recovery_prepared": "async_operations_recovery_prepared",
-  "async_operations.terminal_accepted": "async_operations_terminal_accepted"
+  "async_operations.terminal_accepted": "async_operations_terminal_accepted",
+  "user.scim_provisioned": "user_scim_provisioned",
+  "user.scim_deprovisioned": "user_scim_deprovisioned"
 } as const satisfies Record<AuditEventAction, string>;
 
 const AUDIT_ACTION_FROM_DB = Object.fromEntries(
@@ -4915,6 +5001,10 @@ export const TENANT_ADMIN_ROLES = new Set<MembershipRole>([
   "Admin",
   "MSSPOwner",
   "ClientAdmin"
+]);
+export const BAS_PACK_OWNER_ROLES = new Set<MembershipRole>([
+  "Owner",
+  "MSSPOwner"
 ]);
 export const MSSP_ADMIN_ROLES = new Set<MembershipRole>([
   "Owner",
@@ -8043,6 +8133,11 @@ export function calculateNextRunAt(
   from: Date,
   timing?: ScheduleTiming
 ) {
+  if (frequency === "Hourly" || frequency === "Continuous") {
+    const next = new Date(from.getTime() + 60 * 60 * 1000);
+    return timing ? moveScheduleOutsideBlackout(next, timing) : next;
+  }
+
   if (timing) {
     const local = zonedScheduleParts(from, timing.timeZone);
     const [hour, minute] = timing.runAtLocalTime.split(":").map(Number);
@@ -9372,6 +9467,7 @@ export async function syncPersistedIntegration(input: {
       assets: result.assets,
       connectorKey,
       health: result.health,
+      identityCandidates: result.identityCandidates ?? [],
       signals: result.signals
     },
     filename: connectorKey ? `${connectorKey}-sync` : "integration-sync",
@@ -15495,7 +15591,16 @@ export async function buildTrustSafetySummary(
         workflowCapabilities: connector?.manifest.workflowCapabilities ?? []
       };
     }),
-    identityProvisioning: buildIdentityProvisioningHonesty(),
+    identityProvisioning: buildIdentityProvisioningHonesty({
+      inboundScimConfigured: Boolean(
+        await prisma.scimToken.findFirst({
+          where: {
+            revokedAt: null,
+            tenantId: context.tenant.tenantId
+          }
+        })
+      )
+    }),
     enterpriseCommercial: buildEnterpriseCommercialHonesty({
       routingStatus
     }),
@@ -15825,6 +15930,8 @@ export function createRuntimeServices(
 
   const services = {
     ...createRegistryServices(),
+    ...createBasContentServices(),
+    ...createBasContentRegistryServices(deps),
 
     ...createSignalOperatorServices(deps),
 
@@ -15833,6 +15940,11 @@ export function createRuntimeServices(
     ...createIntegrationServices(deps),
 
     ...createControlAiServices(deps),
+
+    ...createBasControlPlaneServices(deps),
+    ...createBasCampaignServices(deps),
+    ...createBasPackStartGateServices(deps),
+    ...createBasAtomicTestingServices(deps),
 
     ...createControlStimulusServices(deps),
 
@@ -15890,8 +16002,10 @@ export function createRuntimeServices(
     ...createModelFinOpsServices(deps),
 
     ...createScopeServices(deps),
+    ...createEnterpriseSiteServices(deps),
     ...createScenarioServices(deps),
     ...createHybridExecutionCompilerServices(deps),
+    ...createExternalAssessmentServices(deps),
     ...createEngagementServices(deps),
     ...createEngagementCollaborationServices(deps),
     ...createThreatCenterServices(deps),

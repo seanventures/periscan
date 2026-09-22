@@ -226,7 +226,9 @@ export function HomeScreen(props: {
         </Text>
         <Text color={theme.muted}> terminal</Text>
       </Box>
-      <Text color={theme.ink}>governed validation · authorized scope only</Text>
+      <Text color={theme.ink}>
+        authorized local path → Gitleaks-class → Fixed after retest
+      </Text>
 
       <Box marginTop={1} flexDirection="column">
         <Box>

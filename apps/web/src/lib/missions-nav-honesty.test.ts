@@ -62,7 +62,7 @@ describe("missions nav honesty", () => {
     expect(derived?.label).toBe("Validate");
     expect(primary?.label).toBe(derived?.label);
     expect(primary?.label).not.toBe("Missions");
-    expect(primary?.hint).toMatch(/Validation Snapshot/i);
+    expect(primary?.hint).toMatch(/Gitleaks-class on verified scope/i);
   });
 
   it("documents multi-type MissionsWorkbench as unmounted lab surface", () => {

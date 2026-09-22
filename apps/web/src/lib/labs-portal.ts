@@ -102,9 +102,33 @@ export const LABS_PORTAL_DEEP_LINKS: LabsDestination[] = [
     category: "Identity & intel"
   },
   {
+    href: "/attack-navigator",
+    label: "ATT&CK Navigator overlay",
+    hint: "Import/export tested, detected, blocked, and stale layers with evidence links. Imported content is not executed coverage.",
+    category: "Identity & intel"
+  },
+  {
     href: "/continuous",
     label: "Continuous hub",
     hint: "Plan → Run → Health for continuous validation. Schedule and Runners stay primary Setup.",
+    category: "Autonomous"
+  },
+  {
+    href: "/control-validation",
+    label: "Control validation",
+    hint: "BAS-lite benign canary / marker-only coverage. Start ControlValidation on authorized scope, then dispatch, observe, or cancel stimuli.",
+    category: "Autonomous"
+  },
+  {
+    href: "/bas",
+    label: "BAS operator workspace",
+    hint: "Inject a benign marker, observe SIEM/EDR, then read a health-gated verdict. Live Atomic is not executable.",
+    category: "Autonomous"
+  },
+  {
+    href: "/bas/atomic-testing",
+    label: "Atomic testing",
+    hint: "One-click run of a single qualified pin against a bound runner or asset. Live Atomic stays unstartable.",
     category: "Autonomous"
   }
 ];

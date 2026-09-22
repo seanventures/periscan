@@ -205,6 +205,29 @@ describe("attack-path claim language", () => {
       buildValidationSnapshotPathLanguage([measured, heuristic]).overview
     ).toContain("1 measured validated path");
   });
+
+  it("never emits Validated high-impact path from Critical severity alone", () => {
+    const attackPath = path({
+      edgeBases: ["Heuristic", "Heuristic"],
+      evidenceBasis: "Heuristic",
+      validationState: "Validated"
+    });
+    const summary = buildAttackPathRiskSummary(attackPath, "Critical");
+    const snapshot = buildValidationSnapshotPathLanguage([
+      assessment(attackPath)
+    ]);
+
+    expect(summary).not.toMatch(/validated high-impact/i);
+    expect(summary).toMatch(/heuristic path hypothesis/i);
+    expect(snapshot.headline).not.toMatch(/validated high-impact/i);
+    expect(snapshot.headline).toBe(
+      "Critical-risk path hypothesis requires validation."
+    );
+    expect(deriveAttackPathClaim(attackPath).canClaimValidated).toBe(false);
+    expect(
+      projectPathValidationState(attackPath).claimSafeValidationState
+    ).toBe("Discovered");
+  });
 });
 
 describe("projectPathValidationState (P09-2)", () => {
@@ -217,9 +240,9 @@ describe("projectPathValidationState (P09-2)", () => {
       expect(projection.claimSafeValidationState).toBe("Discovered");
       expect(projection.remapped).toBe(true);
       expect(projection.remapReason).toMatch(/not fully measured/);
-      expect(claimSafePathValidationState(path({ validationState: recorded }))).toBe(
-        "Discovered"
-      );
+      expect(
+        claimSafePathValidationState(path({ validationState: recorded }))
+      ).toBe("Discovered");
     }
   });
 

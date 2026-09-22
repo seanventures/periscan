@@ -1,3 +1,4 @@
+import { BasContentPreviewInputSchema, BasContentVersionFilterSchema, RegisterBasContentInputSchema, PromoteBasContentInputSchema, CompileBasCampaignInputSchema, StartBasCampaignInputSchema, CancelBasCampaignInputSchema, QualifyBasPackInputSchema, AuthorizeBasPackInputSchema, ExternalAssessmentCompileInputSchema, ExternalAssessmentStartInputSchema, ExternalAssessmentToolOutputInputSchema, ExternalAssessmentAttachScheduleInputSchema, StartAtomicTestInputSchema } from "@periscan/shared";
 import { randomUUID } from "node:crypto";
 
 import Fastify, { type FastifyRequest } from "fastify";
@@ -53,6 +54,8 @@ import {
   MultiFrameworkComplianceExportInputSchema,
   UpdateComplianceControlGovernanceInputSchema,
   CreateValidationStimulusInputSchema,
+  listBasControlPlaneScenarios,
+  StartBasScenarioInputSchema,
   DetectionMarkerProofInputSchema,
   DnsExfilCanaryProofInputSchema,
   ControlSourceTypeSchema,
@@ -216,21 +219,38 @@ import {
   AppendDesignPartnerSessionNoteInputSchema,
   listAIAppValidationSuites,
   listDefaultRunnerTransportDecisions,
+  listSecurityFeedOperatorItems,
+  SecurityFeedListEnvelopeSchema,
+  CreateEnterpriseSiteInputSchema,
+  UpdateEnterpriseSiteInputSchema,
+  EnterpriseSiteListEnvelopeSchema,
+  EnterpriseSiteSchema,
   listControlValidationScenarios,
+  attachAttackTechniqueCoverage,
+  BasAtomicScenarioRunInputSchema,
+  BasAtomicScenarioRunResultSchema,
   type HealthResponse,
   type MetricsResponse
 } from "@periscan/shared";
-import { evaluateExtensionCompatibility } from "@periscan/modules";
+import {
+  evaluateExtensionCompatibility,
+  evaluateModuleStartConstraints,
+  getAllowlistedAtomicBasScenario,
+  getModuleById,
+  listAllowlistedAtomicBasScenarios
+} from "@periscan/modules";
 import { SARIF_CONTENT_TYPE } from "@periscan/reports";
 
 import {
   AppServiceError,
   createRuntimeServices,
   normalizeCorsOriginsForDeployment,
-  writeAuditEvent,
+  requireRole,
+  TENANT_ADMIN_ROLES,
   type AppServices,
   type AuthenticatedContext
 } from "./runtime-services.js";
+import { issueScimToken, registerScimRoutes } from "./services/scim.js";
 import { toSarif } from "./services/findings.js";
 import {
   isMfaRequiredForPasswordAuth,
@@ -242,6 +262,10 @@ import { augmentOpenApiDocument } from "./openapi-payloads.js";
 import { handleMcpMessage, type JsonRpcMessage } from "./mcp/protocol.js";
 import { runDueThreatFeedPolls } from "./threat-feeds/poller.js";
 import { buildEnterpriseBreadthReadiness } from "./services/enterprise-readiness.js";
+import {
+  EmailDeliveryCanaryProofInputSchema,
+  runEmailDeliveryCanaryProof
+} from "./services/email-delivery-canary.js";
 import {
   getLastValidationSweep,
   runSystemValidationSweep
@@ -703,6 +727,8 @@ export const ValidateControlSourceInputSchema = z.object({
 export { DetectionMarkerProofInputSchema };
 /** Phase C: re-export DNS-exfil detection canary proof input. */
 export { DnsExfilCanaryProofInputSchema };
+/** Email delivery canary: compile/evaluate; never real SMTP. */
+export { EmailDeliveryCanaryProofInputSchema };
 
 export const CreateReportInputSchema = z.object({
   audience: z.string().min(1).optional(),
@@ -883,6 +909,54 @@ const RATE_LIMIT_ALLOWLIST = new Set<string>([
   "/api/v1/api-reference"
 ]);
 
+const FIRST_HOUR_OPERATOR_POLL_PATHS = new Set<string>([
+  "/api/v1/findings",
+  "/api/v1/experience/activation",
+  "/api/v1/missions"
+]);
+
+function isFirstHourOperatorPollPath(path: string): boolean {
+  if (FIRST_HOUR_OPERATOR_POLL_PATHS.has(path)) {
+    return true;
+  }
+  if (/^\/api\/v1\/findings\/[^/]+$/u.test(path)) {
+    return true;
+  }
+  if (/^\/api\/v1\/missions\/[^/]+$/u.test(path)) {
+    return true;
+  }
+  return /^\/api\/v1\/missions\/[^/]+\/runs$/u.test(path);
+}
+
+function readRateLimitSessionCookie(request: FastifyRequest): string | null {
+  const fromPlugin = request.cookies?.[SESSION_COOKIE_NAME];
+  if (typeof fromPlugin === "string" && fromPlugin.length > 0) {
+    return fromPlugin;
+  }
+  const header = request.headers.cookie;
+  if (typeof header !== "string" || header.length === 0) {
+    return null;
+  }
+  for (const part of header.split(";")) {
+    const trimmed = part.trim();
+    const prefix = `${SESSION_COOKIE_NAME}=`;
+    if (!trimmed.startsWith(prefix)) {
+      continue;
+    }
+    const value = trimmed.slice(prefix.length);
+    return value.length > 0 ? value : null;
+  }
+  return null;
+}
+
+function isAuthenticatedOperatorRequest(request: FastifyRequest): boolean {
+  return Boolean(
+    getApiKeyToken(request) ||
+      getScimBearerToken(request) ||
+      readRateLimitSessionCookie(request)
+  );
+}
+
 function getApiKeyToken(request: FastifyRequest) {
   const authorization = request.headers.authorization;
 
@@ -893,6 +967,15 @@ function getApiKeyToken(request: FastifyRequest) {
   }
 
   return null;
+}
+
+function getScimBearerToken(request: FastifyRequest) {
+  const authorization = request.headers.authorization;
+  if (!authorization?.startsWith("Bearer ")) {
+    return null;
+  }
+  const value = authorization.slice("Bearer ".length).trim();
+  return value.startsWith("scim_") ? value : null;
 }
 
 async function getAuthContext(
@@ -1109,7 +1192,8 @@ function getApiReferenceGroup(path: string) {
   if (
     path.includes("/missions") ||
     path.includes("/snapshots") ||
-    path.includes("/light-external-scans")
+    path.includes("/light-external-scans") ||
+    path.includes("/external-assessments")
   ) {
     return "Validation";
   }
@@ -1147,11 +1231,14 @@ function getApiReferenceGroup(path: string) {
     return "AI Apps";
   }
 
-  if (path.includes("/control-sources")) {
+  if (
+    path.includes("/control-sources") ||
+    path.includes("/bas/scenarios")
+  ) {
     return "Controls";
   }
 
-  if (path.includes("/runners")) {
+  if (path.includes("/runners") || path.includes("/enterprise-sites")) {
     return "Runners";
   }
 
@@ -1160,7 +1247,9 @@ function getApiReferenceGroup(path: string) {
   }
 
   if (
+    path.includes("/bas/") ||
     path.includes("/third-party-tools") ||
+    path.includes("/security-feeds") ||
     path.includes("/open-source") ||
     path.includes("/modules") ||
     path.includes("/extensions") ||
@@ -1506,10 +1595,15 @@ export interface BuildAppOptions {
   sessionSecret?: string;
 }
 
+/** Fastify `trustProxy` values that match Fastify 5.12 types (no hop-count number). */
+export type FastifyTrustProxy =
+  | boolean
+  | ((address: string, hop: number) => boolean);
+
 /** Fastify `trustProxy`: `PERISCAN_TRUST_PROXY`, else true in production. */
 export function resolveTrustProxy(
   env: NodeJS.ProcessEnv = process.env
-): boolean | number {
+): FastifyTrustProxy {
   const raw = env.PERISCAN_TRUST_PROXY?.trim();
   if (raw) {
     const lowered = raw.toLowerCase();
@@ -1520,7 +1614,8 @@ export function resolveTrustProxy(
       return false;
     }
     if (/^\d+$/u.test(raw)) {
-      return Number(raw);
+      const hops = Number(raw);
+      return (_address: string, hop: number) => hop < hops;
     }
   }
 
@@ -1666,6 +1761,11 @@ export async function buildApp(options: BuildAppOptions = {}) {
         })),
         error: error.issues.map((issue) => issue.message).join("; ")
       });
+    }
+
+    if ((error as { code?: string }).code === "FST_ERR_CTP_BODY_TOO_LARGE") {
+      log.warn({ op: "request.error", code: "payload_too_large" }, "Request body limit exceeded");
+      return reply.status(413).send({ code: "payload_too_large", error: "Request body exceeds the allowed size." });
     }
 
     const statusCode = (error as { statusCode?: number }).statusCode;
@@ -1845,8 +1945,19 @@ export async function buildApp(options: BuildAppOptions = {}) {
     (isTest ? 100_000 : 20);
 
   await app.register(rateLimit, {
-    allowList: (request) =>
-      RATE_LIMIT_ALLOWLIST.has(request.url.split("?")[0] ?? request.url),
+    allowList: (request) => {
+      const path = request.url.split("?")[0] ?? request.url;
+      if (RATE_LIMIT_ALLOWLIST.has(path)) {
+        return true;
+      }
+      // First-hour operator GETs (Watch + Findings + activation) must not 429
+      // a signed-in session off the board. Auth still runs on the handler.
+      return (
+        request.method === "GET" &&
+        isFirstHourOperatorPollPath(path) &&
+        isAuthenticatedOperatorRequest(request)
+      );
+    },
     keyGenerator: (request) => {
       // P20-8: never store raw API key material as the rate-limit identity.
       const apiKey = getApiKeyToken(request);
@@ -1859,6 +1970,11 @@ export async function buildApp(options: BuildAppOptions = {}) {
 
       if (tenant) {
         return `tenant:${tenant}`;
+      }
+
+      const session = readRateLimitSessionCookie(request);
+      if (session) {
+        return `session:${hashRateLimitApiKey(session)}`;
       }
 
       return `ip:${request.ip}`;
@@ -1893,7 +2009,7 @@ export async function buildApp(options: BuildAppOptions = {}) {
         title: "Periscan API",
         // Bump when security schemes, webhook catalog, list envelopes, or
         // customer-visible product routes/payload honesty change (see CHANGELOG-API).
-        version: "0.4.0"
+        version: "0.4.1"
       },
       // Document both automation and browser credential paths. Public system
       // routes still work without a key; clients that ignore security metadata
@@ -6245,101 +6361,53 @@ export async function buildApp(options: BuildAppOptions = {}) {
     }
   );
 
-  // Inbound SCIM discovery stub (P17-1 / PERISCAN-30 honesty): always 501 /
-  // NotConfigured with actionable residual — never silent 404, never Production.
-  // Full SCIM user lifecycle is not shipped. Distinct from CyberArk connector
-  // read-only inventory SCIM under packages/connectors.
-  const scimNotConfiguredBody = {
-    detail:
-      "Inbound SCIM 2.0 provisioning of Periscan users and groups is NotConfigured and not shipped. Use admin invites or sales-assisted provisioning. Attach the sales-assisted provisioning SLA (docs/ENTERPRISE_IDENTITY_LIFECYCLE.md) to enterprise order forms. CyberArk Identity SCIM connectors are read-only inventory only — not Periscan membership lifecycle. Do not point customer IdP SCIM at this path.",
-    nextSteps: [
-      "Provision seats via Admin invite or sales-assisted onboarding",
-      "Paste sales-assisted provisioning SLA from docs/ENTERPRISE_IDENTITY_LIFECYCLE.md into the enterprise order form / DPA annex",
-      "Read residual status in docs/ops/ENTERPRISE_TRUST_RESIDUAL_2026-07-31.md",
-      "Do not claim SCIM Production or full IdP lifecycle until acceptance tests exercise real membership SCIM"
-    ],
-    orderFormDoc: "docs/ENTERPRISE_IDENTITY_LIFECYCLE.md",
-    residualDoc: "docs/ops/ENTERPRISE_TRUST_RESIDUAL_2026-07-31.md",
-    schemas: ["urn:ietf:params:scim:api:messages:2.0:Error"],
-    scimType: "invalidValue",
-    status: "501",
-    statusName: "NotConfigured" as const,
-    trustSafetyPath: "/api/v1/tenants/current/trust-safety"
-  };
+  // Inbound SCIM 2.0 membership provisioning. Bearer tenant SCIM token only —
+  // does not replace JWT/session login (SSO or password). Distinct from CyberArk
+  // connector read-only inventory SCIM under packages/connectors.
+  registerScimRoutes(app, { prisma: getPrismaClient() });
 
-  const registerScimNotConfiguredRoute = (path: string, operationId: string) => {
-    app.all(
-      path,
-      {
-        schema: {
-          hide: true,
-          operationId,
-          summary:
-            "Inbound SCIM is NotConfigured (honest discovery stub; not a SCIM server)",
-          tags: ["tenant"]
-        }
-      },
-      async (request, reply) => {
-        const context = await getAuthContext(request, services, sessionSecret);
-        if (context) {
-          try {
-            await writeAuditEvent(getPrismaClient(), {
-              action: "policy.decision",
-              actorType: "User",
-              entityId: context.tenant.tenantId,
-              entityType: "Tenant",
-              metadata: {
-                decision: "Denied",
-                path: request.url,
-                reason: "inbound_scim_not_configured",
-                status: "NotConfigured"
-              },
-              tenantId: context.tenant.tenantId,
-              userId: context.user.userId
-            });
-          } catch {
-            // Honesty stub must still return 501 when audit persistence is
-            // unavailable (unit tests / degraded deploy).
-          }
-        }
-
-        return reply
-          .status(501)
-          .header("content-type", "application/scim+json")
-          .send(scimNotConfiguredBody);
+  app.post(
+    "/api/v1/tenants/current/scim-tokens",
+    {
+      schema: {
+        operationId: "issueTenantScimToken",
+        summary: "Issue a hashed tenant SCIM bearer token",
+        tags: ["tenant"]
       }
-    );
-  };
-
-  registerScimNotConfiguredRoute(
-    "/api/v1/scim/v2/ServiceProviderConfig",
-    "scimServiceProviderConfigNotConfigured"
-  );
-  // Additional SCIM discovery documents (RFC 7644 §4) — same NotConfigured honesty
-  // as ServiceProviderConfig so IdP probes never see silent 404 on standard paths.
-  registerScimNotConfiguredRoute(
-    "/api/v1/scim/v2/ResourceTypes",
-    "scimResourceTypesNotConfigured"
-  );
-  registerScimNotConfiguredRoute(
-    "/api/v1/scim/v2/Schemas",
-    "scimSchemasNotConfigured"
-  );
-  registerScimNotConfiguredRoute(
-    "/api/v1/scim/v2/Users",
-    "scimUsersNotConfigured"
-  );
-  registerScimNotConfiguredRoute(
-    "/api/v1/scim/v2/Users/:id",
-    "scimUserByIdNotConfigured"
-  );
-  registerScimNotConfiguredRoute(
-    "/api/v1/scim/v2/Groups",
-    "scimGroupsNotConfigured"
-  );
-  registerScimNotConfiguredRoute(
-    "/api/v1/scim/v2/Groups/:id",
-    "scimGroupByIdNotConfigured"
+    },
+    async (request, reply) => {
+      const context = await requireAuthContext(
+        request,
+        services,
+        sessionSecret
+      );
+      requireRole(
+        context.membership.role,
+        TENANT_ADMIN_ROLES,
+        "issue SCIM tokens"
+      );
+      const name =
+        typeof request.body === "object" &&
+        request.body &&
+        "name" in request.body &&
+        typeof (request.body as { name?: unknown }).name === "string"
+          ? (request.body as { name: string }).name.trim()
+          : "idp";
+      if (!name) {
+        throw new AppServiceError("A SCIM token name is required.", 400, "invalid");
+      }
+      const issued = await issueScimToken(getPrismaClient(), {
+        createdBy: context.user.userId,
+        name,
+        tenantId: context.tenant.tenantId
+      });
+      return reply.status(201).send({
+        name: issued.name,
+        scimTokenId: issued.scimTokenId,
+        token: issued.token,
+        tokenPrefix: issued.tokenPrefix
+      });
+    }
   );
 
   app.get(
@@ -6633,6 +6701,246 @@ export async function buildApp(options: BuildAppOptions = {}) {
       return reply.send({
         items: await services.getOpenSourceCapabilities(query)
       });
+    }
+  );
+
+  app.post(
+    "/api/v1/bas/content/versions",
+    {
+      bodyLimit: 2 * 1024 * 1024,
+      schema: {
+        operationId: "registerBasContent",
+        summary: "Register immutable BAS content metadata; identical replays return the existing version",
+        tags: ["control-sources"]
+      }
+    },
+    async (request, reply) => {
+      const context = await requireAuthContext(request, services, sessionSecret);
+      const input = RegisterBasContentInputSchema.parse(request.body);
+      return reply.send(await services.registerBasContent(context, input));
+    }
+  );
+
+  app.get(
+    "/api/v1/bas/content/versions",
+    { schema: { operationId: "listBasContentVersions", summary: "List tenant BAS content versions", tags: ["control-sources"] } },
+    async (request, reply) => {
+      const context = await requireAuthContext(request, services, sessionSecret);
+      const filter = BasContentVersionFilterSchema.parse(request.query);
+      return reply.send(await services.listBasContentVersions(context, filter));
+    }
+  );
+
+  app.get(
+    "/api/v1/bas/content/versions/:id",
+    { schema: { operationId: "getBasContentVersion", summary: "Read a tenant BAS content version", tags: ["control-sources"] } },
+    async (request, reply) => {
+      const context = await requireAuthContext(request, services, sessionSecret);
+      const { id } = z.object({ id: z.uuid() }).parse(request.params);
+      return reply.send(await services.getBasContentVersion(context, id));
+    }
+  );
+
+  app.post(
+    "/api/v1/bas/content/versions/:id/promote",
+    {
+      schema: {
+        operationId: "promoteBasContent",
+        summary:
+          "Promote a BAS content version to Reviewed. Does not enable live execution or queue jobs.",
+        tags: ["control-sources"]
+      }
+    },
+    async (request, reply) => {
+      const context = await requireAuthContext(request, services, sessionSecret);
+      const { id } = z.object({ id: z.uuid() }).parse(request.params);
+      const input = PromoteBasContentInputSchema.parse(request.body);
+      return reply.send(await services.promoteBasContent(context, id, input));
+    }
+  );
+
+  app.post(
+    "/api/v1/bas/content/preview",
+    {
+      bodyLimit: 2 * 1024 * 1024,
+      schema: {
+        operationId: "previewBasContent",
+        summary: "Preview supplied BAS content without persistence or execution",
+        tags: ["control-sources"]
+      }
+    },
+    async (request, reply) => {
+      const context = await requireAuthContext(request, services, sessionSecret);
+      const input = BasContentPreviewInputSchema.parse(request.body);
+      return reply.send(await services.previewBasContent(context, input));
+    }
+  );
+
+  app.get(
+    "/api/v1/bas/campaigns",
+    {
+      schema: {
+        operationId: "listBasCampaigns",
+        summary:
+          "List tenant BAS campaign plans with digest, policy, typed inputs, and cleanup. Compile never queues.",
+        tags: ["control-sources"]
+      }
+    },
+    async (request, reply) => {
+      const context = await requireAuthContext(request, services, sessionSecret);
+      return reply.send(await services.listBasCampaigns(context));
+    }
+  );
+
+  app.post(
+    "/api/v1/bas/packs/qualify",
+    {
+      schema: {
+        operationId: "qualifyBasPack",
+        summary:
+          "Record a lab qualification receipt for a live BAS pack. Does not flip module liveSupported. Owner only.",
+        tags: ["control-sources"]
+      }
+    },
+    async (request, reply) => {
+      const context = await requireAuthContext(request, services, sessionSecret);
+      const input = QualifyBasPackInputSchema.parse(request.body);
+      return reply.send(await services.qualifyBasPack(context, input));
+    }
+  );
+
+  app.post(
+    "/api/v1/bas/packs/authorize",
+    {
+      schema: {
+        operationId: "authorizeBasPack",
+        summary:
+          "Authorize a qualified live BAS pack for a verified tenant scope. Owner only. Expired authorizations cannot start.",
+        tags: ["control-sources"]
+      }
+    },
+    async (request, reply) => {
+      const context = await requireAuthContext(request, services, sessionSecret);
+      const input = AuthorizeBasPackInputSchema.parse(request.body);
+      return reply.send(await services.authorizeBasPack(context, input));
+    }
+  );
+
+  app.post(
+    "/api/v1/bas/campaigns/compile",
+    {
+      schema: {
+        operationId: "compileBasCampaign",
+        summary:
+          "Compile a BAS campaign plan bound to verified scope, content pins, and policy. Never queues jobs.",
+        tags: ["control-sources"]
+      }
+    },
+    async (request, reply) => {
+      const context = await requireAuthContext(request, services, sessionSecret);
+      const input = CompileBasCampaignInputSchema.parse(request.body);
+      return reply.send(await services.compileBasCampaign(context, input));
+    }
+  );
+
+  app.post(
+    "/api/v1/bas/campaigns/start",
+    {
+      schema: {
+        operationId: "startBasCampaign",
+        summary:
+          "Start a compiled BAS campaign by digest after rechecking scope, policy, and inputs. Denied starts never queue.",
+        tags: ["control-sources"]
+      }
+    },
+    async (request, reply) => {
+      const context = await requireAuthContext(request, services, sessionSecret);
+      const input = StartBasCampaignInputSchema.parse(request.body);
+      return reply.send(await services.startBasCampaign(context, input));
+    }
+  );
+
+  app.post(
+    "/api/v1/bas/campaigns/cancel",
+    {
+      schema: {
+        operationId: "cancelBasCampaign",
+        summary:
+          "Prevent future BAS campaign dispatch, request runner-task cancel, and persist per-step cleanup status.",
+        tags: ["control-sources"]
+      }
+    },
+    async (request, reply) => {
+      const context = await requireAuthContext(request, services, sessionSecret);
+      const input = CancelBasCampaignInputSchema.parse(request.body);
+      return reply.send(await services.cancelBasCampaign(context, input));
+    }
+  );
+
+  app.get(
+    "/api/v1/bas/atomic-tests",
+    {
+      schema: {
+        operationId: "listAtomicTests",
+        summary:
+          "List one-click atomic-test pins. Live Atomic stays unstartable; High-danger catalog requires extra acknowledgement.",
+        tags: ["control-sources"]
+      }
+    },
+    async (request, reply) => {
+      const context = await requireAuthContext(request, services, sessionSecret);
+      return reply.send(await services.listAtomicTests(context));
+    }
+  );
+
+  app.post(
+    "/api/v1/bas/atomic-tests",
+    {
+      schema: {
+        operationId: "startAtomicTest",
+        summary:
+          "Run one qualified pin against a bound runner or asset. Policy is minted; unstartable and unqualified live Atomic never queue.",
+        tags: ["control-sources"]
+      }
+    },
+    async (request, reply) => {
+      const context = await requireAuthContext(request, services, sessionSecret);
+      const input = StartAtomicTestInputSchema.parse(request.body);
+      return reply.send(await services.startAtomicTest(context, input));
+    }
+  );
+
+  app.get(
+    "/api/v1/bas/danger-catalog",
+    {
+      schema: {
+        operationId: "getBasDangerOperatorGate",
+        summary:
+          "Read the High-danger catalog operator gate from stored qualification and authorization. Does not queue jobs.",
+        tags: ["control-sources"]
+      }
+    },
+    async (request, reply) => {
+      const context = await requireAuthContext(request, services, sessionSecret);
+      return reply.send(await services.getBasDangerOperatorGate(context));
+    }
+  );
+
+  app.get(
+    "/api/v1/bas/campaigns/:compiledDigest",
+    {
+      schema: {
+        operationId: "getBasCampaign",
+        summary: "Read a tenant BAS campaign plan by compiled digest",
+        tags: ["control-sources"]
+      }
+    },
+    async (request, reply) => {
+      const context = await requireAuthContext(request, services, sessionSecret);
+      const { compiledDigest } = z
+        .object({ compiledDigest: z.string().regex(/^[a-f0-9]{64}$/u) })
+        .parse(request.params);
+      return reply.send(await services.getBasCampaign(context, compiledDigest));
     }
   );
 
@@ -8317,6 +8625,26 @@ export async function buildApp(options: BuildAppOptions = {}) {
   );
 
   app.get(
+    "/api/v1/security-feeds",
+    {
+      schema: {
+        operationId: "listSecurityFeeds",
+        summary:
+          "List pinned OSS security-content feeds (no auto-execute; PendingReview only)",
+        tags: ["open-source"]
+      }
+    },
+    async (request, reply) => {
+      await requireAuthContext(request, services, sessionSecret);
+      return reply.send(
+        SecurityFeedListEnvelopeSchema.parse({
+          items: listSecurityFeedOperatorItems()
+        })
+      );
+    }
+  );
+
+  app.get(
     "/api/v1/threat-intel/alerts",
     {
       schema: {
@@ -8388,7 +8716,9 @@ export async function buildApp(options: BuildAppOptions = {}) {
       void context;
 
       return reply.send({
-        items: await services.listAttackTechniques()
+        items: (await services.listAttackTechniques()).map((item) =>
+          attachAttackTechniqueCoverage(item)
+        )
       });
     }
   );
@@ -8424,7 +8754,7 @@ export async function buildApp(options: BuildAppOptions = {}) {
         });
       }
 
-      return reply.send(technique);
+      return reply.send(attachAttackTechniqueCoverage(technique));
     }
   );
 
@@ -9240,11 +9570,117 @@ export async function buildApp(options: BuildAppOptions = {}) {
         }
       });
 
-      return reply.status(201).send({
-        scope: verifiedScope,
-        schedule,
-        note: "Light external scan (freemium LightExternalScan tier) created. Domain only; limited ASV/EASM external. No full swarm."
+      const compiled = await services.compileExternalAssessment(context, {
+        profileId: "internet-facing",
+        scopeId: verifiedScope.scopeId
       });
+
+      return reply.status(201).send({
+        assessment: compiled.ok ? compiled.assessment : undefined,
+        note: "Internet-facing assessment teaser on a verified domain. Not a full ASV platform in a box.",
+        schedule,
+        scope: verifiedScope
+      });
+    }
+  );
+
+  app.post(
+    "/api/v1/external-assessments/compile",
+    {
+      schema: {
+        operationId: "compileExternalAssessment",
+        summary:
+          "Compile an internet-facing assessment profile. Never queues jobs.",
+        tags: ["scopes"]
+      }
+    },
+    async (request, reply) => {
+      const context = await requireAuthContext(
+        request,
+        services,
+        sessionSecret
+      );
+      const input = ExternalAssessmentCompileInputSchema.parse(
+        request.body ?? {}
+      );
+      return reply.send(
+        await services.compileExternalAssessment(context, input)
+      );
+    }
+  );
+
+  app.post(
+    "/api/v1/external-assessments/start",
+    {
+      schema: {
+        operationId: "startExternalAssessment",
+        summary:
+          "Start an internet-facing assessment on a verified domain. Denied profiles never queue.",
+        tags: ["scopes"]
+      }
+    },
+    async (request, reply) => {
+      const context = await requireAuthContext(
+        request,
+        services,
+        sessionSecret
+      );
+      const input = ExternalAssessmentStartInputSchema.parse(
+        request.body ?? {}
+      );
+      return reply.send(
+        await services.startExternalAssessment(context, input)
+      );
+    }
+  );
+
+  app.post(
+    "/api/v1/external-assessments/results",
+    {
+      schema: {
+        operationId: "ingestExternalAssessmentResults",
+        summary:
+          "Map internet-facing tool output to Measured redacted findings. Empty output is zero findings.",
+        tags: ["scopes"]
+      }
+    },
+    async (request, reply) => {
+      const context = await requireAuthContext(
+        request,
+        services,
+        sessionSecret
+      );
+      const input = ExternalAssessmentToolOutputInputSchema.parse(
+        request.body ?? {}
+      );
+      return reply.send(
+        await services.ingestExternalAssessmentResults(context, input)
+      );
+    }
+  );
+
+  app.post(
+    "/api/v1/external-assessments/attach-schedule",
+    {
+      schema: {
+        operationId: "attachExternalAssessmentToSchedule",
+        summary:
+          "Attach an internet-facing assessment to a ContinuousValidation schedule. Not always-on BAS.",
+        tags: ["scopes"]
+      }
+    },
+    async (request, reply) => {
+      const context = await requireAuthContext(
+        request,
+        services,
+        sessionSecret
+      );
+      const input = ExternalAssessmentAttachScheduleInputSchema.parse(
+        request.body ?? {}
+      );
+      return reply.send(
+        await services.attachExternalAssessmentToSchedule(context, input)
+      );
     }
   );
 
@@ -10394,6 +10830,37 @@ export async function buildApp(options: BuildAppOptions = {}) {
   );
 
   app.get(
+    "/api/v1/compliance/coverage",
+    {
+      schema: {
+        operationId: "getComplianceCoverage",
+        summary:
+          "Measured per-control compliance coverage from snapshot evidence (not certification)",
+        tags: ["compliance"]
+      }
+    },
+    async (request, reply) => {
+      const context = await requireAuthContext(
+        request,
+        services,
+        sessionSecret
+      );
+      const query = z
+        .object({
+          framework: ComplianceFrameworkKeySchema.default("SOC2Attestation"),
+          snapshotId: z.string().uuid().optional()
+        })
+        .parse(request.query);
+      return reply.send(
+        await services.getComplianceCoverage(context, {
+          framework: query.framework,
+          snapshotId: query.snapshotId
+        })
+      );
+    }
+  );
+
+  app.get(
     "/api/v1/compliance/governance",
     {
       schema: {
@@ -11440,6 +11907,154 @@ export async function buildApp(options: BuildAppOptions = {}) {
   );
 
   app.get(
+    "/api/v1/bas/scenarios",
+    {
+      schema: {
+        operationId: "listBasAtomicScenarios",
+        summary:
+          "List allowlisted Atomic Red Team YAML catalog rows (dry-run, MIT)",
+        tags: ["bas"]
+      }
+    },
+    async (request, reply) => {
+      const context = await requireAuthContext(
+        request,
+        services,
+        sessionSecret
+      );
+      void context;
+      return reply.send({
+        items: await listAllowlistedAtomicBasScenarios()
+      });
+    }
+  );
+
+  app.post(
+    "/api/v1/bas/scenarios/:scenarioId/run",
+    {
+      schema: {
+        operationId: "runBasAtomicScenario",
+        summary:
+          "Policy-gated Atomic catalog run; live execution remains disabled",
+        tags: ["bas"]
+      }
+    },
+    async (request, reply) => {
+      await requireAuthContext(request, services, sessionSecret);
+      const params = z
+        .object({
+          scenarioId: z.string().min(1)
+        })
+        .parse(request.params);
+      const scenario = await getAllowlistedAtomicBasScenario(params.scenarioId);
+      if (!scenario) {
+        throw new AppServiceError(
+          "Allowlisted Atomic scenario not found.",
+          404,
+          "atomic_scenario_not_found"
+        );
+      }
+
+      const input = BasAtomicScenarioRunInputSchema.parse(request.body ?? {});
+      const wantsLive = input.executionMode === "live" || input.dryRun === false;
+      const atomic = getModuleById("atomic.control_validation_safe");
+      if (!atomic) {
+        throw new AppServiceError(
+          "atomic.control_validation_safe is not registered.",
+          500,
+          "atomic_module_missing"
+        );
+      }
+
+      const constraint = evaluateModuleStartConstraints({
+        executionEnvironment: "ControlPlane",
+        moduleManifests: [atomic.manifest],
+        runnerId: null,
+        target: {
+          ...(input.controlSourceId
+            ? { controlSourceId: input.controlSourceId }
+            : {}),
+          dryRun: wantsLive ? false : true,
+          techniqueId: scenario.techniqueId
+        }
+      });
+
+      if (!constraint.allowed) {
+        return reply.send(
+          BasAtomicScenarioRunResultSchema.parse({
+            allowed: false,
+            code: constraint.code,
+            executionMode: wantsLive ? "live" : "dry-run",
+            jobsQueued: 0,
+            liveExecutionDisabled: true,
+            rationale: constraint.rationale,
+            scenarioId: scenario.scenarioId,
+            techniqueId: scenario.techniqueId
+          })
+        );
+      }
+
+      return reply.send(
+        BasAtomicScenarioRunResultSchema.parse({
+          allowed: true,
+          code: "atomic_dry_run_catalog_only",
+          executionMode: "dry-run",
+          jobsQueued: 0,
+          liveExecutionDisabled: true,
+          rationale:
+            "Allowlisted Atomic YAML is dry-run catalog import only; live execution remains disabled.",
+          scenarioId: scenario.scenarioId,
+          techniqueId: scenario.techniqueId
+        })
+      );
+    }
+  );
+
+  app.get(
+    "/api/v1/control-sources/bas-scenarios",
+    {
+      schema: {
+        operationId: "listBasControlPlaneScenarios",
+        summary:
+          "List policy-gated BAS control-plane scenarios (benign marker queued; live Atomic/Caldera/Metasploit denied)",
+        tags: ["control-sources"]
+      }
+    },
+    async (request, reply) => {
+      const context = await requireAuthContext(
+        request,
+        services,
+        sessionSecret
+      );
+      void context;
+      return reply.send({
+        items: listBasControlPlaneScenarios()
+      });
+    }
+  );
+
+  app.post(
+    "/api/v1/control-sources/bas-scenarios/start",
+    {
+      schema: {
+        operationId: "startBasScenario",
+        summary:
+          "Start a policy-gated BAS scenario: mint a PolicyDecision, queue benign ControlValidation, or return Denied without queueing live Atomic/Caldera/Metasploit",
+        tags: ["control-sources"]
+      }
+    },
+    async (request, reply) => {
+      const context = await requireAuthContext(
+        request,
+        services,
+        sessionSecret
+      );
+      const input = StartBasScenarioInputSchema.parse(request.body);
+      return reply.send(await services.startBasScenario(context, input));
+    }
+  );
+
+  app.get(
     "/api/v1/control-sources/rule-coverage",
     {
       schema: {
@@ -11588,7 +12203,7 @@ export async function buildApp(options: BuildAppOptions = {}) {
       schema: {
         operationId: "compileHybridExecution",
         summary:
-          "Compile a mission plan into Ed25519-signed runner task payloads for allowlisted passive measured modules only (not full BAS / live APT)",
+          "Compile a mission plan into Ed25519-signed runner task payloads for allowlisted passive measured modules only (currently qualified passive modules)",
         tags: ["hybrid-compiler"]
       }
     },
@@ -12151,6 +12766,36 @@ export async function buildApp(options: BuildAppOptions = {}) {
 
       return reply.send(
         await services.runDnsExfilCanaryProof(context, params.id, input)
+      );
+    }
+  );
+
+  app.post(
+    "/api/v1/control-sources/:id/email-delivery-canary-proof",
+    {
+      schema: {
+        operationId: "runEmailDeliveryCanaryProof",
+        summary:
+          "Compile and evaluate an email delivery canary (owned recipient only; never real SMTP or data exfil)",
+        tags: ["control-sources"]
+      }
+    },
+    async (request, reply) => {
+      await requireAuthContext(request, services, sessionSecret);
+      const params = z
+        .object({
+          id: z.string().uuid()
+        })
+        .parse(request.params);
+      const input = EmailDeliveryCanaryProofInputSchema.parse(
+        request.body ?? {}
+      );
+
+      return reply.send(
+        runEmailDeliveryCanaryProof({
+          ...input,
+          controlSourceId: params.id
+        })
       );
     }
   );
@@ -12831,6 +13476,83 @@ export async function buildApp(options: BuildAppOptions = {}) {
       const input = RunnerRegistrationRequestSchema.parse(request.body);
 
       return reply.status(201).send(await services.registerRunner(input));
+    }
+  );
+
+  app.get(
+    "/api/v1/enterprise-sites",
+    {
+      schema: {
+        operationId: "listEnterpriseSites",
+        summary:
+          "List Fortune 1000 enterprise sites (honest empty when none are configured)",
+        tags: ["runners"]
+      }
+    },
+    async (request, reply) => {
+      const context = await requireAuthContext(
+        request,
+        services,
+        sessionSecret
+      );
+      return reply.send(
+        EnterpriseSiteListEnvelopeSchema.parse({
+          items: await services.listEnterpriseSites(context)
+        })
+      );
+    }
+  );
+
+  app.post(
+    "/api/v1/enterprise-sites",
+    {
+      schema: {
+        operationId: "createEnterpriseSite",
+        summary: "Create a Fortune 1000 enterprise site",
+        tags: ["runners"]
+      }
+    },
+    async (request, reply) => {
+      const context = await requireAuthContext(
+        request,
+        services,
+        sessionSecret
+      );
+      const input = CreateEnterpriseSiteInputSchema.parse(request.body ?? {});
+      return reply
+        .status(201)
+        .send(
+          EnterpriseSiteSchema.parse(
+            await services.createEnterpriseSite(context, input)
+          )
+        );
+    }
+  );
+
+  app.patch(
+    "/api/v1/enterprise-sites/:siteId",
+    {
+      schema: {
+        operationId: "updateEnterpriseSite",
+        summary: "Update a Fortune 1000 enterprise site",
+        tags: ["runners"]
+      }
+    },
+    async (request, reply) => {
+      const context = await requireAuthContext(
+        request,
+        services,
+        sessionSecret
+      );
+      const { siteId } = z
+        .object({ siteId: z.string().uuid() })
+        .parse(request.params);
+      const input = UpdateEnterpriseSiteInputSchema.parse(request.body ?? {});
+      return reply.send(
+        EnterpriseSiteSchema.parse(
+          await services.updateEnterpriseSite(context, siteId, input)
+        )
+      );
     }
   );
 

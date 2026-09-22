@@ -19,12 +19,22 @@ import type {
   ValidationJobPayload
 } from "@periscan/shared";
 import {
+  CONTINUOUS_VALIDATION_DEFAULT_QUOTA_PER_UTC_DAY,
+  CONTINUOUS_VALIDATION_HONESTY_NOTE,
+  CONTINUOUS_VALIDATION_PRODUCT_NAME,
+  computeScopeAssetHash,
   enrichContinuousEasmDiffSummary,
+  evaluateContinuousValidationFire,
+  isSubDailyScheduleFrequency,
   pickRunnerIdByAffinity,
   resolveContinuousEasmModuleIds,
+  resolveContinuousValidationModuleIds,
   resolveRunnerRoutingHint,
   scheduleRequestsCommunityValidation,
-  toRunnerAffinityCandidate
+  toRunnerAffinityCandidate,
+  type ContinuousValidationFireDecision,
+  type ContinuousValidationFireKind,
+  type ScheduleMaintenanceWindow
 } from "@periscan/shared";
 
 import {
@@ -111,6 +121,94 @@ function readStringIds(value: unknown): string[] {
         (item): item is string => typeof item === "string" && item.length > 0
       )
     : [];
+}
+
+function readMaintenanceWindows(value: unknown): ScheduleMaintenanceWindow[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.filter((item): item is ScheduleMaintenanceWindow => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+      return false;
+    }
+    const row = item as Record<string, unknown>;
+    return (
+      Array.isArray(row.daysOfWeek) &&
+      typeof row.startTime === "string" &&
+      typeof row.endTime === "string"
+    );
+  });
+}
+
+function readContinuousValidationState(config: Record<string, unknown>) {
+  return asRecord(config.continuousValidation);
+}
+
+function utcDayKey(now: Date): string {
+  return now.toISOString().slice(0, 10);
+}
+
+function readSubDailyQuota(config: Record<string, unknown>, now: Date) {
+  const state = readContinuousValidationState(config);
+  const today = utcDayKey(now);
+  const storedDay =
+    typeof state.quotaUtcDay === "string" ? state.quotaUtcDay : "";
+  const firesInWindow =
+    storedDay === today && typeof state.firesInUtcDay === "number"
+      ? state.firesInUtcDay
+      : 0;
+  const quotaPerWindow =
+    typeof state.quotaPerUtcDay === "number" && state.quotaPerUtcDay > 0
+      ? state.quotaPerUtcDay
+      : CONTINUOUS_VALIDATION_DEFAULT_QUOTA_PER_UTC_DAY;
+  return { firesInWindow, quotaPerWindow, today };
+}
+
+function lastAssetHashForScope(
+  config: Record<string, unknown>,
+  scopeId: string
+): string | null {
+  const hashes = asRecord(
+    readContinuousValidationState(config).lastAssetHashes
+  );
+  return typeof hashes[scopeId] === "string" ? hashes[scopeId] : null;
+}
+
+function lastValidatedAtForScope(
+  config: Record<string, unknown>,
+  scopeId: string,
+  scheduleLastRunAt: Date | null
+): string | Date | null {
+  const stamps = asRecord(
+    readContinuousValidationState(config).lastValidatedAtByScope
+  );
+  if (typeof stamps[scopeId] === "string") {
+    return stamps[scopeId];
+  }
+  return scheduleLastRunAt;
+}
+
+function continuousValidationDiff(input: {
+  allowed: boolean;
+  jobsQueued: number;
+  moduleIds: string[];
+  reason: string;
+  scheduleId: string;
+}): ScheduleDiff {
+  const reasonLabel = input.reason.split("_").join(" ");
+  const queuedNote = input.allowed
+    ? `Queued ${input.jobsQueued} ${CONTINUOUS_VALIDATION_PRODUCT_NAME} module run(s): ${input.moduleIds.join(", ")}.`
+    : `${CONTINUOUS_VALIDATION_PRODUCT_NAME}: ${reasonLabel} — no task was queued.`;
+  return {
+    addedPathIds: [],
+    currentSnapshotId: input.scheduleId,
+    previousSnapshotId: null,
+    removedPathIds: [],
+    reopenedPathIds: [],
+    riskScoreDelta: 0,
+    status: input.allowed ? "Changed" : "Unchanged",
+    summary: `${queuedNote} ${CONTINUOUS_VALIDATION_HONESTY_NOTE}`
+  };
 }
 
 function buildCommunityScheduleDiff(
@@ -320,8 +418,13 @@ async function queueContinuousEasmForSchedule(input: {
   affinityConfig: Record<string, unknown>;
   configModuleIds: unknown;
   context: AuthenticatedContext;
+  livePackStartable?: Record<string, boolean>;
   missionQueue: RuntimeServiceDeps["missionQueue"];
   prisma: RuntimeServiceDeps["prisma"];
+  resolveModuleIds?: (args: {
+    configModuleIds: unknown;
+    scopeType: string;
+  }) => string[];
   scheduleAllowances: ExecutionPolicyAllowance[];
   scheduleExecutionAllowance: ExecutionPolicyAllowance;
   scheduleId: string;
@@ -337,8 +440,10 @@ async function queueContinuousEasmForSchedule(input: {
     affinityConfig,
     configModuleIds,
     context,
+    livePackStartable,
     missionQueue,
     prisma,
+    resolveModuleIds,
     scheduleAllowances,
     scheduleExecutionAllowance,
     scheduleId,
@@ -353,10 +458,19 @@ async function queueContinuousEasmForSchedule(input: {
     if (scope.verificationStatus !== "Verified") {
       continue;
     }
-    const moduleIds = resolveContinuousEasmModuleIds({
+    const moduleIds = (
+      resolveModuleIds ??
+      ((args) => resolveContinuousEasmModuleIds(args))
+    )({
       configModuleIds,
       scopeType: scope.scopeType
     }).filter((moduleId) => {
+      if (
+        livePackStartable &&
+        Object.prototype.hasOwnProperty.call(livePackStartable, moduleId)
+      ) {
+        return livePackStartable[moduleId] === true;
+      }
       const module = getModuleById(moduleId);
       return (
         Boolean(module) &&
@@ -860,7 +974,9 @@ export function createScheduleServices(
       assertScheduleTimeZone(timing.timeZone);
       const nextRunAt = input.nextRunAt
         ? new Date(input.nextRunAt)
-        : calculateNextRunAt(input.frequency, nowDate, timing);
+        : isSubDailyScheduleFrequency(input.frequency)
+          ? nowDate
+          : calculateNextRunAt(input.frequency, nowDate, timing);
 
       if (Number.isNaN(nextRunAt.getTime())) {
         throw new AppServiceError(
@@ -1128,7 +1244,12 @@ export function createScheduleServices(
       );
     },
 
-    async runSchedule(this: AppServices, context, scheduleId) {
+    async runSchedule(
+      this: AppServices,
+      context,
+      scheduleId,
+      options?: { fireKind?: ContinuousValidationFireKind }
+    ) {
       requireRole(context.membership.role, SCOPE_EDITOR_ROLES, "run schedules");
 
       const schedule = await prisma.missionSchedule.findFirst({
@@ -1159,34 +1280,41 @@ export function createScheduleServices(
         );
       }
 
+      const fireKind: ContinuousValidationFireKind =
+        options?.fireKind ?? "calendar";
+      const subDaily = isSubDailyScheduleFrequency(schedule.frequency);
+
       // Claim before creating missions/snapshots/packs. Overlapping sweeps and
       // multi-instance run-due previously both observed the same due nextRunAt
       // and double-fired because nextRunAt advanced only after success.
-      const claimedNextRunAt = calculateNextRunAt(
-        schedule.frequency,
-        new Date(),
-        timingFromSchedule(schedule)
-      );
-      const claim = await prisma.missionSchedule.updateMany({
-        data: {
-          nextRunAt: claimedNextRunAt
-        },
-        where: {
-          nextRunAt: schedule.nextRunAt,
-          scheduleId: schedule.scheduleId,
-          status: "Active",
-          tenantId: context.tenant.tenantId
-        }
-      });
-      if (claim.count !== 1) {
-        throw new AppServiceError(
-          "Schedule was already claimed by another runner.",
-          409,
-          "schedule_already_claimed"
+      // Drift fires must not consume the calendar slot.
+      if (fireKind !== "drift") {
+        const claimedNextRunAt = calculateNextRunAt(
+          schedule.frequency,
+          new Date(),
+          timingFromSchedule(schedule)
         );
+        const claim = await prisma.missionSchedule.updateMany({
+          data: {
+            nextRunAt: claimedNextRunAt
+          },
+          where: {
+            nextRunAt: schedule.nextRunAt,
+            scheduleId: schedule.scheduleId,
+            status: "Active",
+            tenantId: context.tenant.tenantId
+          }
+        });
+        if (claim.count !== 1) {
+          throw new AppServiceError(
+            "Schedule was already claimed by another runner.",
+            409,
+            "schedule_already_claimed"
+          );
+        }
+        // Keep in-memory row aligned with the durable claim for later updates.
+        schedule.nextRunAt = claimedNextRunAt;
       }
-      // Keep in-memory row aligned with the durable claim for later updates.
-      schedule.nextRunAt = claimedNextRunAt;
 
       const supported = [
         "ValidationSnapshot",
@@ -1416,6 +1544,29 @@ export function createScheduleServices(
             outcome: "DeniedByPolicy",
             scheduleId
           });
+          if (subDaily) {
+            const deniedDiff = continuousValidationDiff({
+              allowed: false,
+              jobsQueued: 0,
+              moduleIds: [],
+              reason: "denied_policy",
+              scheduleId
+            });
+            const deniedUpdated = await prisma.missionSchedule.update({
+              data: {
+                config: config as Prisma.InputJsonValue,
+                lastDiff: deniedDiff as unknown as Prisma.InputJsonValue,
+                lastRunAt: new Date()
+              },
+              where: { scheduleId }
+            });
+            return {
+              diff: deniedDiff,
+              jobsQueued: 0,
+              schedule: serializeMissionSchedule(deniedUpdated),
+              snapshot: null
+            };
+          }
           throw new AppServiceError(
             "Policy enforcement denied this scheduled run. No task was queued.",
             409,
@@ -1425,6 +1576,102 @@ export function createScheduleServices(
         scheduleAllowances.push(pep.allowance);
       }
       const scheduleExecutionAllowance = scheduleAllowances[0];
+
+      const now = new Date();
+      const timing = timingFromSchedule(schedule);
+      const maintenanceWindows = (() => {
+        const configured = readMaintenanceWindows(config.maintenanceWindows);
+        return configured.length > 0 ? configured : timing.blackoutWindows;
+      })();
+      const quota = readSubDailyQuota(config, now);
+      let subDailyDecision: ContinuousValidationFireDecision | null = null;
+      if (subDaily) {
+        const policyOutcome = policyDecisions.every(
+          (decision) => evaluatePolicyDecisionGate(decision) === "start"
+        )
+          ? "Allowed"
+          : "Denied";
+        subDailyDecision = evaluateContinuousValidationFire({
+          cadence:
+            schedule.frequency === "Continuous" ? "Continuous" : "Hourly",
+          fireKind,
+          firesInWindow: quota.firesInWindow,
+          maintenanceWindows,
+          now,
+          policyOutcome,
+          quotaPerWindow: quota.quotaPerWindow,
+          requestedModuleIds: config.moduleIds,
+          scopes: scopes.map((scope) => ({
+            currentAssetHash: computeScopeAssetHash({
+              scopeId: scope.scopeId,
+              scopeType: scope.scopeType,
+              value: scope.value
+            }),
+            lastAssetHash: lastAssetHashForScope(config, scope.scopeId),
+            lastValidatedAt: lastValidatedAtForScope(
+              config,
+              scope.scopeId,
+              schedule.lastRunAt
+            ),
+            scopeId: scope.scopeId,
+            scopeType: scope.scopeType,
+            value: scope.value,
+            verificationStatus: scope.verificationStatus
+          })),
+          timeZone: timing.timeZone
+        });
+        await writeAuditEvent(prisma, {
+          action:
+            subDailyDecision.auditAction === "schedule.fire"
+              ? "mission.created"
+              : "policy.decision",
+          actorType: "System",
+          entityId: scheduleId,
+          entityType: "ValidationMission",
+          metadata: {
+            continuousValidation: true,
+            fireKind,
+            jobsQueued: subDailyDecision.jobsQueued,
+            moduleIds: subDailyDecision.moduleIds,
+            productName: CONTINUOUS_VALIDATION_PRODUCT_NAME,
+            reason: subDailyDecision.reason,
+            scheduleId,
+            stage: "schedule_fire"
+          },
+          tenantId: context.tenant.tenantId,
+          userId: context.user.userId
+        });
+        if (!subDailyDecision.allowed) {
+          const deniedDiff = continuousValidationDiff({
+            allowed: false,
+            jobsQueued: 0,
+            moduleIds: [],
+            reason: subDailyDecision.reason,
+            scheduleId
+          });
+          const deniedConfig = appendScheduleRunHistory(config, {
+            denyReason: deniedDiff.summary,
+            missionId: null,
+            outcome: "DeniedByPolicy",
+            scheduledAt: now.toISOString(),
+            snapshotId: null
+          });
+          const deniedUpdated = await prisma.missionSchedule.update({
+            data: {
+              config: deniedConfig as Prisma.InputJsonValue,
+              lastDiff: deniedDiff as unknown as Prisma.InputJsonValue,
+              lastRunAt: fireKind === "drift" ? schedule.lastRunAt : now
+            },
+            where: { scheduleId }
+          });
+          return {
+            diff: deniedDiff,
+            jobsQueued: 0,
+            schedule: serializeMissionSchedule(deniedUpdated),
+            snapshot: null
+          };
+        }
+      }
 
       const isSnapshotSchedule =
         !wantsCommunityValidation &&
@@ -1809,13 +2056,21 @@ export function createScheduleServices(
         const easmQueue = await queueContinuousEasmForSchedule({
           affinityConfig: config,
           context,
+          livePackStartable: undefined,
           missionQueue,
           prisma,
+          resolveModuleIds: subDaily
+            ? (args) =>
+                resolveContinuousValidationModuleIds({
+                  requestedModuleIds: args.configModuleIds,
+                  scopeType: args.scopeType
+                })
+            : undefined,
           scheduleId,
           scheduleExecutionAllowance,
           scheduleAllowances,
           scopes,
-          configModuleIds: config.moduleIds
+          configModuleIds: subDailyDecision?.moduleIds ?? config.moduleIds
         });
         continuousEasmMissionId = easmQueue.missionId;
         continuousEasmModuleIds = easmQueue.moduleIds;
@@ -1857,6 +2112,19 @@ export function createScheduleServices(
             })
           };
         }
+      }
+      if (subDailyDecision) {
+        const continuousDiff = continuousValidationDiff({
+          allowed: true,
+          jobsQueued: continuousEasmModuleIds.length,
+          moduleIds: continuousEasmModuleIds,
+          reason: subDailyDecision.reason,
+          scheduleId
+        });
+        diff = {
+          ...diff,
+          summary: `${continuousDiff.summary} ${diff.summary}`
+        };
       }
 
       if (isSnapshotSchedule && diff.reopenedPathIds.length > 0) {
@@ -1946,6 +2214,24 @@ export function createScheduleServices(
         snapshot?.missionId ??
         nonSnapshotPackInfo?.missionId ??
         null;
+      const finishedAt = new Date();
+      const lastAssetHashes = Object.fromEntries(
+        scopes
+          .filter((scope) => scope.verificationStatus === "Verified")
+          .map((scope) => [
+            scope.scopeId,
+            computeScopeAssetHash({
+              scopeId: scope.scopeId,
+              scopeType: scope.scopeType,
+              value: scope.value
+            })
+          ])
+      );
+      const lastValidatedAtByScope = Object.fromEntries(
+        scopes
+          .filter((scope) => scope.verificationStatus === "Verified")
+          .map((scope) => [scope.scopeId, finishedAt.toISOString()])
+      );
       const successConfig = appendScheduleRunHistory(
         {
           ...config,
@@ -1970,12 +2256,24 @@ export function createScheduleServices(
                   note: "Allowlisted safe continuous EASM only; not living map."
                 }
               }
+            : {}),
+          ...(subDaily
+            ? {
+                continuousValidation: {
+                  ...readContinuousValidationState(config),
+                  firesInUtcDay: quota.firesInWindow + 1,
+                  lastAssetHashes,
+                  lastValidatedAtByScope,
+                  quotaPerUtcDay: quota.quotaPerWindow,
+                  quotaUtcDay: quota.today
+                }
+              }
             : {})
         },
         {
           missionId,
           outcome: "Succeeded",
-          scheduledAt: new Date().toISOString(),
+          scheduledAt: finishedAt.toISOString(),
           snapshotId: snapshot?.snapshotId ?? null
         }
       );
@@ -1985,15 +2283,19 @@ export function createScheduleServices(
           config: successConfig as Prisma.InputJsonValue,
           lastDiff: lastDiffForUpdate,
           lastMissionId: missionId ?? "",
-          lastRunAt: new Date(),
+          lastRunAt: finishedAt,
           ...(isSnapshotSchedule && snapshot?.snapshotId
             ? { lastSnapshotId: snapshot.snapshotId }
             : {}),
-          nextRunAt: calculateNextRunAt(
-            schedule.frequency,
-            new Date(),
-            timingFromSchedule({ ...schedule, config: successConfig })
-          )
+          ...(fireKind === "drift"
+            ? {}
+            : {
+                nextRunAt: calculateNextRunAt(
+                  schedule.frequency,
+                  finishedAt,
+                  timingFromSchedule({ ...schedule, config: successConfig })
+                )
+              })
         },
         where: {
           scheduleId
@@ -2002,6 +2304,10 @@ export function createScheduleServices(
 
       return {
         diff,
+        jobsQueued: subDaily
+          ? continuousEasmModuleIds.length
+          : (communityStartInfo?.missionIds.length ??
+            (nonSnapshotPackInfo ? 1 : continuousEasmModuleIds.length)),
         schedule: serializeMissionSchedule(updated),
         snapshot
       };
@@ -2014,14 +2320,24 @@ export function createScheduleServices(
         "run due schedules"
       );
 
+      const now = new Date();
       const dueSchedules = await prisma.missionSchedule.findMany({
         orderBy: {
           nextRunAt: "asc"
         },
         where: {
-          nextRunAt: {
-            lte: new Date()
-          },
+          OR: [
+            {
+              nextRunAt: {
+                lte: now
+              }
+            },
+            {
+              frequency: {
+                in: ["Hourly", "Continuous"]
+              }
+            }
+          ],
           status: "Active",
           tenantId: context.tenant.tenantId
         }
@@ -2029,8 +2345,17 @@ export function createScheduleServices(
       const results: ScheduledRunResult[] = [];
 
       for (const schedule of dueSchedules) {
+        const calendarDue = schedule.nextRunAt.getTime() <= now.getTime();
+        const fireKind: ContinuousValidationFireKind = calendarDue
+          ? "calendar"
+          : "drift";
+        if (!calendarDue && !isSubDailyScheduleFrequency(schedule.frequency)) {
+          continue;
+        }
         try {
-          results.push(await this.runSchedule(context, schedule.scheduleId));
+          results.push(
+            await this.runSchedule(context, schedule.scheduleId, { fireKind })
+          );
         } catch (error) {
           // Lost the CAS claim to a concurrent sweep/instance — not a tenant failure.
           if (

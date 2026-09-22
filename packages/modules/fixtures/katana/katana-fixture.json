@@ -1,0 +1,28 @@
+{
+  "total": 99,
+  "results": [
+    {
+      "timestamp": "2026-01-01T00:00:00Z",
+      "request": {
+        "method": "GET",
+        "endpoint": "https://lab.example.com/",
+        "raw": "GET / HTTP/1.1\r\nAuthorization: AKIAIOSFODNN7EXAMPLE\r\n"
+      },
+      "response": {
+        "status_code": 200,
+        "body": "hashed_secret=fixture",
+        "raw": "-----BEGIN RSA PRIVATE KEY-----\nfixture\n-----END RSA PRIVATE KEY-----"
+      }
+    },
+    {
+      "timestamp": "2026-01-01T00:00:01Z",
+      "request": {
+        "method": "GET",
+        "endpoint": "https://lab.example.com/login"
+      },
+      "response": {
+        "status_code": 200
+      }
+    }
+  ]
+}

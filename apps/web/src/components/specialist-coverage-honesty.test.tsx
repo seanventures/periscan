@@ -33,15 +33,15 @@ describe("SpecialistCoverageHonesty", () => {
       screen.getByText(/not Available, not Validated/i)
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/not sold as full BAS peers/i)
+      screen.getByText(/awaiting scenario qualification/i)
     ).toBeInTheDocument();
     expect(screen.getByText(/Never speaks OT protocols/i)).toBeInTheDocument();
     expect(
-      screen.getByText(/No live crypto, mass lock/i)
+      screen.getByText(/High-danger extra acknowledgement for T1486/i)
     ).toBeInTheDocument();
   });
 
-  it("labels Phase C claim classes and forever-refuse ransomware impact", () => {
+  it("labels Phase C claim classes and High-danger ransomware impact", () => {
     render(<SpecialistCoverageHonesty />);
     expect(screen.getByText("plan_only")).toBeInTheDocument();
     expect(screen.getAllByText("forever_refuse").length).toBeGreaterThanOrEqual(
@@ -49,7 +49,7 @@ describe("SpecialistCoverageHonesty", () => {
     );
     expect(screen.getByText("exposure_only")).toBeInTheDocument();
     expect(
-      screen.getByText(/Forever refuse ransomware impact/i)
+      screen.getByText(/High-danger extra acknowledgement for T1486/i)
     ).toBeInTheDocument();
     expect(
       screen.getByText(/dns-exfil-canary-proof/i)
@@ -62,7 +62,7 @@ describe("SpecialistCoverageHonesty", () => {
     ).toBeInTheDocument();
 
     const ransomware = SPECIALIST_SCAFFOLD_ROWS.find((r) => r.id === 21);
-    expect(ransomware?.claimClass).toBe("forever_refuse");
+    expect(ransomware?.claimClass).toBe("danger_section");
     expect(ransomware?.canElevateSubstituteToPartial).toBe(false);
     const apt = SPECIALIST_SCAFFOLD_ROWS.find((r) => r.id === 16);
     expect(apt?.claimClass).toBe("plan_only");
@@ -96,7 +96,7 @@ describe("SpecialistCoverageHonesty", () => {
     ).toHaveTextContent(/plan_only/);
     expect(
       screen.getByTestId("safety-scaffold-core-honesty-strip")
-    ).toHaveTextContent(/forever_refuse/);
+    ).toHaveTextContent(/danger_section/);
     expect(
       screen.getByTestId("safety-scaffold-core-honesty-strip")
     ).toHaveTextContent(/exposure_only/);

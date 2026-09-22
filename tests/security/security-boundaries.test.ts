@@ -1018,6 +1018,112 @@ describe("security boundary regression suite", () => {
     }
   });
 
+  it("lets an authenticated first-hour operator poll findings, activation, and community runs for ~2 minutes at 1s without 429 or losing the session", async () => {
+    const previousMax = process.env.PERISCAN_RATE_LIMIT_MAX;
+    process.env.PERISCAN_RATE_LIMIT_MAX = "8";
+
+    const { app, prisma } = await createApiHarness();
+    const watchTicks = 120;
+    const missionId = randomUUID();
+
+    try {
+      const cookie = await signupOwner(app, "first-hour-watch");
+      const otherCookie = await signupOwner(app, "first-hour-other");
+
+      const findingsStatuses: number[] = [];
+      const activationStatuses: number[] = [];
+      const runStatuses: number[] = [];
+
+      for (let tick = 0; tick < watchTicks; tick += 1) {
+        const [findings, activation, runs] = await Promise.all([
+          app.inject({
+            cookies: authCookies(cookie),
+            method: "GET",
+            url: "/api/v1/findings"
+          }),
+          app.inject({
+            cookies: authCookies(cookie),
+            method: "GET",
+            url: "/api/v1/experience/activation"
+          }),
+          app.inject({
+            cookies: authCookies(cookie),
+            method: "GET",
+            url: `/api/v1/missions/${missionId}/runs`
+          })
+        ]);
+
+        findingsStatuses.push(findings.statusCode);
+        activationStatuses.push(activation.statusCode);
+        runStatuses.push(runs.statusCode);
+      }
+
+      expect(findingsStatuses).toEqual(Array(watchTicks).fill(200));
+      expect(activationStatuses).toEqual(Array(watchTicks).fill(200));
+      expect(runStatuses.every((status) => status !== 429)).toBe(true);
+
+      const afterWatch = await app.inject({
+        cookies: authCookies(cookie),
+        method: "GET",
+        url: "/api/v1/findings"
+      });
+      expect(afterWatch.statusCode).toBe(200);
+      expect(afterWatch.cookies.some((item) => item.name === SESSION_COOKIE_NAME && item.value === "")).toBe(false);
+
+      const meStatuses: number[] = [];
+      let limitedMe: Awaited<ReturnType<typeof app.inject>> | null = null;
+      for (let attempt = 0; attempt < 12; attempt += 1) {
+        const response = await app.inject({
+          cookies: authCookies(cookie),
+          method: "GET",
+          url: "/api/v1/me"
+        });
+        meStatuses.push(response.statusCode);
+        if (response.statusCode === 429) {
+          limitedMe = response;
+        }
+      }
+      expect(meStatuses).toContain(429);
+      expect(limitedMe).not.toBeNull();
+      expect(
+        limitedMe?.cookies.some(
+          (item) => item.name === SESSION_COOKIE_NAME && item.value === ""
+        )
+      ).toBe(false);
+
+      const findingsAfterMeLimit = await app.inject({
+        cookies: authCookies(cookie),
+        method: "GET",
+        url: "/api/v1/findings"
+      });
+      expect(findingsAfterMeLimit.statusCode).toBe(200);
+
+      const otherMe = await app.inject({
+        cookies: authCookies(otherCookie),
+        method: "GET",
+        url: "/api/v1/me"
+      });
+      expect(otherMe.statusCode).toBe(200);
+
+      const anonymousStatuses: number[] = [];
+      for (let attempt = 0; attempt < 12; attempt += 1) {
+        const response = await app.inject({
+          method: "GET",
+          url: "/api/v1/findings"
+        });
+        anonymousStatuses.push(response.statusCode);
+      }
+      expect(anonymousStatuses).toContain(429);
+      expect(anonymousStatuses.every((status) => status === 401 || status === 429)).toBe(
+        true
+      );
+    } finally {
+      restoreEnvVar("PERISCAN_RATE_LIMIT_MAX", previousMax);
+      await app.close();
+      await prisma.$disconnect();
+    }
+  }, 60_000);
+
   it("redacts raw secret material and rejects unsigned runner task envelopes", async () => {
     const output = await executeModuleById(
       "gitleaks.repo_secrets",

@@ -179,10 +179,11 @@ describe("control-source SCV observe (pull path) acceptance", () => {
         /telemetry-only observation|DryRun|Observe telemetry/i
       );
       expect(liveDenied.json().error).toMatch(
-        /not live inject BAS|Atomic remains dry-run/i
+        /qualified adapters|benign-marker|Observe telemetry/i
       );
-      // Wave D SOW is not an enablement path in product.
-      expect(liveDenied.json().error).toMatch(/signed SOW|dual gates/i);
+      expect(liveDenied.json().error).toMatch(
+        /policy approval|cleanup and measured receipts/i
+      );
       expect(liveDenied.json().error).not.toMatch(
         /enabled|use LiveRunner to inject/i
       );

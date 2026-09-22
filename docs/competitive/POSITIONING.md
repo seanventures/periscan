@@ -1,5 +1,7 @@
 # Periscan category & competitive positioning
 
+> **BAS/AEV program:** [../BAS_AEV_PROGRAM.md](../BAS_AEV_PROGRAM.md) — qualified open-source simulation, emulation and evidence-backed validation (PERISCAN-583).
+
 **Status:** durable GTM contract (2026-07-29)  
 **Tickets:** P12-1, P12-2, P19-1–4  
 **Audience:** product, sales, SEs, founders, analyst briefings
@@ -16,18 +18,18 @@ closing gaps remains in
 
 ### We own
 
-**Adversarial Exposure Validation (AEV) / CTEM proof layer.**
+**BAS / Adversarial Exposure Validation (AEV) / CTEM validation and proof.**
 
 One sentence:
 
 > Periscan measures which exposures are real on authorized scope, proves which
 > paths matter, and only marks Fixed when a re-measurement says so.
 
-### We do not own (and must not sell as peers)
+### Coverage and co-existence
 
 | Category | Peers | Periscan stance |
 |---|---|---|
-| Full multi-vector **BAS** libraries | Cymulate, AttackIQ, Picus (library demos) | **Refuse scenario-library bake-offs.** We ship governed BAS-lite / control observation, not malware/phishing/DNS-exfil live packs. |
+| Full multi-vector **BAS** libraries | Cymulate, AttackIQ, Picus (library demos) | **Build qualified BAS coverage.** Full BAS/AEV is the development objective; comparisons must disclose current import, planned and executable coverage with evidence. |
 | **CNAPP** | Wiz, Orca, Prisma Cloud | **Co-exist.** Ingest inventory/issues; prove path + fix. Never replace CNAPP. |
 | **RBVM / vuln management** | Tenable, Qualys, Rapid7 VM | **Co-exist.** Validate exploitability and re-prove fixes on top of RBVM. Never replace the vuln system of record. |
 | **Automated pentest / kill-chain theater** | Pentera, Horizon3 NodeZero | **Deliberate safety floor.** Governed continuous validation, not automated pentest. |
@@ -44,7 +46,7 @@ One sentence:
 
 ### Denied category phrases
 
-- “Full BAS platform” / “multi-vector BAS like Cymulate”
+- Claiming shipped full BAS or competitor parity without measured coverage; the development objective itself is allowed
 - “Replace your CNAPP” / “Wiz alternative for cloud security posture”
 - “Replace Tenable / RBVM”
 - “Automated pentest” / “autonomous red team” / “ransomware emulation”
@@ -59,10 +61,10 @@ One sentence:
 Internal enums may still use `BAS` / `BASLite` as **source motion and safety
 level** names. External and product-visible copy must clarify:
 
-- **BAS-lite / control validation** = policy-gated, non-destructive, often
-  dry-run or passive; not competitive inject-and-measure BAS libraries.
-- Live Atomic / Caldera / SharpHound / Metasploit-style execution remains
-  disabled or hard-gated per `SECURITY_BOUNDARIES.md` and Agents.md.
+- **Current BAS-lite / control validation** includes dry-run and passive paths.
+  The BAS/AEV program adds qualified inject-and-measure scenarios and campaigns.
+- Atomic / Caldera / SharpHound / Metasploit adapters are development targets;
+  current live restrictions remain until their implementations are qualified.
 
 ### Red-team buyer line (P05-16)
 
@@ -165,7 +167,7 @@ honest matrices, anti-fabrication architecture, and AEV/CTEM proof framing.
 
 - More vision docs, swarm surfaces, or category theater without AtE movement  
 - Exporting internal “Leading” scorecard rows where engineering matrix ≠ Fully-E2E  
-- Entering pure BAS multi-vector RFPs as peer
+- Claiming qualified BAS coverage without scenario-level evidence
 
 ### Leaders path (program, not a document)
 
@@ -210,7 +212,7 @@ must follow this document.
 | Change | Update |
 |---|---|
 | New connector (Wiz/Tenable/etc.) | Keep co-exist language; do not claim category ownership |
-| New validation module | Label measured vs simulated; no “full BAS” upgrade |
+| New validation module | Label measured vs simulated; update BAS coverage from qualified scenario evidence |
 | Scorecard rescore | External language must track matrix Fully-E2E only |
 | Analyst inquiry | Ship this doc + battlecards + coverage matrix; no Leading claims without rescore |
 

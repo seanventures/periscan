@@ -1,0 +1,23 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) Atomic Red Team contributors
+# Source: https://github.com/redcanaryco/atomic-red-team (MIT)
+# Periscan allowlist: dry-run catalog import only. Do not Invoke-AtomicRedTeam live.
+attack_technique: T1087
+display_name: Account Discovery
+tactic: Discovery
+license: MIT
+atomic_tests:
+  - name: Account Discovery Dry Run
+    auto_generated_guid: 8d0d1e2b-5e3f-4c22-8d1b-000000001087
+    description: >
+      Allowlisted Atomic Red Team content for ATT&CK T1087. Periscan imports
+      this YAML as a dry-run catalog row only. Live technique execution is
+      disabled (atomic_live_disabled).
+    supported_platforms:
+      - windows
+      - linux
+      - macos
+    executor:
+      name: powershell
+      elevation_required: false
+      command: Invoke-AtomicTest T1087 -ShowDetailsBrief

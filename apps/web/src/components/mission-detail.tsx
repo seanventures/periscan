@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
   summarizeCommunityMissionRuns,
@@ -18,7 +18,9 @@ import { ProofLoopContext } from "./proof-loop-context";
 import { ValidationMissionActivity } from "./validation-mission-activity";
 import {
   COMMUNITY_RUN_POLL_INTERVAL_MS,
-  communityMissionHref
+  communityMissionHref,
+  communityRunHasEvidence,
+  communityWatchPollMs
 } from "./community-run-progress";
 import {
   ErrorState,
@@ -107,6 +109,9 @@ function communityRemediationsOpenedNote(createdCount: number): string {
 }
 
 export function MissionDetail({ missionId }: { missionId: string }) {
+  const [watchPollMs, setWatchPollMs] = useState<number | undefined>(
+    COMMUNITY_RUN_POLL_INTERVAL_MS
+  );
   const detail = useApiResource(
     async () => {
       const [mission, runs, auditResult, companionResult] = await Promise.all([
@@ -158,8 +163,22 @@ export function MissionDetail({ missionId }: { missionId: string }) {
       };
     },
     [missionId],
-    { refetchIntervalMs: COMMUNITY_RUN_POLL_INTERVAL_MS }
+    { refetchIntervalMs: watchPollMs }
   );
+  useEffect(() => {
+    if (!detail.data) {
+      return;
+    }
+    setWatchPollMs(
+      communityWatchPollMs({
+        status: detail.data.mission.status,
+        hasEvidence: communityRunHasEvidence({
+          missionEvidenceIds: detail.data.mission.evidenceIds,
+          runs: detail.data.runs
+        })
+      })
+    );
+  }, [detail.data]);
   const [cancelling, setCancelling] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
   const [creatingRemediations, setCreatingRemediations] = useState(false);
@@ -249,6 +268,12 @@ export function MissionDetail({ missionId }: { missionId: string }) {
           <h1 className="font-display text-2xl font-semibold tracking-tight text-ink sm:text-3xl">
             {mission.missionType}
           </h1>
+          <p
+            data-testid="community-mission-status"
+            className="font-mono text-[12px] text-ink"
+          >
+            Community mission {mission.status}
+          </p>
           <StateBadge tone="neutral" dot={false}>
             {mission.status}
           </StateBadge>
@@ -264,6 +289,29 @@ export function MissionDetail({ missionId }: { missionId: string }) {
         </div>
         <p className="font-mono text-xs text-subtle">{mission.missionId}</p>
       </header>
+
+      {mission.missionType === "ControlValidation" ? (
+        <div
+          role="status"
+          data-testid="control-validation-honesty"
+          className="rounded-control border border-brand/35 bg-brand/8 px-4 py-3 text-sm text-ink"
+        >
+          <p className="font-medium">
+            This ControlValidation mission is a benign canary / marker-only coverage.
+          </p>
+          <p className="mt-1 text-[13px] leading-5 text-muted">
+            drvClaimClass stays benign_marker_only. Dispatch, observe, or cancel
+            stimuli from the workbench. Additional BAS scenarios require qualified
+            adapters and their own policy decisions.
+          </p>
+          <Link
+            href="/control-validation"
+            className="mt-2 inline-flex text-xs font-semibold text-brand hover:text-brand-2"
+          >
+            Open ControlValidation workbench
+          </Link>
+        </div>
+      ) : null}
 
       {community.hasCommunityPack ? (
         <Panel

@@ -10,7 +10,7 @@
 
 | Role | Path | Customer posture |
 | ---- | ---- | ---------------- |
-| **Supported Customer Runner** | `apps/runner` (Go) | Production LTS: register, mTLS, signed poll, reachability/DNS/TLS/HTTP modules, deploy guides, `pnpm test:runner` |
+| **Supported Customer Runner** | `apps/runner` (Go) | Production LTS: register, mTLS, signed poll, reachability/DNS/TLS/HTTP/port-present/PTR modules, deploy guides, `pnpm test:runner` |
 | **AgentLocal companion** | `apps/runner-agent` (TypeScript) | Staged capability for measured `periscan.*` / safe recon modules on the **same** control-plane contract — not a second enterprise SKU or separate “enterprise package” |
 
 This is **not** two equal enterprise runners. Operators deploy **one** customer-facing binary/image lineage:

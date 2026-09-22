@@ -1,0 +1,33 @@
+{
+  "error_count": 99,
+  "falco_load_results": [
+    {
+      "name": "falco_rules.yaml",
+      "successful": false,
+      "errors": [
+        {
+          "code": "LOAD_ERR_YAML_VALIDATE",
+          "codedesc": "Error validating internal structure of YAML file",
+          "context": {
+            "snippet": "- rule: trap\n  condition: proc.cmdline contains 'AKIAIOSFODNN7EXAMPLE'\n  ^\n"
+          },
+          "message": "Item has no mapping for key 'condition'"
+        },
+        {
+          "code": "LOAD_ERR_COMPILE_CONDITION",
+          "codedesc": "Error compiling condition",
+          "context": {
+            "snippet": "-----BEGIN RSA PRIVATE KEY-----\nfixture\n-----END RSA PRIVATE KEY-----"
+          },
+          "message": "Invalid condition"
+        }
+      ],
+      "warnings": [
+        {
+          "code": "LOAD_NO_EVTTYPE",
+          "message": "Rule matches too many evt.type values."
+        }
+      ]
+    }
+  ]
+}

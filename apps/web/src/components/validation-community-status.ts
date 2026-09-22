@@ -241,6 +241,9 @@ export function communityStartNowCopy(input: {
   const ids = resolveCommunityStartNowModuleIds(input);
   const pinned = (input.pinnedModuleIds ?? []).filter(Boolean);
   const deferred = input.deferredModules ?? [];
+  if (input.pack === "full") {
+    return "Remaining catalog engines. Not the default start.";
+  }
   const bits = [`${ids.length} engine${ids.length === 1 ? "" : "s"} start now`];
   const firstHour = communityFirstHourStartModuleIds(input.startableModuleIds);
   const usingFirstHourSubset =

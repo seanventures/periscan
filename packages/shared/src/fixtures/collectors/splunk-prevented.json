@@ -1,0 +1,18 @@
+{
+  "preview": false,
+  "init_offset": 0,
+  "results": [
+    {
+      "_time": "2026-09-17T14:01:00.000Z",
+      "src_ip": "10.0.0.21",
+      "dst_ip": "10.0.0.8",
+      "host": "lab-siem-01",
+      "signature": "Endpoint blocked the inject",
+      "rule_name": "sigma.proc_canary",
+      "event_type": "blocked",
+      "action": "blocked",
+      "severity": "high",
+      "_raw": "action=blocked marker=periscan-r-aaaa-s-bbbb-nonce1 rule=sigma.proc_canary"
+    }
+  ]
+}

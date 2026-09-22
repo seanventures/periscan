@@ -185,7 +185,7 @@ export function AutonomousOperations() {
             passive role-tagged multi-step assembly creates{" "}
             <strong className="text-ink">Draft missions only</strong> (no
             auto-start), then Hybrid Execution Compiler → signed allowlisted
-            runner tasks for passive modules. No live APT/Atomic.
+            runner tasks for currently qualified passive modules.
           </p>
           <p className="mt-1">
             API:{" "}

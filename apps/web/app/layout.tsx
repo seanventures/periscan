@@ -5,11 +5,12 @@ import type { ReactNode } from "react";
 
 import { AppShell } from "../src/components/app-shell";
 import { PeriscanQueryProvider } from "../src/components/query-provider";
+import { SkipLink } from "../src/components/skip-link";
 
 export const metadata = {
   title: "Periscan — Evidence Dashboard",
   description:
-    "Find the path. Validate the risk. Prove it's fixed. Periscan validates exposure, controls, attack paths, and AI applications, then turns the results into proof.",
+    "Prove authorized exposures are real — and only mark them Fixed when a retest says so. Community start is an authorized local path and Gitleaks-class secrets. Keep the board running.",
   icons: {
     icon: "/brand/periscan-favicon-32.png"
   }
@@ -36,9 +37,7 @@ export default function RootLayout({
         />
       </head>
       <body className="font-sans antialiased">
-        <a className="skip-link" href="#main-content">
-          Skip to content
-        </a>
+        <SkipLink />
         <PeriscanQueryProvider>
           <AppShell>{children}</AppShell>
         </PeriscanQueryProvider>

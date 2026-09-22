@@ -1,0 +1,42 @@
+{
+  "num_vulnerable": 99,
+  "num_audited": 3,
+  "vulnerable": [
+    {
+      "Coordinates": "pkg:golang/github.com/bitly/oauth2_proxy@0.1",
+      "Reference": "https://ossindex.sonatype.org/component/pkg:golang/github.com/bitly/oauth2_proxy@0.1",
+      "Vulnerabilities": [
+        {
+          "Id": "9eb9a5bc-8310-4104-bf85-3a820d28ba79",
+          "Title": "[CVE-2017-1000070] URL Redirection to Untrusted Site",
+          "Description": "Open redirect. Trap secret AKIAIOSFODNN7EXAMPLE",
+          "CvssScore": "6.1",
+          "Cve": "CVE-2017-1000070",
+          "Excluded": false
+        }
+      ],
+      "InvalidSemVer": false
+    },
+    {
+      "Coordinates": "pkg:golang/github.com/ethereum/go-ethereum@1.8.15",
+      "Reference": "https://ossindex.sonatype.org/component/pkg:golang/github.com/ethereum/go-ethereum@1.8.15",
+      "Vulnerabilities": [
+        {
+          "Id": "4efaed86-e62e-4c0c-b812-36c07e61ede4",
+          "Title": "CWE-400: Uncontrolled Resource Consumption",
+          "Description": "-----BEGIN RSA PRIVATE KEY-----\nfixture\n-----END RSA PRIVATE KEY-----",
+          "CvssScore": "7.5",
+          "Cve": "",
+          "Excluded": false
+        }
+      ],
+      "InvalidSemVer": false
+    }
+  ],
+  "audited": [
+    {
+      "Coordinates": "pkg:golang/github.com/safe/lib@v1.0.0",
+      "Vulnerabilities": []
+    }
+  ]
+}

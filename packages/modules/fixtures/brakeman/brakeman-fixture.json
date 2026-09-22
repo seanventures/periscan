@@ -1,0 +1,41 @@
+{
+  "scan_info": {
+    "app_path": "/src",
+    "rails_version": "7.1.0",
+    "security_warnings": 99,
+    "start_time": "2026-01-01 00:00:00 -0000",
+    "brakeman_version": "7.0.2"
+  },
+  "warnings": [
+    {
+      "warning_type": "SQL Injection",
+      "warning_code": 0,
+      "fingerprint": "fixture-sql-injection",
+      "check_name": "SQL",
+      "message": "Possible SQL injection",
+      "file": "app/models/user.rb",
+      "line": 12,
+      "link": "https://brakemanscanner.org/docs/warning_types/sql_injection/",
+      "code": "User.where(\"id = '#{params[:id]}'\") # AKIAIOSFODNN7EXAMPLE",
+      "user_input": "params[:id]",
+      "confidence": "High",
+      "cwe_id": [89]
+    },
+    {
+      "warning_type": "Remote Code Execution",
+      "warning_code": 25,
+      "fingerprint": "fixture-marshal-load",
+      "check_name": "Deserialize",
+      "message": "Marshal.load called with parameter value",
+      "file": "app/controllers/sessions_controller.rb",
+      "line": 8,
+      "code": "Marshal.load(params[:session]) # -----BEGIN RSA PRIVATE KEY-----\nfixture\n-----END RSA PRIVATE KEY-----",
+      "user_input": "params[:session]",
+      "confidence": "High",
+      "cwe_id": [502]
+    }
+  ],
+  "ignored_warnings": [],
+  "errors": [],
+  "obsolete": []
+}

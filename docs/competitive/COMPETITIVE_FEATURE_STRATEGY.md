@@ -1,5 +1,7 @@
 # Competitive feature strategy — prove, integrate, or refuse
 
+> **BAS/AEV program:** [../BAS_AEV_PROGRAM.md](../BAS_AEV_PROGRAM.md) — qualified open-source simulation, emulation and evidence-backed validation (PERISCAN-583).
+
 **Status:** durable GTM + product strategy (2026-07-30)  
 **Pairs with:** [POSITIONING.md](./POSITIONING.md), [CLAIM_DENY_LIST.md](./CLAIM_DENY_LIST.md),  
 [COMPETITIVE_COVERAGE_MATRIX.md](../COMPETITIVE_COVERAGE_MATRIX.md)  
@@ -50,9 +52,9 @@ Catalog entries without live clients stay **Planned / NotConnectable**.
 
 | Ask | Refuse line | Why |
 | --- | --- | --- |
-| Full multi-vector BAS library bake-off | We sell AEV/CTEM proof, not scenario libraries | Category home |
+| Full multi-vector BAS library bake-off | Build qualified BAS scenario coverage with AEV/CTEM proof; disclose current gaps | Category home |
 | Agentless autonomous pentest | Governed continuous validation with hard floor | Safety + positioning |
-| Live ransomware / spray / SharpHound | Permanently off in product | Legal/safety |
+| Destructive behavior, theft or uncontrolled chaining | Excluded behavior | Safety |
 | Auto-mitigate pushes firewall rules | We **auto-revalidate**; human/IaC applies fix | Honesty |
 | TEE/H100 “we run your agents in enclave” | We **qualify customer attestation evidence** | Verifier not host |
 | Ray cluster scaling shipped | Core async workers only; matrix #99 Absent | Platform adjacency (Wave K) |
@@ -68,7 +70,7 @@ Full deny list: [CLAIM_DENY_LIST.md](./CLAIM_DENY_LIST.md).
 
 | Competitor | Win theme | Lose theme if oversold |
 | --- | --- | --- |
-| Picus | Unified proof console + Fixed-only-via-verify + honest SCV observe | Library inject bake-off without Wave D SOW |
+| Picus | Unified proof console + Fixed-only-via-verify + honest SCV observe | Unqualified scenario execution |
 | Pentera / NodeZero | Safe continuous + evidence language | Agentless APT theater |
 | XM Cyber | Evidence-backed path breakers + remediations | Min-cut choke science |
 | CyCognito | Verified-scope external PoA + recon | Autonomous living external map |
@@ -81,7 +83,7 @@ Full deny list: [CLAIM_DENY_LIST.md](./CLAIM_DENY_LIST.md).
 | Wave | Strategy | Outcome |
 | --- | --- | --- |
 | A–C | Prove | Core proof loop depth |
-| D | Prove (lab) / Refuse (default) | Optional inject under SOW |
+| D | Build and qualify | Governed BAS inject/observe with execution authorization |
 | E–F | Prove + Integrate | RemOps + Production connectors |
 | G | Prove (partial) | Audit-support, not cert |
 | H–I | Prove control plane | Agentic ops + attestation verify |

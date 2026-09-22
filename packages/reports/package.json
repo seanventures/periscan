@@ -4,6 +4,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./attack-navigator-freshness": "./src/attack-navigator-freshness.ts",
     "./compliance-catalog": "./src/compliance-catalog.ts"
   },
   "scripts": {

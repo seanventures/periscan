@@ -17,7 +17,7 @@ go_supports_runner() {
 
 if command -v go >/dev/null 2>&1 && go_supports_runner; then
   cd "$RUNNER_DIR"
-  test -z "$(gofmt -l main.go main_test.go)"
+  test -z "$(gofmt -l main.go main_test.go modules_test.go)"
   go test ./...
   go build ./...
 else
@@ -26,7 +26,7 @@ else
     exit 1
   fi
 
-  CONTAINER_ID="$(docker create -w /work "$GO_DOCKER_IMAGE" sh -c 'export PATH=/usr/local/go/bin:$PATH; test -z "$(gofmt -l main.go main_test.go)" && go test ./... && go build ./...')"
+  CONTAINER_ID="$(docker create -w /work "$GO_DOCKER_IMAGE" sh -c 'export PATH=/usr/local/go/bin:$PATH; test -z "$(gofmt -l main.go main_test.go modules_test.go)" && go test ./... && go build ./...')"
   cleanup() {
     docker rm "$CONTAINER_ID" >/dev/null 2>&1 || true
   }

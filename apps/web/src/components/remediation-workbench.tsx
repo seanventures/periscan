@@ -21,60 +21,54 @@ import {
   VERIFICATION_OUTCOME_TONE,
   formatSlaAge,
   relTime,
+  remediationRowTitle,
   statusRank
 } from "./remediation-lib";
 
 const RESOLVED = new Set(["Fixed", "Mitigated"]);
 const PAGE_SIZE = 25;
-const GENERIC_REMEDIATION_TITLE =
-  /^(Own and remediate this validated finding|Review the validated evidence)/i;
-
-function shortFingerprint(fingerprint: string, max = 12): string {
-  return fingerprint.length > max ? fingerprint.slice(0, max) : fingerprint;
-}
-
-function remediationLocator(remediation: {
-  technicalSteps: readonly string[];
-}): string | null {
-  for (const step of remediation.technicalSteps) {
-    const file = step.match(
-      /(?:^|[\s/`'(])((?:[A-Za-z0-9._-]+\/)*[A-Za-z0-9._-]+\.(?:js|ts|tsx|jsx|env|py|json|yml|yaml|tf|go))\b/
-    );
-    const rule = step.match(/\(([A-Za-z0-9._-]+)\)/);
-    if (file?.[1]) {
-      return rule?.[1] ? `${file[1]} · ${rule[1]}` : file[1];
-    }
-  }
-  return null;
-}
-
-function remediationRowTitle(remediation: {
-  recommendedAction: string;
-  relatedFindingFingerprint?: string | null;
-  technicalSteps: readonly string[];
-}): string {
-  const action = remediation.recommendedAction.trim();
-  const locator = remediationLocator(remediation);
-  if (GENERIC_REMEDIATION_TITLE.test(action) && locator) {
-    return locator;
-  }
-  if (
-    GENERIC_REMEDIATION_TITLE.test(action) &&
-    remediation.relatedFindingFingerprint
-  ) {
-    return `${action.replace(/[.\s]+$/u, "")} · fp·${shortFingerprint(remediation.relatedFindingFingerprint)}`;
-  }
-  return action;
-}
 
 export function RemediationWorkbench() {
   const remediations = useApiResource(() => api.listRemediations(), []);
+  const findings = useApiResource(() => api.listFindings(), []);
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("all");
   const [view, setView] = useState("all");
   const [page, setPage] = useState(0);
 
   const all = remediations.data ?? [];
+  const findingsByKey = useMemo(() => {
+    const byFingerprint = new Map<
+      string,
+      { location?: string | null; ruleId?: string | null }
+    >();
+    const byRemediationId = new Map<
+      string,
+      { location?: string | null; ruleId?: string | null }
+    >();
+    for (const finding of findings.data ?? []) {
+      if (finding.fingerprint) {
+        byFingerprint.set(finding.fingerprint, finding);
+      }
+      for (const remId of finding.relatedRemediationIds ?? []) {
+        byRemediationId.set(remId, finding);
+      }
+    }
+    return { byFingerprint, byRemediationId };
+  }, [findings.data]);
+
+  function relatedFinding(remediation: {
+    relatedFindingFingerprint?: string | null;
+    remediationId: string;
+  }) {
+    return (
+      (remediation.relatedFindingFingerprint
+        ? findingsByKey.byFingerprint.get(remediation.relatedFindingFingerprint)
+        : undefined) ??
+      findingsByKey.byRemediationId.get(remediation.remediationId) ??
+      null
+    );
+  }
 
   const statuses = useMemo(
     () => Array.from(new Set(all.map((r) => r.status))).sort(),
@@ -103,9 +97,15 @@ export function RemediationWorkbench() {
             !RESOLVED.has(r.status)
           : true
       )
-      .filter((r) => !q || r.recommendedAction.toLowerCase().includes(q))
+      .filter((r) => {
+        if (!q) return true;
+        if (r.recommendedAction.toLowerCase().includes(q)) return true;
+        return remediationRowTitle(r, relatedFinding(r))
+          .toLowerCase()
+          .includes(q);
+      })
       .sort((a, b) => statusRank(a.status) - statusRank(b.status));
-  }, [all, status, query, view]);
+  }, [all, findingsByKey, status, query, view]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -183,15 +183,6 @@ export function RemediationWorkbench() {
         eyebrow="Remediate"
         title="Remediation"
         description='Fix plans and the proof they held. Mark a fix ready, run a targeted re-test, and a "Fixed" only lands when a real re-validation says so.'
-        actions={
-          <Link
-            href="/findings?view=active"
-            data-testid="remediation-header-primary-cta"
-            className={buttonClassName({ size: "md", variant: "primary" })}
-          >
-            Open Active findings
-          </Link>
-        }
         meta={
           <LiveUpdatePill
             lastUpdatedAt={remediations.lastUpdatedAt}
@@ -302,59 +293,74 @@ export function RemediationWorkbench() {
           </p>
         ) : (
           <>
-            <ul className="list-none">
-              {visible.map((r) => (
-                <li
-                  key={r.remediationId}
-                  className="border-b border-line last:border-b-0"
-                >
-                  <Link
-                    href={`/remediation/${r.remediationId}`}
-                    className="flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-surface"
+            <ul className="list-none" data-testid="remediation-first-hour">
+              {visible.map((r) => {
+                const title = remediationRowTitle(r, relatedFinding(r));
+                return (
+                  <li
+                    key={r.remediationId}
+                    data-testid={`remediation-row-${r.remediationId}`}
+                    className="cursor-pointer border-b border-line last:border-b-0"
+                    onClick={(event) => {
+                      if (event.target !== event.currentTarget) return;
+                      event.currentTarget
+                        .querySelector<HTMLAnchorElement>(
+                          "a[data-remediation-row-link]"
+                        )
+                        ?.click();
+                    }}
                   >
-                    <div className="min-w-0 flex-1">
-                      <p
-                        className="truncate text-[13px] text-ink"
-                        data-testid={`remediation-title-${r.remediationId}`}
-                      >
-                        {remediationRowTitle(r)}
-                      </p>
-                      <p className="mt-0.5 font-mono text-[11px] text-subtle">
-                        {r.owner ? `${r.owner} · ` : "unowned · "}
-                        {r.dueAt
-                          ? `${formatSlaAge(r.dueAt, { prefix: "target" }).label} · `
-                          : "no SLA date · "}
-                        {r.verificationMethod}
-                        {r.nextVerificationAt
-                          ? ` · re-check ${relTime(r.nextVerificationAt)}`
-                          : ""}
-                      </p>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-2">
-                      {r.latestVerification ? (
-                        <StateBadge
-                          tone={
-                            VERIFICATION_OUTCOME_TONE[
-                              r.latestVerification.outcome
-                            ] ?? "neutral"
-                          }
-                          dot={false}
+                    <Link
+                      href={`/remediation/${r.remediationId}`}
+                      data-testid={`remediation-row-link-${r.remediationId}`}
+                      data-remediation-row-link=""
+                      aria-label={`Open remediation: ${title}`}
+                      className="flex w-full items-center gap-3 px-4 py-3.5 transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p
+                          className="truncate text-[13px] text-ink"
+                          data-testid={`remediation-title-${r.remediationId}`}
                         >
-                          {r.latestVerification.measuredRevalidation
-                            ? "measured "
+                          {title}
+                        </p>
+                        <p className="mt-0.5 font-mono text-[11px] text-subtle">
+                          {r.owner ? `${r.owner} · ` : "unowned · "}
+                          {r.dueAt
+                            ? `${formatSlaAge(r.dueAt, { prefix: "target" }).label} · `
+                            : "no SLA date · "}
+                          {r.verificationMethod}
+                          {r.nextVerificationAt
+                            ? ` · re-check ${relTime(r.nextVerificationAt)}`
                             : ""}
-                          {r.latestVerification.outcome}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-2">
+                        {r.latestVerification ? (
+                          <StateBadge
+                            tone={
+                              VERIFICATION_OUTCOME_TONE[
+                                r.latestVerification.outcome
+                              ] ?? "neutral"
+                            }
+                            dot={false}
+                          >
+                            {r.latestVerification.measuredRevalidation
+                              ? "measured "
+                              : ""}
+                            {r.latestVerification.outcome}
+                          </StateBadge>
+                        ) : null}
+                        <StateBadge
+                          tone={REMEDIATION_STATUS_TONE[r.status] ?? "neutral"}
+                        >
+                          {r.status}
                         </StateBadge>
-                      ) : null}
-                      <StateBadge
-                        tone={REMEDIATION_STATUS_TONE[r.status] ?? "neutral"}
-                      >
-                        {r.status}
-                      </StateBadge>
-                    </div>
-                  </Link>
-                </li>
-              ))}
+                      </div>
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
             {pageCount > 1 ? (
               <div className="flex items-center justify-between border-t border-line px-4 py-3 text-xs text-muted">

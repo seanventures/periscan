@@ -2,12 +2,17 @@ import { createHash, randomUUID } from "node:crypto";
 
 import type { Prisma } from "@prisma/client";
 import { getConnectorByKey } from "@periscan/connectors";
+import {
+  listObserverHealthSamplesCoveringWindow,
+  toCorrelationHealthSamples
+} from "@periscan/db";
 import { createPrismaEvidenceService } from "@periscan/evidence";
 import { getModuleById } from "@periscan/modules";
 import { evaluatePolicy } from "@periscan/policy";
 import {
   PolicyRequestedActionSchema,
   ValidationStimulusSchema,
+  gateMissedByObserverHealth,
   type ControlValidationVerdict,
   type CreateValidationStimulusInput,
   type ValidationStimulus
@@ -1029,9 +1034,27 @@ export function createControlStimulusServices(
         return serializeStimulus(updated);
       }
 
-      const verdict = correlationMatched
+      const rawVerdict = correlationMatched
         ? verdictFromOutcome(parsed.outcome)
         : "Inconclusive";
+      const windowStart = stimulus.dispatchedAt ?? stimulus.createdAt;
+      const windowEnd = stimulus.observationDeadlineAt ?? now;
+      const persistedHealthSamples =
+        await listObserverHealthSamplesCoveringWindow(prisma, {
+          controlSourceId: stimulus.controlSourceId,
+          tenantId: context.tenant.tenantId,
+          windowEnd,
+          windowStart
+        });
+      const verdict = gateMissedByObserverHealth(rawVerdict, {
+        healthSamples: toCorrelationHealthSamples(persistedHealthSamples),
+        healthStatus: stimulus.controlSource.healthStatus,
+        lastValidatedAt:
+          stimulus.controlSource.lastValidatedAt?.toISOString() ?? null,
+        telemetryStatus: stimulus.controlSource.telemetryStatus,
+        windowEnd: windowEnd.toISOString(),
+        windowStart: windowStart.toISOString()
+      });
       let signalId: string | null = null;
       if (correlationMatched) {
         const signal = createObservedControlSignal({

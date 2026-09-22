@@ -125,7 +125,7 @@ const SAFE_REQUESTED_ACTION: PolicyRequestedAction = {
 const HONESTY_NOTES = [
   "Advisory next recommended mission only — not autonomous real-time path replan.",
   "Human approval is required; approval creates a Draft mission and never auto-queues destructive work.",
-  "Drivers are signal- and hop-measurement evidence; this is not full-BAS dynamic adaptation.",
+  "Adaptation uses signal and hop-measurement evidence; broader BAS campaign adaptation requires qualified scenario execution.",
   "A recommendation is never proof that a path is fixed or that an edge is Measured."
 ] as const;
 

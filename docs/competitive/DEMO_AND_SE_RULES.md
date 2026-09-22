@@ -31,11 +31,11 @@ Optional only after the spine lands:
 - Control observation / rule coverage (honest: not full inject BAS unless stimulus path is live)
 - Engines readiness checklist (`/engines`) if asked how tools install
 
-**Sales walk (honest)** — single BAS refuse + Wiz co-exist playbook (help id
+**Sales walk (honest)** — single BAS coverage + Wiz co-exist playbook (help id
 `competitive-walk`; Continuous hub panel on `/continuous`). Ordered real
 routes only: `/scopes` → `/engines` → `/controls` → `/findings` →
 `/attack-paths` → `/continuous` (scorecard honesty). See
-[BATTLECARDS.md § Product walk](./BATTLECARDS.md#product-walk--bas-refuse--wiz-co-exist-honest).
+[BATTLECARDS.md § Product walk](./BATTLECARDS.md#product-walk--bas-coverage--wiz-co-exist-honest).
 No fake demo data, no inject claims.
 
 ---
@@ -44,7 +44,7 @@ No fake demo data, no inject claims.
 
 | RFP / eval shape | Action |
 |---|---|
-| Full multi-vector BAS library bake-off (malware, phishing, DNS exfil, ransomware live) | **Walk or partner** with a BAS library vendor. Do not fake parity. |
+| Full multi-vector BAS library bake-off (malware, phishing, DNS exfil, ransomware live) | Map the request to qualified scenarios and the BAS/AEV delivery plan. Demonstrate measured coverage; qualify missing adapters before committing a delivery date. |
 | “Replace our Wiz / CNAPP” | **Reframe** to co-exist recipe; if buyer requires CNAPP rip-out, disqualify. |
 | “Replace Tenable / RBVM” | **Reframe** to validation-on-top; keep Tenable as system of record. |
 | “Automated pentest / autonomous red team” | **Deny-list.** Offer governed continuous validation + hard floor. |

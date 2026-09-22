@@ -78,23 +78,166 @@ Concise plans per tool. Each follows the definition of done in
   Schema mapping is PassiveReadOnly content work and never asserts exploitability,
   detection, or fix status.
 
-## Atomic Red Team (real, dry-run/fixture only)
+## Atomic Red Team / Invoke-AtomicRedTeam
 
-- Module: `atomic.control_validation_safe` (BASLite, approvalRequired=true).
-- Plan: ATT&CK scenario content packs + dry-run executor only. Live execution is blocked
-  by `evaluateModuleStartConstraints` until an approved internal-runner path exists.
+- Current module: `atomic.control_validation_safe` imports content; the separate
+  local harness has a measured T1082 execution and cleanup receipt.
+- Delivery: PERISCAN-586. Implement reviewed scenario execution, prerequisites,
+  signed receipts, cancellation, cleanup and detection correlation. Qualify in
+  disposable local labs before customer execution.
 
-## MITRE Caldera (import only, live disabled)
+## Caldera
 
-- Module: `caldera.advanced_adversarial` (AdvancedAdversarial, approvalRequired=true).
-- Plan: import adversary plans as content only. Live adversarial execution is disabled by
-  policy and `evaluateModuleStartConstraints`.
+- Current module: `caldera.advanced_adversarial` imports plans.
+- Delivery: PERISCAN-587. Implement the private-deployment API adapter, selected
+  ability sets, plan-bound approvals, bounded operation lifecycle and result
+  ingestion. Preserve Periscan's outbound signed-task runner transport.
 
-## BloodHound CE (import only)
+## SharpHound / BloodHound CE
 
-- Module: `bloodhound.identity_pathing` (Apache-2.0, PassiveReadOnly).
-- Plan: import identity-path graphs for analysis. The **SharpHound** collector is GPL
-  family and legal-review blocked; it is not enabled.
+- Current module: `bloodhound.identity_pathing` imports compatible graphs.
+- Delivery: PERISCAN-588. Implement scoped collection and normalized graph
+  provenance with reviewed licensing, permissions, limits and redaction.
+  Collection alone does not prove exploitability; verify claimed path edges.
+
+## Metasploit Framework
+
+- Current module: `exploit.metasploit_check` provides planning/fixture support.
+- Delivery: PERISCAN-589. Implement reviewed non-destructive checks with typed
+  options, exact version pins, bounded execution and normalized evidence.
+
+## detect-secrets / Bandit / gosec / KubeLinter (real fixtures)
+
+- Modules: `detect_secrets.repo_secrets` (Apache-2.0), `bandit.python_sast`
+  (Apache-2.0), `gosec.go_sast` (Apache-2.0), `kube_linter.manifest_posture`
+  (Apache-2.0). PassiveReadOnly, ControlPlane.
+- Status (PERISCAN-490 wave `swarm/oss-pack`): certified fixture parsers,
+  redacted evidence mapping, honest skip/unavailable. FixtureMode replays the
+  fixture only and never invents findings. First-hour stays Gitleaks.
+- Parsers omit raw secrets, `hashed_secret`, and source `code` snippets.
+
+## Checkov / Terrascan / KICS / kube-bench (real fixtures)
+
+- Modules: `checkov.iac_posture` (Apache-2.0), `terrascan.iac_posture`
+  (Apache-2.0), `kics.iac_posture` (Apache-2.0), `kube_bench.cis_cluster`
+  (Apache-2.0). PassiveReadOnly, ControlPlane.
+- Status (PERISCAN-490 wave `swarm/oss-pack-w2`): certified fixture parsers,
+  redacted evidence mapping, honest IaC/kubeconfig skip. FixtureMode replays
+  the fixture only and never invents findings from summary counters. First-hour
+  stays Gitleaks.
+- Parsers omit `code_block`, violation `code`, KICS `search_value` /
+  `actual_value`, and kube-bench `reason` (trap secrets in raw tool JSON).
+
+## Brakeman / Talisman / Dependency-Check / YARA (real fixtures)
+
+- Modules: `brakeman.ruby_sast` (MIT), `talisman.repo_secrets` (Apache-2.0),
+  `dependency_check.sca` (Apache-2.0), `yara.repo_rules` (BSD-3-Clause).
+  PassiveReadOnly, ControlPlane.
+- Status (PERISCAN-490 wave `swarm/oss-pack-w3`): certified fixture parsers,
+  redacted evidence mapping, honest Gemfile/.yar skip. FixtureMode replays
+  the fixture only and never invents findings from summary counters.
+  First-hour stays Gitleaks.
+- Parsers omit Brakeman `code`/`user_input`, Talisman `message`,
+  Dependency-Check `description`, and YARA `strings` (trap secrets in raw
+  tool JSON). SSLyze is upstream AGPL-3.0 and stays out of this wave.
+
+## Falco / Amass / Horusec / naabu (real fixtures)
+
+- Modules: `falco.rules_validate` (Apache-2.0), `amass.passive_enum`
+  (Apache-2.0), `horusec.multi_sast` (Apache-2.0), `naabu.port_inventory`
+  (MIT). Falco/Horusec PassiveReadOnly ControlPlane; Amass/naabu
+  ActiveNonInvasive InternalRunner.
+- Status (PERISCAN-490 wave `swarm/oss-pack-w4`): certified fixture parsers,
+  redacted evidence mapping, honest Falco rules skip. FixtureMode replays
+  the fixture only and never invents findings from summary counters
+  (`error_count`, `summary.names`, `totalVulnerabilities`, `total`).
+  First-hour stays Gitleaks.
+- Parsers omit Falco `context`/`snippet`, Amass `source`/`addresses`,
+  Horusec `code`/`details`, and naabu `banner`/`raw` (trap secrets in raw
+  tool JSON). SSLyze is upstream AGPL-3.0 and stays out of the default pack.
+
+## tfsec / cfn-nag / Whispers / Nancy (real fixtures)
+
+- Modules: `tfsec.iac_posture` (MIT), `cfn_nag.cloudformation` (MIT),
+  `whispers.repo_secrets` (Apache-2.0), `nancy.go_advisories` (Apache-2.0).
+  PassiveReadOnly, ControlPlane.
+- Status (PERISCAN-490 wave `swarm/oss-pack-w5`): certified fixture parsers,
+  redacted evidence mapping, honest Terraform/CloudFormation/go.mod skip.
+  FixtureMode replays the fixture only and never invents findings from
+  summary counters (`failed_count`, `failure_count`, `summary.count`,
+  `num_vulnerable`). First-hour stays Gitleaks.
+- Parsers omit tfsec `description`/`links`, cfn-nag `code`/`snippet`,
+  Whispers `value`/`hashed_secret`, and Nancy `Description` (trap secrets
+  in raw tool JSON). SSLyze is upstream AGPL-3.0 and stays out of the
+  default pack.
+
+## Sobelow / Polaris / kubeaudit / Popeye / katana / cloudlist (real fixtures)
+
+- Modules: `sobelow.elixir_sast` (Apache-2.0), `polaris.k8s_posture`
+  (Apache-2.0), `kubeaudit.k8s_posture` (MIT), `popeye.cluster_sanitizer`
+  (Apache-2.0), `katana.web_crawl` (MIT), `cloudlist.cloud_assets` (MIT).
+  Sobelow/Polaris/kubeaudit: PassiveReadOnly ControlPlane. Popeye:
+  PassiveReadOnly ControlPlane (kubeconfig). katana: ActiveNonInvasive
+  InternalRunner. cloudlist: PassiveReadOnly InternalRunner.
+- Status (PERISCAN-490 wave `swarm/oss-pack-w6`): certified fixture parsers,
+  redacted evidence mapping, honest mix.exs/YAML/kubeconfig skip.
+  FixtureMode replays the fixture only and never invents findings from
+  summary counters (`total_findings`, `Score`, `summary.errors`, `score`/
+  `grade`/`tally`, `total`). First-hour stays Gitleaks.
+- Parsers omit Sobelow `vuln_source`, Polaris `Details`/`Message`, kubeaudit
+  `msg`/`Snippet`/`Command`, Popeye `snippet`/`details`, katana
+  `request.raw`/`response.body`/`response.raw`, and cloudlist `token`/
+  `secret` (trap secrets in raw tool JSON). SSLyze is upstream AGPL-3.0
+  and stays out of the default pack.
+
+## pip-audit / Dockle / tlsx / kube-score (real fixtures)
+
+- Modules: `pip_audit.python_advisories` (Apache-2.0), `dockle.dockerfile_cis`
+  (Apache-2.0), `tlsx.tls_probe` (MIT), `kube_score.manifest_score` (MIT).
+  pip-audit/Dockle/kube-score: PassiveReadOnly ControlPlane. tlsx:
+  ActiveNonInvasive InternalRunner.
+- Status (PERISCAN-490 wave `swarm/oss-pack-w7`): certified fixture parsers,
+  redacted evidence mapping, honest lockfile/Dockerfile/YAML skip. FixtureMode
+  replays the fixture only and never invents findings from summary counters
+  (`vulnerability_count`, `summary.fatal`/`warn`, `total`, `score`/`grade`).
+  First-hour stays Gitleaks.
+- Parsers omit pip-audit `description`, Dockle `alerts`, tlsx
+  `certificate`/`serial`/`fingerprint_hash`, and kube-score `comments`
+  (trap secrets in raw tool JSON). SSLyze is upstream AGPL-3.0 and stays
+  out of the default pack.
+
+## Conftest / cdxgen / git-secrets / secretlint (real fixtures)
+
+- Modules: `conftest.policy_test` (Apache-2.0), `cdxgen.sbom_generate`
+  (Apache-2.0), `git_secrets.repo_secrets` (Apache-2.0),
+  `secretlint.repo_secrets` (MIT). Conftest/git-secrets/secretlint:
+  PassiveReadOnly ControlPlane. cdxgen: PassiveReadOnly InternalRunner.
+- Status (PERISCAN-490 wave `swarm/oss-pack-w8`): certified fixture parsers,
+  redacted evidence mapping, honest policy/ skip. FixtureMode replays the
+  fixture only and never invents findings from summary counters
+  (`successes`/`failure_count`, `component_count`/`vulnerabilities`,
+  `match_count`, `errorCount`). First-hour stays Gitleaks.
+- Parsers omit Conftest `msg`/`metadata`, cdxgen `description`/`hashes`/
+  `properties`, git-secrets `content`, and secretlint `message`/`data`/
+  `sourceContent` (trap secrets in raw tool JSON). SSLyze is upstream
+  AGPL-3.0 and stays out of the default pack.
+
+## retire.js / govulncheck / cargo-audit / Kubescape / slsa-verifier (real fixtures)
+
+- Modules: `retirejs.js_advisories` (Apache-2.0), `govulncheck.go_advisories`
+  (BSD-3-Clause), `cargo_audit.rust_advisories` (Apache-2.0),
+  `kubescape.repo_posture` (Apache-2.0), `slsa_verifier.provenance`
+  (Apache-2.0). PassiveReadOnly, ControlPlane.
+- Status (PERISCAN-490 wave `swarm/oss-pack-w9`): certified fixture parsers,
+  redacted evidence mapping, honest package.json/go.mod/Cargo.lock/provenance
+  skip. FixtureMode replays the fixture only and never invents findings from
+  summary counters (`vulnerability_count`, OSV/progress messages,
+  `vulnerabilities.count`/`found`/warnings, `summaryDetails.score`/
+  `ResourceCounters`, `failed`/PASSED). First-hour stays Gitleaks.
+- Parsers omit retire.js `identifiers.summary`/`info`, govulncheck OSV
+  `details`, cargo-audit `description`, Kubescape `rules`/`paths`/`resources`,
+  and slsa-verifier `error` (trap secrets in raw tool JSON). SSLyze is
+  upstream AGPL-3.0 and stays out of the default pack.
 
 ## Cross-cutting backlog
 

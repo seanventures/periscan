@@ -58,7 +58,7 @@ describe("ProductHelpDrawer", () => {
     fireEvent.keyDown(document, { key: "Escape" });
     expect(onClose).toHaveBeenCalledTimes(1);
 
-    fireEvent.click(screen.getByRole("link", { name: /Open remediation/i }));
+    fireEvent.click(screen.getByRole("link", { name: /Review remediations/i }));
     expect(onClose).toHaveBeenCalledTimes(2);
   });
 

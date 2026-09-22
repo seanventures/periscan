@@ -95,7 +95,11 @@ const PRD_PACK_TYPE_MAP = new Map<string, PackMapping>([
   [
     "SOC 2 / ISO Support Pack",
     {
-      labels: ["Periscan SOC 2 Support Pack", "Periscan ISO Support Pack"],
+      // SETTLED: customer evidence support, not vendor SOC 2 attestation.
+      labels: [
+        "Customer SOC 2 support evidence (not vendor attestation)",
+        "Periscan ISO Support Pack"
+      ],
       packTypes: ["SOC2Support", "ISOSupport"]
     }
   ],

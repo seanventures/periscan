@@ -1,0 +1,54 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "serialNumber": "urn:uuid:00000000-0000-4000-8000-000000000008",
+  "version": 1,
+  "metadata": {
+    "component": {
+      "type": "application",
+      "name": "lab-app",
+      "version": "1.0.0",
+      "description": "Trap secret AKIAIOSFODNN7EXAMPLE"
+    },
+    "component_count": 99
+  },
+  "components": [
+    {
+      "type": "library",
+      "name": "express",
+      "version": "4.17.1",
+      "purl": "pkg:npm/express@4.17.1",
+      "description": "-----BEGIN RSA PRIVATE KEY-----\nfixture\n-----END RSA PRIVATE KEY-----",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "hashed_secret"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "lodash",
+      "version": "4.17.19",
+      "purl": "pkg:npm/lodash@4.17.19",
+      "properties": [
+        {
+          "name": "token",
+          "value": "ghp_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "pkg:npm/express@4.17.1",
+      "dependsOn": []
+    }
+  ],
+  "vulnerabilities": [
+    {
+      "id": "CVE-2017-16137",
+      "description": "Trap secret hashed_secret"
+    }
+  ]
+}

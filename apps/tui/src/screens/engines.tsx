@@ -142,13 +142,13 @@ export function EnginesScreen(props: {
         <Text bold color={theme.accent}>
           Community suite
         </Text>
-        {suite.modules.map((entry) => {
+        {suite.modules.map((entry, index) => {
           const status = communityEngineStatus(
             entry.moduleId,
             suite.startableModuleIds
           );
           return (
-            <Text key={entry.moduleId}>
+            <Text key={`${entry.moduleId}:${index}`}>
               {engineLabel(entry)}
               {"  "}
               <Text color={theme.muted}>{entry.toolLicense}</Text>
@@ -170,10 +170,10 @@ export function EnginesScreen(props: {
           Copyleft opt-in
         </Text>
         <Text color={theme.muted}>{suite.copyleftOptIn.hint}</Text>
-        {suite.copyleftOptIn.modules.map((entry) => {
+        {suite.copyleftOptIn.modules.map((entry, index) => {
           const accepted = entry.toolId ? licensed.has(entry.toolId) : false;
           return (
-            <Text key={entry.moduleId}>
+            <Text key={`${entry.moduleId}:${index}`}>
               {engineLabel(entry)}
               {"  "}
               <Text color={theme.muted}>{entry.toolLicense}</Text>
@@ -186,13 +186,13 @@ export function EnginesScreen(props: {
 
       <Box marginTop={1} flexDirection="column">
         <Text bold color={theme.muted}>
-          Theater · catalog only · never install
+          Qualification pending · not runnable
         </Text>
         {ENGINE_LAB_THEATER_TOOL_IDS.map((toolId) => (
           <Text key={toolId}>
             {theaterTitle(toolId)}
             {"  "}
-            <Text color={theme.muted}>catalog only · never install</Text>
+            <Text color={theme.muted}>adapter qualification required</Text>
           </Text>
         ))}
       </Box>

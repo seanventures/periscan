@@ -37,6 +37,9 @@ export const COMMUNITY_NUCLEI_SIBLING_WINDOW_MS = 5 * 60 * 1000;
 export const COMMUNITY_GITLEAKS_REPO_SECRETS_MODULE_ID =
   "gitleaks.repo_secrets" as const;
 
+export const COMMUNITY_PROWLER_AWS_POSTURE_MODULE_ID =
+  "prowler.aws_posture" as const;
+
 /** Default Community start on a repository: Gitleaks-class secrets only. */
 export const COMMUNITY_FIRST_HOUR_MODULE_IDS = [
   COMMUNITY_GITLEAKS_REPO_SECRETS_MODULE_ID
@@ -54,13 +57,45 @@ export function communityFirstHourStartModuleIds(
 }
 
 export const COMMUNITY_EDITION_VALUE_LINE =
-  "Community edition is the open-core validation pack. First-hour on a repository is Gitleaks-class secrets; SCA, SAST, IaC, and SBOM are a second control (full Community pack). Apache-2.0 product source. Not live Atomic/Caldera/Metasploit. GPL/LGPL engines stay Engine Lab + license accept.";
+  "Community edition is the open-core validation pack. Default start on a repository is Gitleaks-class secrets; keep proving, re-verify, and schedule the next run. SCA, SAST, IaC, and SBOM are a second control (full Community pack). Apache-2.0 product source. Not live Atomic/Caldera/Metasploit. GPL/LGPL engines stay Engine Lab + license accept.";
 
 export const COMMUNITY_EDITION_LICENSE_NOTE =
-  "Community edition is the open-core validation slice. Source is Apache-2.0. Third-party engines keep their own SPDX. Not full BAS. Not live Atomic/Caldera/Metasploit.";
+  "Community edition is the open-core validation slice. Source is Apache-2.0. Third-party engines keep their own SPDX. BAS/AEV adapters require qualification; current coverage is documented per engine.";
 
 /** Local file Community uses to prove repository authorization (not a LICENSE flip). */
 export const COMMUNITY_REPOSITORY_AUTH_FILENAME = ".periscan-authorization";
+
+/**
+ * Suggested `<a download>` name. Prefer `.periscan-authorization`.
+ * Chromium and Windows drop extensionless leading-dot names; use `.txt` then.
+ */
+export function communityRepositoryAuthDownloadFilename(options?: {
+  requireExtension?: boolean;
+}): string {
+  if (options?.requireExtension) {
+    return `${COMMUNITY_REPOSITORY_AUTH_FILENAME}.txt`;
+  }
+  return COMMUNITY_REPOSITORY_AUTH_FILENAME;
+}
+
+/** True when the UA/OS would drop a leading-dot, extensionless download name. */
+export function communityRepositoryAuthDownloadRequiresExtension(env: {
+  platform?: string;
+  userAgent?: string;
+} = {}): boolean {
+  const platform = env.platform ?? "";
+  const userAgent = env.userAgent ?? "";
+  if (/^Win/i.test(platform) || /Windows/i.test(userAgent)) {
+    return true;
+  }
+  if (
+    /Chrome|Chromium|Edg\//i.test(userAgent) &&
+    !/Firefox|FxiOS/i.test(userAgent)
+  ) {
+    return true;
+  }
+  return false;
+}
 
 export const CommunityProductEditionSchema = z.enum([
   "community",
@@ -788,6 +823,56 @@ export const COMMUNITY_VALIDATION_SUITE = [
     title: "cloudlist cloud assets",
     toolId: "cloudlist",
     toolLicense: "MIT"
+  },
+  {
+    defaultSafetyLevel: "PassiveReadOnly",
+    executionMode: "ControlPlane",
+    moduleId: "kingfisher.repo_secrets",
+    requiredScopeTypes: ["Repository"],
+    targetKind: "repositoryPath",
+    title: "Kingfisher secret scan",
+    toolId: "kingfisher",
+    toolLicense: "Apache-2.0"
+  },
+  {
+    defaultSafetyLevel: "PassiveReadOnly",
+    executionMode: "ControlPlane",
+    moduleId: "kyverno.repo_policy",
+    requiredScopeTypes: ["Repository"],
+    targetKind: "repositoryPath",
+    title: "Kyverno policy apply",
+    toolId: "kyverno",
+    toolLicense: "Apache-2.0"
+  },
+  {
+    defaultSafetyLevel: "PassiveReadOnly",
+    executionMode: "ControlPlane",
+    moduleId: "inspec.repo_profile",
+    requiredScopeTypes: ["Repository"],
+    targetKind: "repositoryPath",
+    title: "InSpec profile exec",
+    toolId: "inspec",
+    toolLicense: "Apache-2.0"
+  },
+  {
+    defaultSafetyLevel: "ActiveNonInvasive",
+    executionMode: "InternalRunner",
+    moduleId: "assetfinder.passive_enum",
+    requiredScopeTypes: ["Domain", "Subdomain"],
+    targetKind: "hostname",
+    title: "assetfinder passive enum",
+    toolId: "assetfinder",
+    toolLicense: "MIT"
+  },
+  {
+    defaultSafetyLevel: "ActiveNonInvasive",
+    executionMode: "InternalRunner",
+    moduleId: "gau.known_urls",
+    requiredScopeTypes: ["Domain", "Subdomain"],
+    targetKind: "hostname",
+    title: "gau known URLs",
+    toolId: "gau",
+    toolLicense: "MIT"
   }
 ] as const satisfies readonly CommunityValidationSuiteEntry[];
 
@@ -812,7 +897,8 @@ export const ENGINE_LAB_THEATER_TOOL_IDS = [
   "sqlmap",
   "metasploit",
   "netexec",
-  "promptfoo"
+  "promptfoo",
+  "infection-monkey"
 ] as const;
 
 export const ENGINE_LAB_THEATER_MODULE_IDS = [
@@ -820,7 +906,8 @@ export const ENGINE_LAB_THEATER_MODULE_IDS = [
   "caldera.advanced_adversarial",
   "exploit.metasploit_check",
   "identity.cred_spray",
-  "web.sqli_probe"
+  "web.sqli_probe",
+  "infection-monkey.discover"
 ] as const;
 
 /**
@@ -950,7 +1037,7 @@ export const COPYLEFT_OPT_IN_MODULE_IDS = COPYLEFT_OPT_IN_SUITE.map(
 );
 
 export const COPYLEFT_OPT_IN_VALUE_LINE =
-  "Copyleft engines (GPL/LGPL) are not in the Community start set and are not redistributed by Periscan. You accept each SPDX, then Engine Lab downloads the official pin. After accept + install + enable they may run on verified scope. sqlmap/SharpHound/Atomic/Caldera/Metasploit stay blocked.";
+  "Copyleft engines (GPL/LGPL) are not in the Community start set and are not redistributed by Periscan. You accept each SPDX, then Engine Lab downloads the official pin. After accept + install + enable they may run on verified scope. Additional BAS adapters require scenario qualification before they become executable.";
 
 export function isCopyleftOptInToolId(toolId: string): boolean {
   return (COPYLEFT_OPT_IN_TOOL_IDS as readonly string[]).includes(toolId);
@@ -1019,6 +1106,68 @@ export const COMMUNITY_FIRST_RUN_REVIEW_EMPTY_LABEL = "Review Community run";
 export const COMMUNITY_FIRST_RUN_CONNECT_AWS_LABEL = "Connect AWS";
 export const COMMUNITY_FIRST_RUN_CONNECT_AWS_REASON =
   "No Community engines start without AWS. Connect an AWS integration to start Prowler.";
+
+/**
+ * Optional first-hour AWS path. Shown next to Gitleaks when AWS is Connected —
+ * never instead of Gitleaks, never as a CTEM % ring, never “full cloud BAS”.
+ */
+export const COMMUNITY_FIRST_RUN_ASSESS_AWS_LABEL =
+  "Assess connected AWS (Prowler)";
+export const COMMUNITY_OPTIONAL_AWS_FIRST_HOUR_HREF =
+  `/missions?moduleIds=${COMMUNITY_PROWLER_AWS_POSTURE_MODULE_ID}`;
+export const COMMUNITY_OPTIONAL_AWS_FIRST_HOUR_REASON =
+  "Optional Prowler/ScoutSuite-class posture on Connected AWS. First hour stays Gitleaks-class.";
+
+export type OptionalAwsFirstHourCta = {
+  href: string;
+  label: string;
+  moduleIds: string[];
+  reason: string;
+};
+
+/** True when the operator explicitly pinned the optional Prowler AWS path. */
+export function isExplicitProwlerFirstHourStart(
+  moduleIds: readonly string[] | null | undefined
+): boolean {
+  if (!moduleIds?.length) {
+    return false;
+  }
+  return moduleIds.every((id) => id === COMMUNITY_PROWLER_AWS_POSTURE_MODULE_ID);
+}
+
+/**
+ * Offer Prowler next to Gitleaks only when AWS is Connected.
+ * On Validate, keep it beside Gitleaks — do not duplicate a CloudAccount-only
+ * Run that is already Prowler.
+ */
+export function shouldOfferOptionalAwsFirstHourCta(input: {
+  cloudAwsAvailable?: boolean | null;
+  startableModuleIds?: readonly string[] | null;
+}): boolean {
+  if (input.cloudAwsAvailable !== true) {
+    return false;
+  }
+  const startable = input.startableModuleIds;
+  if (startable == null) {
+    return true;
+  }
+  return startable.includes(COMMUNITY_GITLEAKS_REPO_SECRETS_MODULE_ID);
+}
+
+export function resolveOptionalAwsFirstHourCta(input: {
+  cloudAwsAvailable?: boolean | null;
+  startableModuleIds?: readonly string[] | null;
+}): OptionalAwsFirstHourCta | null {
+  if (!shouldOfferOptionalAwsFirstHourCta(input)) {
+    return null;
+  }
+  return {
+    href: COMMUNITY_OPTIONAL_AWS_FIRST_HOUR_HREF,
+    label: COMMUNITY_FIRST_RUN_ASSESS_AWS_LABEL,
+    moduleIds: [COMMUNITY_PROWLER_AWS_POSTURE_MODULE_ID],
+    reason: COMMUNITY_OPTIONAL_AWS_FIRST_HOUR_REASON
+  };
+}
 
 export const COMMUNITY_NUCLEI_DENIED_SKIP_REASON =
   "Nuclei External PoA was denied (kill switch, rate, or hostname guard). The rest of the Community pack still queued.";
@@ -1598,11 +1747,11 @@ function isGitForgeHost(host: string): boolean {
 function parseHostedGitValue(
   value: string
 ): { host: string; segments: string[] } | null {
-  const rest = (
-    (
-      value.includes("://") ? value.slice(value.indexOf("://") + 3) : value
-    ).split(/[?#]/u)[0] ?? ""
-  );
+  const rest =
+    (value.includes("://")
+      ? value.slice(value.indexOf("://") + 3)
+      : value
+    ).split(/[?#]/u)[0] ?? "";
   const slash = rest.indexOf("/");
   if (slash === -1) {
     return null;

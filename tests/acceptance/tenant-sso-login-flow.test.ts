@@ -840,9 +840,8 @@ describe("tenant OIDC SSO login acceptance flow", () => {
       // without elevating the restricted password session. issuerUrl must match
       // the ID token `iss` (API path normalizes via new URL().toString() → trailing /).
       const clientSecret = `sso-forcemfa-secret-${randomUUID()}`;
-      const { encryptSecret } = await import(
-        "../../apps/api/src/integration-credentials.js"
-      );
+      const { encryptSecret } =
+        await import("../../apps/api/src/integration-credentials.js");
       const normalizedIssuer = new URL(oidcServer.origin).toString();
       await prisma.tenantSsoConfig.upsert({
         create: {
@@ -925,6 +924,182 @@ describe("tenant OIDC SSO login acceptance flow", () => {
       });
       await testHelpers.cleanupTestDataByEmailPrefix(prisma, [
         "sso-forcemfa-owner"
+      ]);
+      await prisma.$disconnect();
+    }
+  });
+
+  it("optionally JIT-creates an Active Viewer on first verified SSO", async () => {
+    const prisma = createPrismaClient();
+    await testHelpers.probeDatabaseConnection(prisma);
+
+    const app = await buildApp({
+      devMode: true,
+      services: createRuntimeServices({
+        dataRegion: "us-east-1",
+        devMode: true,
+        prisma
+      })
+    });
+    let currentNonce = "";
+    let issuer = "";
+    const jitEmail = testHelpers.uniqueEmail("sso-jit-user");
+
+    oidcServer = await startOidcFixtureServer({
+      email: jitEmail,
+      issuer: () => issuer,
+      nonce: () => currentNonce
+    });
+    issuer = `${oidcServer.origin}/`;
+
+    try {
+      const owner = await testHelpers.performSignup(
+        app,
+        "sso-jit-owner",
+        "SSO JIT Tenant"
+      );
+      const ownerCookie = owner.cookie;
+      const tenantId = owner.response.json().tenant.tenantId as string;
+      const clientSecret = `sso-jit-secret-${randomUUID()}`;
+      const ssoPayload = {
+        authorizationEndpoint: `${oidcServer.origin}/authorize`,
+        clientId: "periscan-live-oidc-client",
+        clientSecret,
+        emailDomainAllowlist: ["periscan.test"],
+        enabled: true,
+        enforced: false,
+        issuerUrl: oidcServer.origin,
+        jwksUri: `${oidcServer.origin}/jwks`,
+        providerType: "OIDC" as const,
+        redirectUri: `${oidcServer.origin}/callback`,
+        scopes: ["openid", "email", "profile"],
+        tokenEndpoint: `${oidcServer.origin}/token`
+      };
+
+      const updateDisabled = await app.inject({
+        cookies: testHelpers.authHeaders(ownerCookie),
+        method: "PUT",
+        payload: { ...ssoPayload, jitEnabled: false },
+        url: "/api/v1/tenants/current/sso"
+      });
+      expect(updateDisabled.statusCode).toBe(200);
+      expect(updateDisabled.json()).toMatchObject({
+        jitDefaultRole: "Viewer",
+        jitEnabled: false
+      });
+
+      const ownerForbidden = await app.inject({
+        cookies: testHelpers.authHeaders(ownerCookie),
+        method: "PUT",
+        payload: {
+          ...ssoPayload,
+          jitDefaultRole: "Owner",
+          jitEmailDomains: ["periscan.test"],
+          jitEnabled: true
+        },
+        url: "/api/v1/tenants/current/sso"
+      });
+      expect(ownerForbidden.statusCode).toBe(400);
+
+      const startDenied = await app.inject({
+        method: "POST",
+        payload: { email: jitEmail, tenantId },
+        url: "/api/v1/auth/sso/start"
+      });
+      expect(startDenied.statusCode).toBe(200);
+      const deniedUrl = new URL(startDenied.json().authorizationUrl);
+      currentNonce = deniedUrl.searchParams.get("nonce") ?? "";
+      const deniedCallback = await app.inject({
+        method: "GET",
+        url:
+          "/api/v1/auth/sso/callback?" +
+          new URLSearchParams({
+            code: "authorization-code",
+            state: deniedUrl.searchParams.get("state") ?? ""
+          }).toString()
+      });
+      expect(deniedCallback.statusCode).toBe(403);
+      expect(deniedCallback.json().code).toBe("sso_user_not_provisioned");
+      expect(
+        await prisma.user.findUnique({ where: { email: jitEmail } })
+      ).toBeNull();
+
+      const updateEnabled = await app.inject({
+        cookies: testHelpers.authHeaders(ownerCookie),
+        method: "PUT",
+        payload: {
+          ...ssoPayload,
+          jitDefaultRole: "Viewer",
+          jitEmailDomains: ["periscan.test"],
+          jitEnabled: true
+        },
+        url: "/api/v1/tenants/current/sso"
+      });
+      expect(updateEnabled.statusCode).toBe(200);
+      expect(updateEnabled.json()).toMatchObject({
+        jitDefaultRole: "Viewer",
+        jitEmailDomains: ["periscan.test"],
+        jitEnabled: true
+      });
+
+      const startJit = await app.inject({
+        method: "POST",
+        payload: { email: jitEmail, tenantId },
+        url: "/api/v1/auth/sso/start"
+      });
+      expect(startJit.statusCode).toBe(200);
+      const jitUrl = new URL(startJit.json().authorizationUrl);
+      currentNonce = jitUrl.searchParams.get("nonce") ?? "";
+      const jitCallback = await app.inject({
+        method: "GET",
+        url:
+          "/api/v1/auth/sso/callback?" +
+          new URLSearchParams({
+            code: "authorization-code",
+            state: jitUrl.searchParams.get("state") ?? ""
+          }).toString()
+      });
+      expect(jitCallback.statusCode).toBe(200);
+      expect(jitCallback.cookies[0]?.name).toBe(SESSION_COOKIE_NAME);
+      expect(jitCallback.json()).toMatchObject({
+        membership: { role: "Viewer", tenantId },
+        user: { email: jitEmail, status: "Active" }
+      });
+
+      const created = await prisma.user.findUniqueOrThrow({
+        include: { memberships: { where: { tenantId } } },
+        where: { email: jitEmail }
+      });
+      expect(created.status).toBe("Active");
+      expect(created.passwordHash).toBeNull();
+      expect(created.memberships).toHaveLength(1);
+      expect(created.memberships[0]?.role).toBe("Viewer");
+
+      const owners = await prisma.membership.count({
+        where: { role: "Owner", tenantId }
+      });
+      expect(owners).toBe(1);
+
+      const jitAudit = await app.inject({
+        cookies: {
+          [SESSION_COOKIE_NAME]: jitCallback.cookies[0]!.value
+        },
+        method: "GET",
+        url: "/api/v1/audit-events?action=user.jit_provisioned&limit=10"
+      });
+      expect(jitAudit.statusCode).toBe(200);
+      expect(jitAudit.json().items.length).toBeGreaterThanOrEqual(1);
+      expect(jitAudit.json().items[0]).toMatchObject({
+        action: "user.jit_provisioned"
+      });
+    } finally {
+      await app.close();
+      await prisma.tenant.deleteMany({
+        where: { name: "SSO JIT Tenant" }
+      });
+      await testHelpers.cleanupTestDataByEmailPrefix(prisma, [
+        "sso-jit-owner",
+        "sso-jit-user"
       ]);
       await prisma.$disconnect();
     }

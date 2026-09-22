@@ -5,6 +5,7 @@ import {
   COMPLIANCE_CATALOG_VERSIONS,
   COMPLIANCE_PACK_DISCLAIMER,
   COMPLIANCE_PACK_DISCLAIMER_SHORT,
+  COMPLIANCE_PACK_FRAMEWORK_ALIASES,
   COMPLIANCE_PACK_TYPES,
   computeComplianceCoverage,
   computeSnapshotComplianceTrace,
@@ -193,6 +194,148 @@ describe("compliance control catalog", () => {
     );
     expect(risk?.status).toBe("Partial");
     expect(risk?.missing).toContain("continuous-validation");
+  });
+
+  it("keeps SOC2 display names as customer evidence support, not vendor attestation", () => {
+    const displayName = COMPLIANCE_CATALOG.SOC2Attestation.displayName;
+    expect(displayName).toBe(
+      "Customer SOC 2 support evidence (partial Trust Services Criteria — not vendor attestation)"
+    );
+    expect(displayName).not.toMatch(/Type II/i);
+    expect(displayName).not.toMatch(/certified/i);
+    expect(displayName).not.toMatch(/audit opinion/i);
+    expect(COMPLIANCE_PACK_DISCLAIMER).toMatch(/not a vendor SOC 2 Type II/i);
+    expect(COMPLIANCE_PACK_DISCLAIMER).toMatch(/not a certification/i);
+    expect(COMPLIANCE_PACK_DISCLAIMER).toMatch(/not an audit opinion/i);
+  });
+
+  it("includes representative SOC2 TSC CC5/CC6/CC8 mappings for SOC2Attestation and SOC2Support", () => {
+    const soc2 = COMPLIANCE_CATALOG.SOC2Attestation;
+    const allowedKinds = [
+      "measured-exposure-validation",
+      "fix-verification",
+      "control-detection-validation",
+      "evidence-integrity",
+      "attack-path-analysis",
+      "continuous-validation"
+    ] as const;
+
+    expect(soc2.controls.length).toBeGreaterThanOrEqual(8);
+    expect(soc2.controls.some((c) => c.controlId.includes("CC5.2"))).toBe(true);
+    expect(soc2.controls.some((c) => c.controlId.includes("CC5.3"))).toBe(true);
+    expect(soc2.controls.some((c) => c.controlId.includes("CC6.1"))).toBe(true);
+    expect(soc2.controls.some((c) => c.controlId.includes("CC6.6"))).toBe(true);
+    expect(soc2.controls.some((c) => c.controlId.includes("CC8.1"))).toBe(true);
+    expect(soc2.controls.some((c) => c.controlId.includes("CC7.1"))).toBe(true);
+    expect(soc2.controls.some((c) => c.controlId.includes("CC7.2"))).toBe(true);
+    expect(soc2.controls.some((c) => c.controlId.includes("CC7.4"))).toBe(true);
+
+    for (const control of soc2.controls) {
+      expect(control.evidencedBy.length).toBeGreaterThan(0);
+      for (const kind of control.evidencedBy) {
+        expect(allowedKinds).toContain(kind);
+      }
+    }
+
+    expect(
+      soc2.controls.find((c) => c.controlId.includes("CC5.2"))?.evidencedBy
+    ).toEqual(
+      expect.arrayContaining([
+        "measured-exposure-validation",
+        "control-detection-validation",
+        "continuous-validation"
+      ])
+    );
+    expect(
+      soc2.controls.find((c) => c.controlId.includes("CC5.3"))?.evidencedBy
+    ).toEqual(
+      expect.arrayContaining(["continuous-validation", "fix-verification"])
+    );
+    expect(
+      soc2.controls.find((c) => c.controlId.includes("CC6.1"))?.evidencedBy
+    ).toEqual(
+      expect.arrayContaining([
+        "measured-exposure-validation",
+        "attack-path-analysis"
+      ])
+    );
+    expect(
+      soc2.controls.find((c) => c.controlId.includes("CC6.6"))?.evidencedBy
+    ).toEqual(
+      expect.arrayContaining([
+        "measured-exposure-validation",
+        "control-detection-validation",
+        "attack-path-analysis"
+      ])
+    );
+    expect(
+      soc2.controls.find((c) => c.controlId.includes("CC8.1"))?.evidencedBy
+    ).toEqual(
+      expect.arrayContaining([
+        "measured-exposure-validation",
+        "fix-verification",
+        "evidence-integrity"
+      ])
+    );
+
+    expect(COMPLIANCE_CATALOG_VERSIONS.SOC2Attestation.catalogVersion).toBe(
+      "periscan-2026.09.soc2-tsc"
+    );
+    expect(COMPLIANCE_PACK_FRAMEWORK_ALIASES.SOC2Support).toBe(
+      "SOC2Attestation"
+    );
+
+    const viaSupport = computeComplianceCoverage("SOC2Support", []);
+    const viaAttestation = computeComplianceCoverage("SOC2Attestation", []);
+    expect(viaSupport).not.toBeNull();
+    expect(viaAttestation).not.toBeNull();
+    expect(viaSupport?.displayName).toBe(viaAttestation?.displayName);
+    expect(viaSupport?.displayName).toMatch(/not vendor attestation/i);
+    expect(viaSupport?.controls.map((c) => c.controlId)).toEqual(
+      viaAttestation?.controls.map((c) => c.controlId)
+    );
+    expect(viaSupport?.metCount).toBe(0);
+    expect(viaSupport?.unmetCount).toBe(viaSupport?.controls.length);
+    expect(viaSupport?.controls.every((c) => c.status === "Unmet")).toBe(true);
+  });
+
+  it("derives SOC2 Met/Partial only from measured evidence kinds", () => {
+    const empty = computeComplianceCoverage("SOC2Attestation", []);
+    expect(empty?.metCount).toBe(0);
+    expect(empty?.controls.every((c) => c.status === "Unmet")).toBe(true);
+
+    const partial = computeComplianceCoverage("SOC2Attestation", [
+      "measured-exposure-validation"
+    ]);
+    const cc61 = partial?.controls.find((c) => c.controlId.includes("CC6.1"));
+    expect(cc61?.status).toBe("Partial");
+    expect(cc61?.missing).toContain("attack-path-analysis");
+
+    const cc81 = partial?.controls.find((c) => c.controlId.includes("CC8.1"));
+    expect(cc81?.status).toBe("Partial");
+    expect(cc81?.missing).toEqual(
+      expect.arrayContaining(["fix-verification", "evidence-integrity"])
+    );
+
+    const cc53 = partial?.controls.find((c) => c.controlId.includes("CC5.3"));
+    expect(cc53?.status).toBe("Unmet");
+
+    const metLogicalAccess = computeComplianceCoverage("SOC2Support", [
+      "measured-exposure-validation",
+      "attack-path-analysis"
+    ]);
+    const cc61Met = metLogicalAccess?.controls.find((c) =>
+      c.controlId.includes("CC6.1")
+    );
+    expect(cc61Met?.status).toBe("Met");
+    expect(cc61Met?.missing).toEqual([]);
+    for (const control of metLogicalAccess?.controls ?? []) {
+      if (control.status === "Met") {
+        expect(control.missing).toEqual([]);
+      }
+    }
+    expect(metLogicalAccess?.metCount ?? 0).toBeGreaterThan(0);
+    expect(metLogicalAccess?.unmetCount ?? 0).toBeGreaterThan(0);
   });
 
   it("derives Met only when every required measured evidence kind is present", () => {

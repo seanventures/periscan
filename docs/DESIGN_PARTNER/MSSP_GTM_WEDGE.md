@@ -22,7 +22,7 @@ reference) remains **open** until a real partner runs two child tenants.
 > scope → validate → remediate → re-verify → evidence pack — with isolation
 > leave-behinds your customers can trust.
 
-**Do not lead with:** connector counts, autonomous theater, full BAS libraries,
+**Do not lead with:** connector counts, unsupported autonomous-execution claims, unqualified BAS libraries,
 or public Marketplace self-serve.
 
 ## Architecture already sold (honest)

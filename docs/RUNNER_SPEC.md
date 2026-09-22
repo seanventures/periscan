@@ -186,6 +186,8 @@ when ANY of these fail (server denies before dispatch; runner denies before exec
 | `runner.cert_expiry_check`     | **Implemented** (TLS cert validity/expiry; `PassiveReadOnly`).                                            |
 | `runner.tcp_banner_check`      | **Implemented** (TCP connect + bounded banner read for service fingerprint; `PassiveReadOnly`).           |
 | `runner.tls_info_check`        | **Implemented** (TLS handshake version/cipher/chain details; `PassiveReadOnly`).                          |
+| `runner.port_connect_check`    | **Implemented** (banner-free TCP connect; single IP in signed CIDR + single approved port; timeout 1–5s; `PassiveReadOnly`). |
+| `runner.ptr_lookup_check`      | **Implemented** (reverse-DNS PTR for a single IP in signed CIDR; no connect; timeout 1–5s; `PassiveReadOnly`). |
 
 All modules are passive/non-invasive, scope-enforced reads. No `runner.shell`,
 `runner.exec`, or arbitrary-command module exists or may be added.

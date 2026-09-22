@@ -1,5 +1,7 @@
 # Roadmap
 
+> **BAS/AEV program:** [BAS_AEV_PROGRAM.md](BAS_AEV_PROGRAM.md) — qualified open-source simulation, emulation and evidence-backed validation (PERISCAN-583).
+
 This roadmap fits the current codebase and keeps work incremental.
 
 ## Phase 0: Foundation
@@ -87,7 +89,7 @@ Status: Done for tested/API-first first-customer scope; live tenant use remains 
 
 ## Phase 3: BAS and Detection Rule Validation
 
-Status: Done for dry-run/API-first rule coverage; live execution remains policy-gated.
+Status: Partial. Dry-run/API-first rule coverage is implemented; the full BAS/AEV program is open under PERISCAN-583. Live adapters and campaign qualification remain delivery work.
 
 - Safe control-source registry and dry-run Atomic-style catalog exist.
 - Rule coverage, logged-but-not-alerted, stale evidence detection, and tuning recommendations exist through API-derived control coverage summaries.
@@ -157,7 +159,7 @@ Status: Done for API-first recommendation/evaluation/approval; execution remains
 Status: Ready for first-customer install validation; customer-specific environment testing is deployment-dependent. Full spec: [RUNNER_SPEC.md](RUNNER_SPEC.md). GAP-OSS-AGENT-01 resolved — outbound-only signed-task transport, no reverse SSH/shell/tunnel.
 
 - Runner registration, signed tasks, heartbeat, credential rotation, continuous polling, non-root Docker packaging, Docker Compose/Kubernetes/systemd install examples, GHCR image publish workflow, scoped evidence upload, local lab E2E, deployment artifact validation, and reachability checks exist.
-- Local module allowlist + safety-level allowlist + nonce-replay cache + server kill-switch handling in the Go runner, plus customer kill-switch, accept/reject, list-tasks, and evidence APIs (RBAC + tenant + audit) exist. The Go runner executes `runner.reachability_check`, `runner.dns_resolution_check`, `runner.tls_certificate_check`, and `runner.http_health_check`; the TypeScript runner-agent handles policy-gated AgentLocal `periscan.*` measured modules and safe `recon.*` discovery modules through the same signed-task control-plane API.
+- Local module allowlist + safety-level allowlist + nonce-replay cache + server kill-switch handling in the Go runner, plus customer kill-switch, accept/reject, list-tasks, and evidence APIs (RBAC + tenant + audit) exist. The Go runner executes `runner.reachability_check`, `runner.dns_resolution_check`, `runner.tls_certificate_check`, `runner.http_health_check`, `runner.port_connect_check`, and `runner.ptr_lookup_check`; the TypeScript runner-agent handles policy-gated AgentLocal `periscan.*` measured modules and safe `recon.*` discovery modules through the same signed-task control-plane API.
 - Next work: WebSocket streaming and any restricted task-tunnel remain design-only/future (NOT reverse SSH); validate a specific customer environment after issued runner mTLS credentials, firewall allowlist, and target internal scope are available.
 
 ## Phase 7: MSSP, Billing, and Executive Reporting

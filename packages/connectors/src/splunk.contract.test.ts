@@ -290,4 +290,156 @@ describe("splunk contract", () => {
     expect(detection!.techniqueIds).toEqual(["T1059"]);
     expect(detection!.relatedAssetHints).toContain("fixture-siem-host-01");
   });
+
+  const SPLUNK_CLIENT_ID = "splunk-entra-client-id";
+  const SPLUNK_CLIENT_SECRET = "splunk-entra-client-secret";
+  const SPLUNK_ACCESS_TOKEN = "splunk-oauth-access-token";
+  const SPLUNK_TOKEN_URL =
+    "https://login.microsoftonline.com/contoso/oauth2/v2.0/token";
+
+  const oauthConfig = {
+    baseUrl: SPLUNK_BASE_URL,
+    clientId: SPLUNK_CLIENT_ID,
+    clientSecret: SPLUNK_CLIENT_SECRET,
+    connectorKey: "splunk",
+    earliestTime: "-48h",
+    index: "main",
+    latestTime: "now",
+    lastRotatedAt: "2026-09-01T00:00:00.000Z",
+    scopes: ["https://splunk.example/.default"],
+    techniqueId: "T1059",
+    tokenUrl: SPLUNK_TOKEN_URL
+  } as const;
+
+  const oauthContext = {
+    authType: "oauth2ClientCredentials",
+    config: oauthConfig,
+    integrationId: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+    mockMode: false,
+    tenantId: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee"
+  } as const;
+
+  it("advertises OAuth2 client_credentials for Fortune 1000 IdP app registration", () => {
+    const connector = getConnectorByKey("splunk");
+    const kinds = connector!.manifest.authMethods.map((method) => method.kind);
+
+    expect(kinds).toEqual(
+      expect.arrayContaining(["mock", "apiToken", "oauth2ClientCredentials"])
+    );
+
+    const oauth = connector!.manifest.authMethods.find(
+      (method) => method.kind === "oauth2ClientCredentials"
+    );
+    expect(oauth?.fields.map((field) => field.key)).toEqual(
+      expect.arrayContaining(["tokenUrl", "clientId", "clientSecret"])
+    );
+    expect(
+      oauth?.fields.find((field) => field.key === "clientSecret")?.secret
+    ).toBe(true);
+  });
+
+  it("exchanges client_credentials then searches Splunk with the access token", async () => {
+    const connector = getConnectorByKey("splunk");
+    const fetchMock = vi.fn(
+      async (input: string | URL | Request, init?: RequestInit) => {
+        void init;
+        const url = String(input);
+        if (url === SPLUNK_TOKEN_URL) {
+          return new Response(
+            JSON.stringify({
+              access_token: SPLUNK_ACCESS_TOKEN,
+              expires_in: 3600,
+              token_type: "Bearer"
+            }),
+            {
+              headers: { "content-type": "application/json" },
+              status: 200
+            }
+          );
+        }
+
+        return exportWithResults();
+      }
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await connector!.observeControl!(oauthContext);
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const calls = fetchMock.mock.calls as FetchArgs[];
+    const [tokenUrl, tokenInit] = calls[0]!;
+    expect(String(tokenUrl)).toBe(SPLUNK_TOKEN_URL);
+    const tokenBody = tokenInit?.body as URLSearchParams;
+    expect(tokenBody.get("grant_type")).toBe("client_credentials");
+    expect(tokenBody.get("client_id")).toBe(SPLUNK_CLIENT_ID);
+    expect(tokenBody.get("client_secret")).toBe(SPLUNK_CLIENT_SECRET);
+
+    const [searchUrl, searchInit] = calls[1]!;
+    expect(String(searchUrl)).toBe(
+      `${SPLUNK_BASE_URL}/services/search/jobs/export`
+    );
+    expect((searchInit?.headers as Record<string, string>).authorization).toBe(
+      `Bearer ${SPLUNK_ACCESS_TOKEN}`
+    );
+    expect(result.outcome).toBe("Logged");
+    expect(JSON.stringify(result)).not.toContain(SPLUNK_CLIENT_SECRET);
+    expect(JSON.stringify(result)).not.toContain(SPLUNK_ACCESS_TOKEN);
+  });
+
+  it("maps vendor 401 on token exchange to Degraded with no invented detections", async () => {
+    const connector = getConnectorByKey("splunk");
+    const fetchMock = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ error: "invalid_client" }), {
+          status: 401
+        })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await connector!.sync(oauthContext);
+
+    expect(result.health.status).toBe("Degraded");
+    expect(result.health.authorizationVerified).toBe(false);
+    expect(result.assets).toEqual([]);
+    expect(
+      result.signals.some((signal) => signal.sourceType === "splunk.detection")
+    ).toBe(false);
+    expect(JSON.stringify(result)).not.toContain(SPLUNK_CLIENT_SECRET);
+    expect(JSON.stringify(result)).not.toContain(SPLUNK_ACCESS_TOKEN);
+  });
+
+  it("maps vendor 401 on Splunk search to Degraded instead of inventing findings", async () => {
+    const connector = getConnectorByKey("splunk");
+    const fetchMock = vi.fn(
+      async (input: string | URL | Request, init?: RequestInit) => {
+        void init;
+        if (String(input) === SPLUNK_TOKEN_URL) {
+          return new Response(
+            JSON.stringify({
+              access_token: SPLUNK_ACCESS_TOKEN,
+              expires_in: 3600,
+              token_type: "Bearer"
+            }),
+            {
+              headers: { "content-type": "application/json" },
+              status: 200
+            }
+          );
+        }
+
+        return new Response("unauthorized", { status: 401 });
+      }
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await connector!.sync(oauthContext);
+
+    expect(result.health.status).toBe("Degraded");
+    expect(result.health.authorizationVerified).toBe(false);
+    expect(
+      result.signals.some((signal) => signal.sourceType === "splunk.detection")
+    ).toBe(false);
+    expect(JSON.stringify(result)).not.toContain(SPLUNK_CLIENT_SECRET);
+    expect(JSON.stringify(result)).not.toContain(SPLUNK_ACCESS_TOKEN);
+  });
 });

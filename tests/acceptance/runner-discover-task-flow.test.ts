@@ -105,7 +105,7 @@ describe("Runner discovery-task acceptance workflow", () => {
       const scopeResponse = await app.inject({
         cookies: authCookies(cookie),
         method: "POST",
-        payload: { scopeType: "InternalNetwork", value: "corp-lan" },
+        payload: { scopeType: "InternalNetwork", value: "10.0.0.0/24" },
         url: "/api/v1/scopes"
       });
       expect(scopeResponse.statusCode).toBe(201);
@@ -118,6 +118,18 @@ describe("Runner discovery-task acceptance workflow", () => {
         url: `/api/v1/scopes/${scopeId}/verify`
       });
       expect(verify.statusCode).toBe(200);
+
+      const siteResponse = await app.inject({
+        cookies: authCookies(cookie),
+        method: "POST",
+        payload: {
+          cidrs: ["10.0.0.0/24"],
+          name: "Discover lab site",
+          runnerIds: [runnerId]
+        },
+        url: "/api/v1/enterprise-sites"
+      });
+      expect(siteResponse.statusCode).toBe(201);
 
       const createDiscover = (payload: Record<string, unknown>) =>
         app.inject({

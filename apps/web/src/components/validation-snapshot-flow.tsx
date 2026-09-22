@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import {
+  COMMUNITY_FIRST_RUN_ASSESS_AWS_LABEL,
   COMMUNITY_FIRST_RUN_CONNECT_AWS_LABEL,
+  COMMUNITY_OPTIONAL_AWS_FIRST_HOUR_REASON,
+  COMMUNITY_PROWLER_AWS_POSTURE_MODULE_ID,
   communityPolicyPreviewRequest,
   communityScopeAuthorizationHint,
   type CommunityValidationStartResult,
@@ -14,7 +16,14 @@ import {
   type ValidationSnapshot
 } from "@periscan/shared";
 
-import { resolveCommunityStartPrimaryAction } from "../lib/first-run-primary-action";
+import {
+  AEV_BAS_BOUNDARY_SENTENCE,
+  COMMUNITY_FIRST_HOUR_JOB_SENTENCE
+} from "../lib/aev-bas-copy";
+import {
+  resolveCommunityStartPrimaryAction,
+  resolveOptionalAwsFirstHourCta
+} from "../lib/first-run-primary-action";
 
 import { browserPeriscanApiClient as api } from "../lib/periscan-api-client";
 import { useApiResource } from "../hooks/use-api-resource";
@@ -38,10 +47,7 @@ import {
   cn,
   type StateTone
 } from "../ui";
-import {
-  CommunityRunProgress,
-  communityMissionHref
-} from "./community-run-progress";
+import { CommunityRunProgress } from "./community-run-progress";
 import { ScopeSafetyEditor } from "./scope-safety-editor";
 import {
   HOSTED_GITHUB_SCOPE_HINT,
@@ -71,7 +77,6 @@ import {
 } from "./validation-community-status";
 
 export function ValidationSnapshotFlow() {
-  const router = useRouter();
   const scopes = useApiResource(() => api.listScopes(), []);
 
   const [selectedScopeId, setSelectedScopeId] = useState<string | null>(null);
@@ -168,6 +173,10 @@ export function ValidationSnapshotFlow() {
   );
   const showConnectAwsPrimary =
     communityStartDoor?.label === COMMUNITY_FIRST_RUN_CONNECT_AWS_LABEL;
+  const optionalAwsCta = resolveOptionalAwsFirstHourCta({
+    cloudAwsAvailable: suite.data?.cloudAwsAvailable,
+    startableModuleIds: suite.data?.startableModuleIds
+  });
   const hideDeadRunButton =
     !showConnectAwsPrimary &&
     startNowModuleIds.length === 0 &&
@@ -258,6 +267,28 @@ export function ValidationSnapshotFlow() {
     }
   }
 
+  async function runOptionalProwler() {
+    if (!gateOk || !selectedScope || !policyAllowsRun || !policy) return;
+    setRunning(true);
+    setRunError(null);
+    try {
+      const started = await api.startCommunityValidation({
+        moduleIds: [COMMUNITY_PROWLER_AWS_POSTURE_MODULE_ID],
+        policyDecisionId: policy.policyDecisionId,
+        scopeId: selectedScope.scopeId
+      });
+      setCommunityRun(started);
+    } catch (caught) {
+      setRunError(
+        caught instanceof Error
+          ? caught.message
+          : "AWS Prowler assessment did not start."
+      );
+    } finally {
+      setRunning(false);
+    }
+  }
+
   async function runCommunitySuite(pack: CommunityStartPack = "first-hour") {
     if (!gateOk || !selectedScope || !policyAllowsRun || !policy) return;
     setRunning(true);
@@ -279,7 +310,6 @@ export function ValidationSnapshotFlow() {
         scopeId: selectedScope.scopeId
       });
       setCommunityRun(started);
-      router.push(communityMissionHref(started.mission.missionId));
     } catch (caught) {
       setRunError(
         caught instanceof Error
@@ -333,8 +363,11 @@ export function ValidationSnapshotFlow() {
         }
         description={
           <>
-            Authorize a verified scope, preview policy, then Run Community
-            validation (Gitleaks, Trivy, Grype, first-party DNS/TLS/HTTP, ZAP).
+            <span data-testid="validate-first-hour-lead">
+              {COMMUNITY_FIRST_HOUR_JOB_SENTENCE} Authorize a verified local path, preview
+              policy, then run Gitleaks-class. Full Community pack is a second
+              control. Schedule the next run.
+            </span>{" "}
             Recurring AI, control, and fix validation is created from{" "}
             <Link
               href="/schedules"
@@ -353,6 +386,17 @@ export function ValidationSnapshotFlow() {
           </>
         }
       />
+      <details
+        data-testid="validate-aev-bas-boundary"
+        className="rounded-card border border-line bg-elevated/50"
+      >
+        <summary className="cursor-pointer list-none px-4 py-2.5 text-sm font-semibold text-ink marker:content-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand [&::-webkit-details-marker]:hidden">
+          BAS / AEV / CTEM
+        </summary>
+        <p className="border-t border-line px-4 py-3 text-[13px] leading-relaxed text-muted">
+          {AEV_BAS_BOUNDARY_SENTENCE}
+        </p>
+      </details>
 
       <Panel>
         <PanelHeader title={gateOk ? "Authorized scope" : "Authorize scope"} />
@@ -804,29 +848,53 @@ export function ValidationSnapshotFlow() {
                     : "Run Community validation"}
                 </button>
               ) : null}
-              {showFullPackControl ? (
+              {optionalAwsCta && !showConnectAwsPrimary ? (
                 <>
                   <button
                     type="button"
-                    onClick={() => void runCommunitySuite("full")}
+                    onClick={() => void runOptionalProwler()}
                     disabled={!gateOk || !policyAllowsRun || running}
-                    className={buttonClassName({
-                      size: "sm",
-                      variant: "secondary"
-                    })}
-                    data-testid="run-full-community-pack"
+                    className={buttonClassName({ variant: "primary" })}
+                    data-testid="assess-connected-aws-prowler"
                   >
-                    Run full Community pack
+                    {COMMUNITY_FIRST_RUN_ASSESS_AWS_LABEL}
                   </button>
-                  {fullPackStartNowCopy ? (
-                    <span
-                      data-testid="full-community-pack-start-now"
-                      className="text-[12px] text-muted"
-                    >
-                      {fullPackStartNowCopy}
-                    </span>
-                  ) : null}
+                  <span className="text-[12px] text-muted">
+                    {COMMUNITY_OPTIONAL_AWS_FIRST_HOUR_REASON}
+                  </span>
                 </>
+              ) : null}
+              {showFullPackControl ? (
+                <details
+                  className="w-full rounded-control border border-line bg-surface"
+                  data-testid="full-community-pack-details"
+                >
+                  <summary className="cursor-pointer list-none px-3 py-2 text-[12px] font-medium text-muted marker:content-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand [&::-webkit-details-marker]:hidden">
+                    More engines (catalog)
+                  </summary>
+                  <div className="flex flex-wrap items-center gap-2 border-t border-line px-3 py-2">
+                    <button
+                      type="button"
+                      onClick={() => void runCommunitySuite("full")}
+                      disabled={!gateOk || !policyAllowsRun || running}
+                      className={buttonClassName({
+                        size: "sm",
+                        variant: "secondary"
+                      })}
+                      data-testid="run-full-community-pack"
+                    >
+                      Run full Community pack
+                    </button>
+                    {fullPackStartNowCopy ? (
+                      <span
+                        data-testid="full-community-pack-start-now"
+                        className="text-[12px] text-muted"
+                      >
+                        {fullPackStartNowCopy}
+                      </span>
+                    ) : null}
+                  </div>
+                </details>
               ) : null}
             </div>
             <details

@@ -516,8 +516,9 @@ export function createDataFabricServices(
 }
 
 function integrationFreshnessBudgetHours(
-  frequency: "Daily" | "Weekly" | "Monthly" | null
+  frequency: "Daily" | "Weekly" | "Monthly" | "Hourly" | "Continuous" | null
 ) {
+  if (frequency === "Hourly" || frequency === "Continuous") return 2;
   if (frequency === "Weekly") return 180;
   if (frequency === "Monthly") return 744;
   return 30;

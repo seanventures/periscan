@@ -87,7 +87,9 @@ const DASHBOARD_GUIDE: ProductHelpGuide = {
   id: "dashboard",
   title: "Work the proof loop",
   summary:
-    "Use the ranked queue to find the next decision, then follow the linked record to its evidence or action. When unmeasured hops and verified scope exist, the flagship primary CTA is Measure path hops — not a SIEM dump.",
+    "Keep proving: authorized local path → Gitleaks-class → Fixed after retest. Use the ranked queue for the next decision. Schedule the next run. When unmeasured hops and verified scope exist, Measure path hops — not a SIEM dump.",
+  caution:
+    "AEV/CTEM proof layer on authorized scope: we prove authorized exposure; BAS/AEV scenario execution requires qualified adapters. Catalog, BAS, and CTEM live below the default start.",
   steps: [
     {
       title: "Start with Needs you",
@@ -185,18 +187,18 @@ const CONTINUOUS_GUIDE: ProductHelpGuide = {
     {
       term: "Continuous schedule",
       definition:
-        "A recurring governed validation on verified scope. Each fire re-evaluates policy; denied runs are never silently replayed. Path/risk snapshot diffs are change detection only — not a living map."
+        "Continuous validation: a policy-approved Hourly/Daily/Weekly/Monthly cadence or drift-triggered re-check on verified scope. Each fire re-evaluates policy, quota, and maintenance windows; denied runs queue nothing. Not always-on BAS."
     }
   ],
   caution:
-    "Continuous EASM is not an autonomous living external map or continuous terrain swarm. Continuous validation does not replace SIEM streaming or invent FullyMeasured paths. Hop launch is not measurement."
+    "Continuous validation is a governed cadence, not always-on BAS, NodeZero, or autonomous pentest. Continuous EASM is not an autonomous living external map. Denied fires queue nothing. Hop launch is not measurement."
 };
 
 const INTEGRATIONS_GUIDE: ProductHelpGuide = {
   id: "integrations",
   title: "Connect a signal source",
   summary:
-    "Configure only a source you are authorized to read. Periscan shows supported authentication and data access before saving it. Planned catalog entries never accept live credentials.",
+    "AEV/CTEM proof layer on authorized scope: we prove authorized exposure; BAS/AEV scenario execution requires qualified adapters. Configure only a source you are authorized to read. Periscan shows supported authentication and data access before saving it. Planned catalog entries never accept live credentials.",
   steps: [
     {
       title: "Find the source",
@@ -321,7 +323,7 @@ const MISSIONS_GUIDE: ProductHelpGuide = {
   id: "missions",
   title: "Run an authorized validation",
   summary:
-    "A measured snapshot requires a verified scope and a current policy decision. Changing the scope or safety ceiling invalidates the preview.",
+    "Keep proving: authorized local path → Gitleaks-class → Fixed after retest. A measured snapshot requires a verified scope and a current policy decision. Changing the scope or safety ceiling invalidates the preview. Schedule the next run.",
   steps: [
     {
       title: "Add and verify scope",
@@ -369,19 +371,19 @@ const MISSIONS_GUIDE: ProductHelpGuide = {
     }
   ],
   caution:
-    "Verification proves control of the target; it does not replace your organization’s authorization process. Validate only customer-approved scope. Public customer references remain 0 — this first-run is the Community proof loop, not a case study."
+    "AEV/CTEM proof layer on authorized scope: we prove authorized exposure; BAS/AEV scenario execution requires qualified adapters. Verification proves control of the target; it does not replace your organization’s authorization process. Validate only customer-approved scope. Public customer references remain 0 — this first-run is the Community proof loop, not a case study."
 };
 
 const EXTERNAL_VALIDATION_GUIDE: ProductHelpGuide = {
   id: "external-validation",
-  title: "Validate an internet-facing target",
+  title: "Run an external assessment",
   summary:
-    "Use one verified hostname, one server-owned safe GET-only profile, and one target-bound policy decision to create measured external observations. Not a full ASV, crawl, auth-fuzz, or external pentest product.",
+    "Start from a verified Domain. Use one server-owned safe GET-only profile and one target-bound policy decision. Results come from the API. Not a full ASV, crawl, auth-fuzz, or pentest product.",
   steps: [
     {
       title: "Choose verified scope and target",
       instruction:
-        "In Verified scope, select a verified domain or subdomain. Confirm Target hostname is the exact subdomain or a hostname inside the selected verified domain. IP-only and private/reserved targets are blocked."
+        "In Verified scope, select a verified Domain. Confirm Target hostname is that domain or a hostname inside it. IP-only and private/reserved targets are blocked."
     },
     {
       title: "Choose a safe observation profile",
@@ -396,7 +398,7 @@ const EXTERNAL_VALIDATION_GUIDE: ProductHelpGuide = {
     {
       title: "Launch and watch the ledger",
       instruction:
-        "Choose Launch safe validation. Follow Authorize, Policy, Execute, and Prove, then use Live validation execution for persisted queue, run, evidence, denial, failure, or timeout state."
+        "Choose Start external assessment. Follow Authorize, Policy, Execute, and Prove, then read persisted queue, run, evidence, denial, failure, or timeout state from the API."
     },
     {
       title: "Route evidence and re-test",
@@ -434,29 +436,29 @@ const FINDINGS_GUIDE: ProductHelpGuide = {
   id: "findings",
   title: "Triage a finding",
   summary:
-    "Use validation state, path proof, evidence, and business context together. Severity alone is not the work order.",
+    "Review the VALIDATED path · rule row, then Create remediations or Review remediations. The rail does not offer a second primary on this page. Measure path hops, FP chips, views, and Run a Validation Snapshot stay under More.",
   steps: [
     {
-      title: "Open the right queue",
+      title: "Review the VALIDATED row",
       instruction:
-        "Start on Active (default; hides false positives and suppressed noise). Choose Priority · unowned for assignment work or New · untriaged for analyst decisions, then open a finding row."
+        "The board's default view is the CLI-shaped path · rule finding plus one next verb. The rail does not offer a second primary on this page. Open that VALIDATED row. Do not start with saved views, hop measurement, or a new snapshot."
     },
     {
-      title: "Check the proof",
+      title: "Create remediations or review",
       instruction:
-        "Read occurrence count and root-cause summary when shown, then Why this priority, Path proof, Scoring factors, and linked Evidence before changing the finding."
+        "Create remediations from the Community mission when no Open task exists, or Review remediations when one is already linked. Fixed still requires a verification event. There is no Mark Fixed.",
+      href: "/remediation",
+      actionLabel: "Review remediations"
+    },
+    {
+      title: "Use More for triage tools",
+      instruction:
+        "Measure path hops, detection-eng false-positive chips, saved views, filters, and Run a Validation Snapshot live under More — not in the default chrome. At 390px those filter chips wrap or scroll and do not cover the VALIDATED path · rule row. Copy view link (and similar copy-link controls) is at least 24×24 CSS pixels."
     },
     {
       title: "Record the analyst decision",
       instruction:
         "Choose a Disposition, add an owner or note when needed, then choose Save. Accepted risk also requires an owner, expiry, and governed approval."
-    },
-    {
-      title: "Route the smallest fix",
-      instruction:
-        "Use Fix workflow to create or open the owned remediation instead of treating the disposition as remediation.",
-      href: "/remediation",
-      actionLabel: "Open remediation"
     }
   ],
   terms: [
@@ -537,22 +539,22 @@ const REMEDIATION_GUIDE: ProductHelpGuide = {
   id: "remediation",
   title: "Fix, then verify",
   summary:
-    "A task can be implemented without being proven. Periscan reserves Fixed for a successful fresh re-test.",
+    "Open a task, then Re-verify. Periscan reserves Fixed for a successful fresh re-test — never a ticket close or GitHub PR.",
   steps: [
     {
-      title: "Open the task and choose the fix path",
+      title: "Open the remediation",
       instruction:
-        "Open an owned remediation and review its source path. For IaC, pick a real GitHub PAT integration, set the authorized repository and one proposed file, then Preview exact diff. Approve only after reviewing the red/green diff and preview hash. Periscan opens a single-file PR (never merges); multi-file or multi-repo needs separate PRs."
+        "Open the row. First-hour chrome is Re-verify plus the verification timeline. Secondary actions stay under More."
     },
     {
-      title: "Track or roll back the pull request",
+      title: "Re-verify the fix",
       instruction:
-        "After Open pull request, use Refresh CI + merge state. Before merge, Close PR + delete branch performs the declared rollback. After merge, the task moves to Verification Pending. For work completed outside Periscan, choose Mark ready for verification or Run auto-revalidate (plan + re-measure only — never a WAF/firewall push). Neither path marks the risk fixed."
+        "Choose Re-verify after the leak is gone. A Fixed status only lands when a real re-test confirms the exposure is gone; a failed re-test keeps or reopens it."
     },
     {
-      title: "Run fresh verification",
+      title: "Optional actions stay under More",
       instruction:
-        "Choose Run targeted verification or Auto-revalidate. Compare the before/after evidence and timeline; a failed re-test reopens or preserves the exposure. Auto-revalidate always reports actionApplied=false until a separate approved control-push capability ships."
+        "Under More you can create a ticket, run auto-revalidate, preview a governed action, or connect a GitHub PAT for a single-file PR. None of those mark the risk Fixed."
     },
     {
       title: "Deliver verified proof",
@@ -646,7 +648,7 @@ const REPORTS_GUIDE: ProductHelpGuide = {
     {
       term: "Claim deny-list",
       definition:
-        "Shared prove/integrate/refuse language (never full BAS peer, never live ransomware, never DORA certification). Source: packages/shared claim-deny-list."
+        "Shared capability language: describe qualified BAS/AEV coverage; do not claim live ransomware or certification. Source: packages/shared claim-deny-list."
     }
   ],
   caution:
@@ -853,7 +855,7 @@ const MCP_GUIDE: ProductHelpGuide = {
   id: "mcp",
   title: "Query posture and start Community validation over MCP",
   summary:
-    "Wave H catalog remains read-only posture query. Community tools add list_community_suite, start_community_validation (verified scopeId and policyDecisionId), and list_findings_for_mission. Denied tasks never queue. Not live Atomic, Caldera, SharpHound, sqlmap, or Metasploit.",
+    "Wave H catalog remains read-only posture query. Community tools add list_community_suite, start_community_validation (verified scopeId and policyDecisionId), and list_findings_for_mission. Denied tasks never queue. Additional BAS scenarios require qualified adapters.",
   steps: [
     {
       title: "Confirm Wave H catalog vs Community tools",
@@ -898,7 +900,7 @@ const MCP_GUIDE: ProductHelpGuide = {
     }
   ],
   caution:
-    "Do not demo MCP as multi-agent BAS swarm or live Atomic, Caldera, SharpHound, sqlmap, or Metasploit. Denied tasks never queue. Denied mutate keys must fail closed. Prefer Agent Workflows and Model Gateway for policy-gated analyst sessions."
+    "Demo the measured capabilities of the current MCP tool set; BAS execution adapters are tracked separately. Denied tasks never queue. Denied mutate keys must fail closed. Prefer Agent Workflows and Model Gateway for policy-gated analyst sessions."
 };
 
 const COMPLIANCE_GUIDE: ProductHelpGuide = {
@@ -1138,7 +1140,9 @@ const CONTROLS_GUIDE: ProductHelpGuide = {
     {
       title: "Treat Atomic as import-only",
       instruction:
-        "Atomic Red Team modules supply an ATT&CK-mapped control scenario library in dry-run or fixture mode only. They do not live-inject attack techniques and are not competitive inject BAS."
+        "Atomic Red Team modules supply an ATT&CK-mapped control scenario library in dry-run or fixture mode only. They do not live-inject attack techniques and are not competitive inject BAS. One-click Atomic testing runs a single startable pin against a bound runner or asset; unqualified live Atomic still queues zero jobs.",
+      href: "/bas/atomic-testing",
+      actionLabel: "Open atomic testing"
     },
     {
       title: "Run Detection marker proof (DRV marker class)",
@@ -1146,6 +1150,13 @@ const CONTROLS_GUIDE: ProductHelpGuide = {
         "Use the Controls CTA Run detection marker proof for one allowlisted periscan-* emit→SIEM/EDR observe chain. Responses stamp drvClaimClass=benign_marker_only and fullAttackLibrary=false — marker class only, not full ATT&CK BAS. Lab may use mock SIEM when live telemetry is empty.",
       href: "/controls",
       actionLabel: "Open Controls · marker proof"
+    },
+    {
+      title: "Operate inject → observe → verdict → retest",
+      instruction:
+        "The BAS operator workspace correlates unique run/step markers with asset, technique, rule, and event time. Missed requires a healthy observer and a completed window; outages stay Inconclusive. Live Atomic is not executable.",
+      href: "/bas",
+      actionLabel: "Open BAS operator workspace"
     },
     {
       title: "Measure with canaries when needed",
@@ -1636,6 +1647,11 @@ const SCOPES_GUIDE: ProductHelpGuide = {
         "Open Validate to run a guided Validation Snapshot. Inventory lineage stays under Assets & ownership.",
       href: "/missions",
       actionLabel: "Open Validate"
+    },
+    {
+      title: "Triage discovery candidates",
+      instruction:
+        "Unattributed hosts stay pending promote-to-scope. Promote creates a Pending target. Invasive modules cannot Validate until that target is verified."
     }
   ],
   terms: [
@@ -1670,7 +1686,7 @@ const SCHEDULES_GUIDE: ProductHelpGuide = {
     {
       title: "Define cadence and ContinuousValidation intent",
       instruction:
-        "Choose interval and mission type. ContinuousValidation queues allowlisted safe External PoA (Nuclei) and recon modules plus prior-snapshot path/risk change detection — not a living external map. Preview shows the next fire time before save."
+        "Choose interval (Hourly, Daily, Weekly, Monthly, or Continuous drift) and mission type. ContinuousValidation queues allowlisted safe External PoA (Nuclei) and recon modules plus prior-snapshot path/risk change detection — not a living external map. Preview shows the next fire time before save."
     },
     {
       title: "Confirm policy still allows",
@@ -1696,7 +1712,7 @@ const SCHEDULES_GUIDE: ProductHelpGuide = {
     }
   ],
   caution:
-    "Schedules never bypass policy. ContinuousValidation is not a living map. A denied decision means no job is queued."
+    "Schedules never bypass policy. Continuous validation is not always-on BAS. ContinuousValidation is not a living map. A denied decision means no job is queued."
 };
 
 const THREAT_CENTER_GUIDE: ProductHelpGuide = {
@@ -1904,16 +1920,16 @@ const GENERIC_GUIDE: ProductHelpGuide = {
 };
 
 /**
- * P19-r2 / P19-r3 residual: single honest sales walk for BAS refuse + Wiz
+ * P19-r2 / P19-r3 residual: single honest sales walk for BAS coverage + Wiz
  * co-exist. Deep-links real product surfaces only — no fake demo data, no
  * inject-library claims, no CNAPP replacement. Continuous hub labels this
  * "Sales walk (honest)".
  */
 const COMPETITIVE_WALK_GUIDE: ProductHelpGuide = {
   id: "competitive-walk",
-  title: "Competitive walk: BAS refuse + Wiz co-exist",
+  title: "Competitive walk: BAS coverage + Wiz co-exist",
   summary:
-    "Single honest sales walk: refuse full multi-vector BAS bake-offs, co-exist with Wiz as CNAPP context, and prove paths on verified scope. Real surfaces only — no fake demo data, no inject claims.",
+    "Single honest sales walk: review qualified BAS/AEV scenario coverage, co-exist with Wiz as CNAPP context, and prove paths on verified scope. Real surfaces only — no fake demo data, no inject claims.",
   steps: [
     {
       title: "Authorize verified scope",
@@ -1925,14 +1941,14 @@ const COMPETITIVE_WALK_GUIDE: ProductHelpGuide = {
     {
       title: "Read engines honesty",
       instruction:
-        "Open Engine Lab. Show Ready vs Needs install vs Not available. Restricted engines need license acceptance. Atomic and live-inject peers stay dry-run or unavailable — never demo as competitive inject BAS.",
+        "Open Engine Lab. Show Ready vs Needs install vs Not available. Restricted engines need license acceptance. Show the current Atomic import support and distinguish the separate local lab qualification from production runtime readiness.",
       href: "/engines",
       actionLabel: "Open Engines"
     },
     {
-      title: "Refuse full BAS on Controls",
+      title: "Review BAS coverage on Controls",
       instruction:
-        "Open Controls. Atomic is dry-run/import only. Measured Detected/Missed needs canary or live observer correlation. Walk away from malware/phishing/DNS-exfil library bake-offs — partner or refuse full multi-vector BAS RFPs.",
+        "Open Controls. Atomic is dry-run/import only. Measured Detected/Missed needs canary or live observer correlation. Map BAS requirements to qualified scenarios and evidence, and disclose gaps.",
       href: "/controls",
       actionLabel: "Open Controls"
     },
@@ -1953,16 +1969,16 @@ const COMPETITIVE_WALK_GUIDE: ProductHelpGuide = {
     {
       title: "Scorecard honesty note",
       instruction:
-        "Return to Continuous. Read Specialist coverage — Scaffold/gated rows (ransomware, APT, OT, dark web) are not Available and not sold as full BAS peers. Never export Leading claims for matrix Missing or Scaffold rows.",
+        "Return to Continuous. Read Specialist coverage — Scaffold/gated rows (ransomware, APT, OT, dark web) require measured qualification before Available claims. Never export Leading claims for matrix Missing or Scaffold rows.",
       href: "/continuous",
       actionLabel: "Open Continuous hub"
     }
   ],
   terms: [
     {
-      term: "BAS refuse",
+      term: "BAS coverage",
       definition:
-        "Refuse full multi-vector scenario-library bake-offs. Governed control observation and safe probes only — not malware, phishing, or DNS-exfil inject parity."
+        "Evaluate BAS requirements against actual executable scenarios, supported platforms, policy gates and outcome evidence. Full BAS/AEV is the development objective."
     },
     {
       term: "Wiz co-exist",
@@ -2037,7 +2053,11 @@ export function resolveProductHelp(pathname: string): ProductHelpGuide {
   if (pathname.startsWith("/snapshots/") && !pathname.endsWith("/report")) {
     return SNAPSHOT_GUIDE;
   }
-  if (pathname === "/remediation" || pathname.startsWith("/remediation/")) {
+  if (
+    pathname === "/remediation" ||
+    pathname === "/remediations" ||
+    pathname.startsWith("/remediation/")
+  ) {
     return REMEDIATION_GUIDE;
   }
   if (pathname === "/reports" || pathname.endsWith("/report")) {
@@ -2052,7 +2072,15 @@ export function resolveProductHelp(pathname: string): ProductHelpGuide {
   if (pathname === "/mcp") return MCP_GUIDE;
   if (pathname === "/compliance") return COMPLIANCE_GUIDE;
   if (pathname === "/model-gateway") return MODEL_GATEWAY_GUIDE;
-  if (pathname === "/controls") return CONTROLS_GUIDE;
+  if (
+    pathname === "/controls" ||
+    pathname === "/control-validation" ||
+    pathname === "/attack-navigator" ||
+    pathname === "/bas" ||
+    pathname.startsWith("/bas/")
+  ) {
+    return CONTROLS_GUIDE;
+  }
   if (pathname === "/engines" || pathname === "/registries") {
     return REGISTRY_GUIDE;
   }

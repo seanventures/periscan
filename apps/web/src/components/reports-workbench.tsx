@@ -5,9 +5,11 @@ import { useEffect, useState } from "react";
 
 import {
   COMPLIANCE_CATALOG,
+  COMPLIANCE_PACK_DISCLAIMER,
   COMPLIANCE_PACK_TYPES
 } from "@periscan/reports/compliance-catalog";
 import type {
+  ComplianceControlStatus,
   EvidencePack,
   EvidencePackType,
   ReportShareGrant,
@@ -40,6 +42,12 @@ const REDACTION_TONE: Record<string, StateTone> = {
   Restricted: "missed"
 };
 
+const SOC2_STATUS_TONE: Record<ComplianceControlStatus, StateTone> = {
+  Met: "fixed",
+  Partial: "approval",
+  Unmet: "missed"
+};
+
 const AUDIENCES = ["Executive", "Technical", "Auditor"] as const;
 const TOP_ITEM_OPTIONS = [3, 5] as const;
 /** ICP-P1-5: Board brief binds real ExecutiveRiskSummary pack type, not Snapshot. */
@@ -61,6 +69,12 @@ const REPORT_PRESETS = [
     label: "Assurance",
     maxTopItems: 5 as const,
     packType: "ValidationSnapshotReport" as EvidencePackType
+  },
+  {
+    audience: "Auditor" as const,
+    label: "SOC 2 support",
+    maxTopItems: 5 as const,
+    packType: "SOC2Support" as EvidencePackType
   }
 ] as const;
 
@@ -68,13 +82,22 @@ const REPORT_TYPE_OPTIONS: Array<{
   label: string;
   value: EvidencePackType;
 }> = [
-  { label: "Board pack (Executive Risk Summary)", value: "ExecutiveRiskSummary" },
+  {
+    label: "Board pack (Executive Risk Summary)",
+    value: "ExecutiveRiskSummary"
+  },
   { label: "Validation Snapshot", value: "ValidationSnapshotReport" },
+  { label: "CTEM Program Summary", value: "CTEMProgramSummary" },
+  { label: "Customer SOC 2 support pack", value: "SOC2Support" },
   ...COMPLIANCE_PACK_TYPES.map((value) => ({
     label: COMPLIANCE_CATALOG[value]?.displayName ?? value,
     value
   }))
 ];
+
+function isSoc2SupportPack(packType: EvidencePackType): boolean {
+  return packType === "SOC2Support";
+}
 
 /** Deep-link from Executive "Build board pack" → board pack default path. */
 function packTypeFromSearch(raw: string | null): EvidencePackType | null {
@@ -94,6 +117,20 @@ function packTypeFromSearch(raw: string | null): EvidencePackType | null {
     value === "validationsnapshotreport"
   ) {
     return "ValidationSnapshotReport";
+  }
+  if (
+    value === "ctem" ||
+    value === "ctemprogramsummary" ||
+    value === "ctem_program_summary"
+  ) {
+    return "CTEMProgramSummary";
+  }
+  if (
+    value === "soc2" ||
+    value === "soc2support" ||
+    value === "customer-soc2"
+  ) {
+    return "SOC2Support";
   }
   const known = REPORT_TYPE_OPTIONS.find(
     (option) => option.value.toLowerCase() === value
@@ -132,6 +169,10 @@ export function ReportsWorkbench() {
   const snapshots = useApiResource(() => api.listSnapshots(), []);
   const packs = useApiResource(() => api.listReports({ limit: 50 }), []);
   const integrity = useApiResource(() => api.verifyEvidenceChain(), []);
+  const soc2Coverage = useApiResource(
+    () => api.getComplianceCoverage("SOC2Attestation"),
+    []
+  );
 
   const [audience, setAudience] =
     useState<(typeof AUDIENCES)[number]>("Executive");
@@ -186,6 +227,30 @@ export function ReportsWorkbench() {
     setGenError(null);
     setGenSuccess(null);
     try {
+      if (isSoc2SupportPack(packType)) {
+        const sourceSnapshot = snapshots.data?.[0];
+        if (!sourceSnapshot) {
+          setGenError(
+            "Export disabled — no validation snapshot yet. Generate a Snapshot first; packs never invent sample claims."
+          );
+          return;
+        }
+        const pack = await api.createReport({
+          audience,
+          maxTopItems,
+          packType: "SOC2Support",
+          snapshotId: sourceSnapshot.snapshotId,
+          title: "Customer SOC 2 support evidence"
+        });
+        triggerDownload(
+          await api.exportReport(pack.evidencePackId, { format: "html" })
+        );
+        await Promise.all([snapshots.refetch(), packs.refetch()]);
+        setGenSuccess(
+          `${pack.title} exported. Customer evidence support only — not a certification and not an audit opinion.`
+        );
+        return;
+      }
       if (packType === "ValidationSnapshotReport") {
         const snapshot = await api.createSnapshot({ audience, maxTopItems });
         await Promise.all([snapshots.refetch(), packs.refetch()]);
@@ -195,7 +260,9 @@ export function ReportsWorkbench() {
         const packTitle =
           packType === "ExecutiveRiskSummary"
             ? "Executive Risk Summary (board pack)"
-            : `${COMPLIANCE_CATALOG[packType]?.displayName ?? packType} measured control trace`;
+            : packType === "CTEMProgramSummary"
+              ? "CTEM Program Summary"
+              : `${COMPLIANCE_CATALOG[packType]?.displayName ?? packType} measured control trace`;
         const pack = await api.createReport({
           audience,
           maxTopItems,
@@ -411,31 +478,75 @@ export function ReportsWorkbench() {
                   ))}
                 </select>
               </label>
-              <p className="text-[12px] text-subtle">
-                {packType === "ExecutiveRiskSummary"
-                  ? "Board pack: Executive Risk Summary with Measured/Heuristic path honesty and Fixed-only-via-verification. Not a certification or audit attestation."
-                  : packType !== "ValidationSnapshotReport"
-                    ? "Customer evidence-support pack: per-control Met, Partial, and Unmet status from the latest persisted snapshot. Not a certification and not an audit opinion; not a vendor SOC 2 Type II or formal framework attestation."
-                    : audience === "Executive"
-                      ? "Board-level snapshot variant: control effectiveness, validated exposure, path risk, remediation velocity. Prefer Board pack type for the dedicated executive pack."
-                      : "Analyst-level: priority attack paths, evidence certainty, control observations, and artifact detail."}
-              </p>
+              {isSoc2SupportPack(packType) ? (
+                <p
+                  data-testid="soc2-support-disclaimer"
+                  className="text-[12px] text-subtle"
+                >
+                  {COMPLIANCE_PACK_DISCLAIMER}
+                </p>
+              ) : (
+                <p className="text-[12px] text-subtle">
+                  {packType === "ExecutiveRiskSummary"
+                    ? "Board pack: Executive Risk Summary with Measured/Heuristic path honesty and Fixed-only-via-verification. Not a certification or audit attestation."
+                    : packType === "CTEMProgramSummary"
+                      ? "Program summary of authorized proof across scope, discover, prioritize, validate, mobilize, and verify. Not a certification."
+                      : packType !== "ValidationSnapshotReport"
+                        ? "Customer evidence-support pack: per-control Met, Partial, and Unmet status from the latest persisted snapshot. Not a certification and not an audit opinion; not a vendor SOC 2 Type II or formal framework attestation."
+                        : audience === "Executive"
+                          ? "Board-level snapshot variant: control effectiveness, validated exposure, path risk, remediation velocity. Prefer Board pack type for the dedicated executive pack."
+                          : "Analyst-level: priority attack paths, evidence certainty, control observations, and artifact detail."}
+                </p>
+              )}
               <div>
                 <button
                   type="button"
                   onClick={generate}
-                  disabled={generating}
+                  disabled={
+                    generating ||
+                    (isSoc2SupportPack(packType) &&
+                      (snapshots.loading ||
+                        (snapshots.data?.length ?? 0) === 0))
+                  }
+                  aria-describedby={
+                    isSoc2SupportPack(packType) &&
+                    !snapshots.loading &&
+                    (snapshots.data?.length ?? 0) === 0
+                      ? "soc2-export-disabled-reason"
+                      : undefined
+                  }
+                  data-testid={
+                    isSoc2SupportPack(packType)
+                      ? "export-soc2-support-pack"
+                      : undefined
+                  }
                   className={buttonClassName({ variant: "primary" })}
                 >
                   {generating
                     ? "Generating…"
-                    : packType === "ValidationSnapshotReport"
-                      ? "Generate & preview"
-                      : packType === "ExecutiveRiskSummary"
-                        ? "Generate board pack"
-                        : "Generate evidence pack"}
+                    : isSoc2SupportPack(packType)
+                      ? "Export SOC 2 support pack"
+                      : packType === "ValidationSnapshotReport"
+                        ? "Generate & preview"
+                        : packType === "ExecutiveRiskSummary"
+                          ? "Generate board pack"
+                          : packType === "CTEMProgramSummary"
+                            ? "Generate CTEM program summary"
+                            : "Generate evidence pack"}
                 </button>
               </div>
+              {isSoc2SupportPack(packType) &&
+              !snapshots.loading &&
+              (snapshots.data?.length ?? 0) === 0 ? (
+                <p
+                  id="soc2-export-disabled-reason"
+                  data-testid="soc2-export-disabled-reason"
+                  className="text-[12px] text-subtle"
+                >
+                  Export disabled — no validation snapshot yet. Generate a
+                  Snapshot first; packs never invent sample claims.
+                </p>
+              ) : null}
               {genError ? (
                 <p role="alert" className="text-sm text-missed">
                   {genError}
@@ -491,6 +602,94 @@ export function ReportsWorkbench() {
                 </button>
               </div>
             </div>
+          </Panel>
+
+          <Panel data-testid="soc2-coverage-panel">
+            <PanelHeader
+              title="SOC 2 control coverage"
+              actions={
+                <StateBadge tone="neutral" dot={false}>
+                  Evidence support
+                </StateBadge>
+              }
+            />
+            {soc2Coverage.loading ? (
+              <LoadingSkeleton rows={3} />
+            ) : soc2Coverage.error ? (
+              <ErrorState
+                message={soc2Coverage.error}
+                onRetry={soc2Coverage.refetch}
+              />
+            ) : !soc2Coverage.data?.configured ? (
+              <NotConfigured
+                className="m-3"
+                title="NotConfigured — no validation snapshot"
+                message="SOC 2 CC* coverage is derived from measured evidence on a Validation Snapshot. Empty is Unmet — never a certification."
+                action={{
+                  href: "/missions",
+                  label: "Run a Validation Snapshot"
+                }}
+              />
+            ) : (
+              <div className="flex flex-col gap-3 p-4">
+                <p className="text-xs leading-relaxed text-muted">
+                  {soc2Coverage.data.disclaimer}
+                </p>
+                <p className="font-mono text-[11px] text-subtle">
+                  {soc2Coverage.data.metCount} met ·{" "}
+                  {soc2Coverage.data.partialCount} partial ·{" "}
+                  {soc2Coverage.data.unmetCount} unmet · not certification
+                </p>
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[420px] text-left text-sm">
+                    <caption className="sr-only">
+                      SOC 2 CC controls with Met, Partial, or Unmet status from
+                      measured evidence only
+                    </caption>
+                    <thead className="border-b border-line text-[11px] uppercase tracking-[0.08em] text-subtle">
+                      <tr>
+                        <th scope="col" className="py-2 pr-3 font-semibold">
+                          Control
+                        </th>
+                        <th scope="col" className="py-2 font-semibold">
+                          Status
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-line">
+                      {soc2Coverage.data.controls.map((control) => (
+                        <tr key={control.controlId}>
+                          <th
+                            scope="row"
+                            className="py-2.5 pr-3 text-left font-normal"
+                          >
+                            <p className="font-medium text-ink">
+                              {control.controlId}
+                            </p>
+                            <p className="mt-0.5 text-xs text-muted">
+                              {control.title}
+                            </p>
+                          </th>
+                          <td className="py-2.5">
+                            <StateBadge
+                              tone={SOC2_STATUS_TONE[control.status]}
+                            >
+                              {control.status}
+                            </StateBadge>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <Link
+                  href="/compliance"
+                  className="text-sm font-semibold text-brand hover:text-brand-2"
+                >
+                  Open full compliance trace →
+                </Link>
+              </div>
+            )}
           </Panel>
 
           <Panel>

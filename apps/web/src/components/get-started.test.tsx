@@ -11,12 +11,16 @@ import {
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { ProductActivationState } from "@periscan/shared";
+import type {
+  CommunityValidationSuiteResponse,
+  ProductActivationState
+} from "@periscan/shared";
 
 import {
   FIRST_PROOF_RESUME_KEY,
   writeFirstProofResume
 } from "../lib/first-proof-resume";
+import { browserPeriscanApiClient as api } from "../lib/periscan-api-client";
 import { GetStarted, showFirstMeasuredProofPercent } from "./get-started";
 
 function milestone(
@@ -226,11 +230,11 @@ describe("GetStarted", () => {
 
     expect(
       await screen.findByRole("heading", {
-        name: "Let's prove your first path."
+        name: "Keep proving: authorized local path → Gitleaks-class → Fixed after retest."
       })
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/two steps take you from an empty console/i)
+      screen.getByText(/this board stays up/i)
     ).toBeInTheDocument();
     // JTBD-2: hero label MUST match rail — resolveFirstRunPrimaryAction().label.
     const primaryCta = screen.getByTestId("get-started-primary-cta");
@@ -244,8 +248,11 @@ describe("GetStarted", () => {
     expect(
       screen.queryByText(/Start — connect a source/u)
     ).not.toBeInTheDocument();
-    // Exactly one primary CTA test id (no competing brand-filled heroes).
+    // Empty tenant: Gitleaks-only one primary. No Prowler second CTA.
     expect(screen.getAllByTestId("get-started-primary-cta")).toHaveLength(1);
+    expect(
+      screen.queryByTestId("get-started-aws-prowler-cta")
+    ).not.toBeInTheDocument();
     expect(screen.getByTestId("get-started-primary-reason")).toHaveTextContent(
       /verified authorized scope/u
     );
@@ -259,7 +266,7 @@ describe("GetStarted", () => {
     expect(screen.getByText(/0 of 2 setup steps/u)).toBeInTheDocument();
     expect(screen.queryByText(/0 of 3 setup steps/u)).not.toBeInTheDocument();
     expect(
-      screen.getByRole("progressbar", { name: /First-run setup progress/u })
+      screen.getByRole("progressbar", { name: /Board setup progress/u })
     ).toBeInTheDocument();
     const setupCards = screen.getAllByTestId("get-started-step-card");
     expect(setupCards).toHaveLength(2);
@@ -267,7 +274,7 @@ describe("GetStarted", () => {
     expect(setupCards[0]).toHaveTextContent(/1\s*Authorize scope/u);
     expect(setupCards[0]).not.toHaveTextContent(/Connect a source/i);
     expect(setupCards[1]).toHaveAttribute("href", "/missions");
-    expect(setupCards[1]).toHaveTextContent(/2\s*Run your first validation/u);
+    expect(setupCards[1]).toHaveTextContent(/2\s*Run Gitleaks-class/u);
     expect(setupCards[1]).toHaveTextContent(/Run Community validation/u);
     expect(setupCards[1]).not.toHaveTextContent(/Prowler/);
     const optionalSource = screen.getByTestId("get-started-connect-optional");
@@ -745,7 +752,7 @@ describe("GetStarted", () => {
     render(<GetStarted />);
 
     expect(
-      await screen.findByRole("heading", { name: "Continue toward Prove." })
+      await screen.findByRole("heading", { name: "Keep proving." })
     ).toBeInTheDocument();
     // UX-W13: calm success when setup complete (not cheese).
     expect(
@@ -1032,7 +1039,7 @@ describe("GetStarted", () => {
     render(<GetStarted />);
 
     expect(
-      await screen.findByRole("heading", { name: "Continue toward Prove." })
+      await screen.findByRole("heading", { name: "Keep proving." })
     ).toBeInTheDocument();
     await waitFor(() => {
       expect(localStorage.getItem(FIRST_PROOF_RESUME_KEY)).toBeNull();
@@ -1067,16 +1074,17 @@ describe("GetStarted SETTLED first-hour copy (PERISCAN-555)", () => {
     render(<GetStarted userName="Ada Lovelace" />);
     expect(
       await screen.findByRole("heading", {
-        name: "Let's prove your first path."
+        name: "Keep proving: authorized local path → Gitleaks-class → Fixed after retest."
       })
     ).toBeInTheDocument();
   }
 
-  it("Community start card names first-hour Gitleaks, not the 38-engine pack as the door", async () => {
+  it("Community start card names Gitleaks default start, not the 38-engine pack as the door", async () => {
     await renderEmptyTenant();
     const runCard = screen.getAllByTestId("get-started-step-card")[1];
     expect(runCard).toHaveTextContent(/Gitleaks/i);
-    expect(runCard).toHaveTextContent(/first-hour/i);
+    expect(runCard).not.toHaveTextContent(/first[- ]hour/i);
+    expect(runCard).toHaveTextContent(/default start/i);
     expect(runCard).toHaveTextContent(/secrets/i);
     expect(runCard).toHaveTextContent(/full Community pack/i);
     expect(runCard).not.toHaveTextContent(/default repo pack/i);
@@ -1087,12 +1095,84 @@ describe("GetStarted SETTLED first-hour copy (PERISCAN-555)", () => {
     expect(runCard).not.toHaveTextContent(/recon/i);
   });
 
-  it("empty-tenant hero proves authorized exposures and does not claim attacker reachability", async () => {
-    await renderEmptyTenant();
-    const lede = screen.getByText(/two steps take you from an empty console/i);
-    expect(lede).toHaveTextContent(/authorized expos/i);
+  it("P2-CTEMCOPY: empty Home headlines one first-hour job, not ASV/CTEM/attack-paths mall", async () => {
+    render(<GetStarted userName="Ada Lovelace" />);
+    const heading = await screen.findByRole("heading", { level: 1 });
+    expect(heading).toHaveTextContent(/Keep proving/i);
+    expect(heading).toHaveTextContent(/authorized local path/i);
+    expect(heading).toHaveTextContent(/Gitleaks-class/i);
+    expect(heading).toHaveTextContent(/Fixed after retest/i);
+    expect(heading).not.toHaveTextContent(/first hour/i);
+    expect(heading).not.toHaveTextContent(/first path/i);
+    expect(heading).not.toHaveTextContent(/Automated Security Validation/i);
+    expect(heading).not.toHaveTextContent(/CTEM/i);
+    expect(heading).not.toHaveTextContent(/attack path/i);
+
+    const hero = heading.closest("section");
+    expect(hero).not.toBeNull();
+    expect(hero!).not.toHaveTextContent(/AEV\/CTEM proof layer/i);
+    expect(hero!).not.toHaveTextContent(
+      /Automated Security Validation platform/i
+    );
+    expect(hero!).not.toHaveTextContent(/we are a CTEM platform/i);
+    expect(hero!).not.toHaveTextContent(/33%/);
+    expect(hero!).not.toHaveTextContent(/Verify·100|Verify · 100/i);
+
+    expect(screen.getAllByTestId("get-started-primary-cta")).toHaveLength(1);
+    expect(screen.getByTestId("get-started-primary-cta")).toHaveTextContent(
+      /Authorize scope/i
+    );
+    expect(
+      screen.queryByTestId("get-started-aws-prowler-cta")
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: /Assess connected AWS/i })
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/full cloud BAS/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/High-danger/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: /^Connect a source$/i })
+    ).not.toBeInTheDocument();
+
+    const details = screen.getByTestId("get-started-full-loop-details");
+    expect(details).not.toHaveAttribute("open");
+    expect(details).toHaveTextContent(/AEV\/CTEM proof layer/i);
+    expect(details).toContainElement(
+      screen.getByTestId("get-started-aev-bas-boundary")
+    );
+  });
+
+  it("empty-tenant hero names the authorized local path and does not claim attacker reachability", async () => {
+    render(<GetStarted userName="Ada Lovelace" />);
+    const heading = await screen.findByRole("heading", { level: 1 });
+    expect(heading).toHaveTextContent(/authorized local path/i);
+    const lede = screen.getByText(/this board stays up/i);
+    expect(lede).toHaveTextContent(/authorize a local path/i);
+    expect(lede).toHaveTextContent(/Gitleaks-class/i);
+    expect(lede).not.toHaveTextContent(/^Ada/i);
     expect(lede).not.toHaveTextContent(/attacker can actually reach/i);
     expect(lede).not.toHaveTextContent(/can actually reach/i);
+    expect(lede).not.toHaveTextContent(/attack path/i);
+  });
+
+  it("keeps qualified BAS/AEV execution below the first-hour fold", async () => {
+    render(<GetStarted userName="Ada Lovelace" />);
+    await screen.findByRole("heading", { level: 1 });
+    const boundary = screen.getByTestId("get-started-aev-bas-boundary");
+    expect(screen.getByTestId("get-started-full-loop-details")).toContainElement(
+      boundary
+    );
+    expect(boundary).toHaveTextContent(
+      /we prove authorized exposure/i
+    );
+    expect(boundary).toHaveTextContent(
+      /BAS\/AEV scenario execution requires qualified adapters/i
+    );
+    expect(boundary).toHaveTextContent(/AEV\/CTEM proof layer/i);
+    expect(boundary).not.toHaveTextContent(/Full BAS platform/i);
+    expect(boundary).not.toHaveTextContent(/automated pentest/i);
+    expect(boundary).not.toHaveTextContent(/ransomware emulation/i);
+    expect(boundary.closest("section")).toBeNull();
   });
 
   it("TTV strip is Authorize → Validate and hides AccountCreated 1/9 theater", async () => {
@@ -1106,6 +1186,41 @@ describe("GetStarted SETTLED first-hour copy (PERISCAN-555)", () => {
     expect(screen.getByTestId("ttv-milestone-prove")).not.toHaveTextContent(
       /1\/9/
     );
+  });
+
+  it("offers Assess connected AWS (Prowler) as a second primary when AWS is Connected", async () => {
+    vi.spyOn(api, "getCommunityValidationSuite").mockResolvedValue({
+      cloudAwsAvailable: true,
+      copyleftOptIn: {
+        hint: "GPL/LGPL extras stay Engine Lab.",
+        licensedToolIds: [],
+        modules: []
+      },
+      deferredModules: [],
+      editionId: "community",
+      includeExternalPoa: false,
+      licenseNote: "Not live Atomic.",
+      modules: [],
+      runnerAvailable: false,
+      scopeType: null,
+      startableModuleIds: ["gitleaks.repo_secrets", "prowler.aws_posture"],
+      valueLine: "Community edition is the open-core validation pack."
+    } satisfies CommunityValidationSuiteResponse);
+
+    await renderEmptyTenant();
+
+    expect(screen.getAllByTestId("get-started-primary-cta")).toHaveLength(1);
+    expect(screen.getByTestId("get-started-primary-cta")).toHaveTextContent(
+      /Authorize scope/i
+    );
+    const awsCta = screen.getByTestId("get-started-aws-prowler-cta");
+    expect(awsCta).toHaveTextContent("Assess connected AWS (Prowler)");
+    expect(awsCta).toHaveAttribute("href", "/missions?moduleIds=prowler.aws_posture");
+    expect(awsCta).not.toHaveTextContent(/full cloud BAS/i);
+    expect(screen.queryByText(/full cloud BAS/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/High-danger/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/33%/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/CTEM %/i)).not.toBeInTheDocument();
   });
 });
 

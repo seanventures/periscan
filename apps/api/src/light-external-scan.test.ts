@@ -65,7 +65,11 @@ describe("POST /api/v1/light-external-scans", () => {
         getSessionContext: async () => ownerContext,
         createScope,
         verifyScope,
-        createSchedule
+        createSchedule,
+        compileExternalAssessment: async () => ({
+          ok: true,
+          assessment: { jobsQueued: 0, startsJobs: false }
+        })
       } as never,
       sessionSecret: SESSION_SECRET
     });
@@ -116,7 +120,11 @@ describe("POST /api/v1/light-external-scans", () => {
         getSessionContext: async () => ownerContext,
         createScope,
         verifyScope,
-        createSchedule
+        createSchedule,
+        compileExternalAssessment: async () => ({
+          ok: true,
+          assessment: { jobsQueued: 0, startsJobs: false }
+        })
       } as never,
       sessionSecret: SESSION_SECRET
     });
@@ -162,7 +170,11 @@ describe("POST /api/v1/light-external-scans", () => {
         getSessionContext: async () => ownerContext,
         createScope,
         verifyScope,
-        createSchedule
+        createSchedule,
+        compileExternalAssessment: async () => ({
+          ok: true,
+          assessment: { jobsQueued: 0, startsJobs: false }
+        })
       } as never,
       sessionSecret: SESSION_SECRET
     });

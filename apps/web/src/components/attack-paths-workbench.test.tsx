@@ -184,13 +184,13 @@ describe("AttackPathsWorkbench", () => {
     expect(
       await screen.findByRole("heading", { name: "Path breaker optimizer" })
     ).toBeInTheDocument();
-    expect(screen.getByText("Evidence-backed path breakers")).toBeInTheDocument();
+    expect(
+      screen.getByText("Evidence-backed path breakers")
+    ).toBeInTheDocument();
     expect(screen.getByText("Privileged cloud role")).toBeInTheDocument();
     expect(screen.getAllByText("Heuristic").length).toBeGreaterThan(0);
     expect(screen.getByText("100%")).toBeInTheDocument();
-    expect(
-      screen.getByText(/not exact global min-cut/i)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/not exact global min-cut/i)).toBeInTheDocument();
     expect(screen.getByText("Greedy approx")).toBeInTheDocument();
     expect(screen.queryByText(/Leading min-cut/i)).not.toBeInTheDocument();
     expect(
@@ -312,7 +312,8 @@ describe("AttackPathsWorkbench", () => {
     );
     expect(screen.getAllByText("Measure path hops").length).toBeGreaterThan(0);
     expect(
-      screen.getByRole("link", { name: /Exposed identity to production data/i })
+      screen
+        .getByRole("link", { name: /Exposed identity to production data/i })
         .closest("a")
     ).toHaveAttribute("href", `/attack-paths/${pathId}#hop-measurement`);
   });
@@ -372,7 +373,9 @@ describe("AttackPathsWorkbench", () => {
 
     const empty = await screen.findByTestId("attack-paths-empty");
     expect(empty).toBeInTheDocument();
-    expect(empty).toHaveTextContent(/empty is honest, not a fake Measured path/i);
+    expect(empty).toHaveTextContent(
+      /empty is honest, not a fake Measured path/i
+    );
     expect(empty).toHaveTextContent(
       /never claim FullyMeasured without hop receipts/i
     );
@@ -451,6 +454,49 @@ describe("AttackPathsWorkbench", () => {
     // still list recorded workflow states — that is filter honesty, not claim).
     expect(claimHero).not.toHaveTextContent(/^Validated$/);
     expect(claimHero.textContent).not.toMatch(/\bValidated\b/i);
+    expect(
+      screen.queryByText(/Validated high-impact path/i)
+    ).not.toBeInTheDocument();
+  });
+
+  it("never claims Validated high-impact path from Critical severity without hop receipts", async () => {
+    vi.spyOn(api, "listAttackPaths").mockResolvedValue([
+      {
+        ...assessment,
+        attackPath: {
+          ...assessment.attackPath,
+          impactScore: 99,
+          validationState: "Validated"
+        },
+        risk: {
+          band: "Critical",
+          factors: [],
+          score: 95,
+          summary:
+            "Critical-risk heuristic path hypothesis requires measurement before any reachable or validated-path claim."
+        }
+      }
+    ]);
+    vi.spyOn(api, "getAttackPathChokePointAnalysis").mockResolvedValue(
+      analysis
+    );
+    mockImpactDesk();
+
+    render(<AttackPathsWorkbench />);
+
+    const row = await screen.findByTestId("path-row");
+    expect(row).toHaveAttribute("data-claim-kind", "HeuristicHypothesis");
+    expect(row).toHaveAttribute("data-claim-safe-state", "Discovered");
+    expect(row).toHaveAttribute("data-risk-band-display", "Critical");
+    expect(screen.getByTestId("path-claim-hero")).toHaveTextContent(
+      /Heuristic hypothesis/i
+    );
+    expect(
+      screen.queryByText(/Validated high-impact path/i)
+    ).not.toBeInTheDocument();
+    expect(screen.getByTestId("path-claim-hero").textContent).not.toMatch(
+      /\bValidated\b/i
+    );
   });
 
   it("disambiguates Fixed risk band as Closed (risk) on path cards [UX-W1 #66]", async () => {

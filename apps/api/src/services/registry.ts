@@ -8,6 +8,7 @@ import {
 import { listOperatorProfiles } from "@periscan/operators";
 import { listExternalValidationTemplateProfiles } from "@periscan/policy";
 import {
+  attachAttackTechniqueCoverage,
   getAttackTechniqueById,
   listAttackTechniques as listAttackTechniqueCatalog
 } from "@periscan/shared";
@@ -101,11 +102,14 @@ export function createRegistryServices(): Pick<
     },
 
     async getAttackTechnique(techniqueId) {
-      return getAttackTechniqueById(techniqueId);
+      const technique = getAttackTechniqueById(techniqueId);
+      return technique ? attachAttackTechniqueCoverage(technique) : null;
     },
 
     async listAttackTechniques() {
-      return listAttackTechniqueCatalog();
+      return listAttackTechniqueCatalog().map((technique) =>
+        attachAttackTechniqueCoverage(technique)
+      );
     },
 
     async getOperatorProfiles() {

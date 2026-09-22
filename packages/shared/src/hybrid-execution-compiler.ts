@@ -48,7 +48,7 @@ export type HybridCompilerAgentRole = z.infer<
   typeof HybridCompilerAgentRoleSchema
 >;
 
-/** Role templates for passive multi-step mission assembly (not BAS swarm). */
+/** Role templates for passive multi-step mission assembly (passive planning). */
 export const PASSIVE_MULTI_AGENT_ROLE_TEMPLATES: ReadonlyArray<{
   agentRole: HybridCompilerAgentRole;
   description: string;
@@ -501,7 +501,7 @@ export function assemblePassiveMultiAgentPlan(input: {
 /**
  * Conversational draft → Hybrid compile input (#33 → #30).
  *
- * The draft remains `executable: false` (not BAS). The returned compile input
+ * The draft remains `executable: false` (planning only). The returned compile input
  * is only for allowlisted passive measured modules via the Hybrid Execution
  * Compiler; it never claims full multi-agent offense or live APT/Atomic.
  */
@@ -565,7 +565,7 @@ export function missionDraftToHybridCompileInput(
   const options = MissionDraftToHybridCompileOptionsSchema.parse(rawOptions);
   if (draft.executable !== false) {
     throw new Error(
-      "Conversational mission draft must remain executable:false (not BAS)."
+      "Conversational mission draft must remain executable:false (planning only)."
     );
   }
 

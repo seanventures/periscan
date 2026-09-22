@@ -1,0 +1,25 @@
+{
+  "summary": {
+    "names": 99
+  },
+  "results": [
+    {
+      "name": "www.example.com",
+      "domain": "example.com",
+      "tag": "cert",
+      "source": "Crtsh token=AKIAIOSFODNN7EXAMPLE",
+      "addresses": [
+        {
+          "ip": "203.0.113.10",
+          "desc": "-----BEGIN RSA PRIVATE KEY-----\nfixture\n-----END RSA PRIVATE KEY-----"
+        }
+      ]
+    },
+    {
+      "name": "api.example.com",
+      "domain": "example.com",
+      "tag": "dns",
+      "source": "DNS hashed_secret=fixture"
+    }
+  ]
+}

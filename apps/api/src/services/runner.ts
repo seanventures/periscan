@@ -2,9 +2,10 @@ import { createHash, createPublicKey, randomUUID, verify } from "node:crypto";
 
 import type { Prisma, PrismaClient } from "@prisma/client";
 
+import { listEnterpriseSiteRecords } from "@periscan/db";
 import { createPrismaEvidenceService } from "@periscan/evidence";
-import { evaluatePolicy } from "@periscan/policy";
 import { getModuleById } from "@periscan/modules";
+import { evaluatePolicy } from "@periscan/policy";
 import {
   assertRemediationFixedOnlyViaVerification,
   buildRunnerTaskRoutingHint,
@@ -28,6 +29,8 @@ import {
 import { tryAutoApplyPathEdgeReceiptFromCompletedRun } from "./findings.js";
 import { reconcileMissionAggregateFromRuns } from "../mission-run-aggregate.js";
 import { withMissionRunAggregateLock } from "../mission-run-aggregate-lock.js";
+import { runObserverHealthSamplerTick } from "./observer-health-sampler.js";
+import { assertEnterpriseSiteDiscoverAllowed } from "./enterprise-sites.js";
 import {
   serializeScope,
   serializeValidationMission,
@@ -378,8 +381,8 @@ async function persistRunnerHeartbeat(
   const certificateExpiresAt = input.certificateExpiresAt
     ? new Date(input.certificateExpiresAt)
     : runner.certificateExpiresAt;
-  return prisma.$transaction(async (tx) => {
-    const updated = await tx.runner.update({
+  const updated = await prisma.$transaction(async (tx) => {
+    const next = await tx.runner.update({
       data: {
         certificateExpiresAt,
         lastSeenAt: receivedAt,
@@ -404,8 +407,14 @@ async function persistRunnerHeartbeat(
         version: input.version
       }
     });
-    return updated;
+    return next;
   });
+  void runObserverHealthSamplerTick({
+    now: receivedAt,
+    prisma,
+    tenantIds: [runner.tenantId]
+  }).catch(() => undefined);
+  return updated;
 }
 
 export function createRunnerServices(
@@ -2144,8 +2153,10 @@ export function createRunnerServices(
         }
       }
 
-      const isDns = input.module === "runner.dns_resolution_check";
-      const scopePorts = isDns || input.port === undefined ? [] : [input.port];
+      const isPortless =
+        input.module === "runner.dns_resolution_check" ||
+        input.module === "runner.ptr_lookup_check";
+      const scopePorts = isPortless || input.port === undefined ? [] : [input.port];
       const taskTypeByModule = {
         "runner.dns_resolution_check": "dns_resolution",
         "runner.http_health_check": "http_health",
@@ -2153,7 +2164,9 @@ export function createRunnerServices(
         "runner.http_header_check": "http_header",
         "runner.cert_expiry_check": "cert_expiry",
         "runner.tcp_banner_check": "tcp_banner",
-        "runner.tls_info_check": "tls_info"
+        "runner.tls_info_check": "tls_info",
+        "runner.port_connect_check": "port_connect",
+        "runner.ptr_lookup_check": "ptr_lookup"
       } as const;
 
       const taskInputs: Record<string, unknown> = {
@@ -2830,6 +2843,28 @@ export function createRunnerServices(
           "runner_scope_violation"
         );
       }
+
+      const [siteRows, tenantScopes] = await Promise.all([
+        listEnterpriseSiteRecords(prisma, context.tenant.tenantId),
+        prisma.scope.findMany({
+          where: { tenantId: context.tenant.tenantId }
+        })
+      ]);
+      assertEnterpriseSiteDiscoverAllowed({
+        sites: siteRows.map((row) => ({
+          adDomains: row.adDomains,
+          cidrs: row.cidrs,
+          name: row.name,
+          runnerIds: row.runnerIds,
+          siteId: row.siteId
+        })),
+        target: input.target,
+        verifiedScopes: tenantScopes.map((row) => ({
+          scopeType: row.scopeType,
+          value: row.value,
+          verificationStatus: row.verificationStatus
+        }))
+      });
 
       const requestedAction = {
         credentialTheft: false,

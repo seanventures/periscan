@@ -62,4 +62,25 @@ describe("copyleft opt-in engines", () => {
       expect(getModuleById(moduleId)?.manifest.liveSupported).toBe(true);
     }
   });
+
+  it("keeps Infection Monkey GPL Engine Lab, not a live copyleft Community engine", () => {
+    const module = getModuleById("infection-monkey.discover");
+    expect(module).not.toBeNull();
+    expect(module?.manifest.liveSupported).toBe(false);
+    expect(module?.manifest.license).toBe("GPL-3.0");
+    expect(isCopyleftOptInModuleId("infection-monkey.discover")).toBe(false);
+    expect(isEngineLabTheaterModuleId("infection-monkey.discover")).toBe(true);
+    expect(COPYLEFT_OPT_IN_MODULE_IDS).not.toContain("infection-monkey.discover");
+    expect(
+      evaluateModuleStartConstraints({
+        executionEnvironment: "InternalRunner",
+        moduleManifests: [module!.manifest],
+        runnerId: "runner-lab",
+        target: { hostname: "lab-web.example.test" }
+      })
+    ).toMatchObject({
+      allowed: false,
+      code: "upstream_license_required"
+    });
+  });
 });

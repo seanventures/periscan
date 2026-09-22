@@ -151,6 +151,9 @@ describe("MissionDetail", () => {
     expect(
       await screen.findByRole("heading", { name: "ControlValidation" })
     ).toBeInTheDocument();
+    expect(screen.getByTestId("control-validation-honesty")).toHaveTextContent(
+      /benign canary \/ marker-only coverage/i
+    );
     expect(screen.getAllByText(policyDecisionId).length).toBeGreaterThan(0);
     const runs = screen.getByText("Runs (1)").closest("section");
     expect(runs).not.toBeNull();
@@ -373,8 +376,12 @@ describe("MissionDetail", () => {
     render(<MissionDetail missionId={missionId} />);
 
     const banner = await screen.findByTestId("community-pack-banner");
-    const honesty = within(banner).getByTestId("community-remediations-honesty");
-    expect(honesty).toHaveTextContent("Fixed still requires a verification event");
+    const honesty = within(banner).getByTestId(
+      "community-remediations-honesty"
+    );
+    expect(honesty).toHaveTextContent(
+      "Fixed still requires a verification event"
+    );
     expect(honesty).toHaveTextContent(
       "Community remediations keep originating evidence/path when the finding has them."
     );

@@ -1,4 +1,6 @@
 export * from "./correlation";
+export * from "./detection-correlation";
+export * from "./collector-normalize";
 export * from "./entity-resolution";
 export * from "./choke-points";
 export * from "./edge-receipts";

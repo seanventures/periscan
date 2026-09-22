@@ -1,7 +1,21 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { FindingsWorkbench } from "./findings-workbench";
+import {
+  FINDINGS_FILTER_CHIPS_390_VIEWPORT,
+  FindingsHeaderMeta,
+  FindingsWorkbench,
+  WCAG_TARGET_SIZE_MINIMUM_PX,
+  findingsCommunityMissionChipReady,
+  findingsCopyLinkControlClassName,
+  findingsFilterChips390ClassName,
+  findingsFilterChips390LayoutOk,
+  findingsFilterChips390RailClassName,
+  findingsFilterChipsCoverValidatedRow,
+  findingsWorkbenchHref,
+  targetSizeBelowMinimumPx
+} from "./findings-workbench";
 
 const timestamp = "2026-07-14T12:00:00.000Z";
 const tenantId = "11111111-1111-4111-8111-111111111111";
@@ -138,7 +152,8 @@ function mockFetch() {
       },
       "/api/v1/tenants/current/members": {
         items: [{ membership, user }]
-      }
+      },
+      "/api/v1/remediations": { items: [], page: { hasMore: false } }
     };
 
     if (!(route in payloads)) {
@@ -165,12 +180,272 @@ describe("FindingsWorkbench v2", () => {
     window.history.replaceState(null, "", "/findings");
   });
 
-  it("PageHeader exposes primary Run a Validation Snapshot action (ICP residual)", async () => {
-    vi.stubGlobal("fetch", mockFetch());
+  it("P2-FINDINGSMALL: first-hour Gitleaks chrome is the VALIDATED path·rule row + one next verb", async () => {
+    const gitleaksFinding = {
+      ...finding,
+      findingId: "88888888-8888-4888-8888-888888888888",
+      title: "EXV SecretExposure",
+      source: "gitleaks.repo_secrets.scan",
+      sourceEntityType: "Exposure" as const,
+      sourceMotion: "EXV" as const,
+      relatedPathIds: [],
+      relatedRemediationIds: [],
+      pathProof: null,
+      location: "leaked.js:2",
+      ruleId: "slack-bot-token",
+      impact: "Exposure validation observed SecretExposure.",
+      rootCauseSummary:
+        "Exposure / SecretExposure from Gitleaks (gitleaks.repo_secrets.scan); no linked assets.",
+      status: "Validated" as const,
+      validationState: "Validated" as const
+    };
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const route = String(input).split("?")[0] ?? "";
+      if (route === "/api/v1/findings") {
+        return {
+          json: async () => ({
+            items: [gitleaksFinding],
+            page: { hasMore: false, limit: 50, offset: 0 }
+          }),
+          ok: true,
+          status: 200
+        };
+      }
+      return mockFetch()(input);
+    }) as unknown as typeof fetch;
+    vi.stubGlobal("fetch", fetchMock);
+
     render(<FindingsWorkbench />);
-    const cta = await screen.findByTestId("findings-header-primary-cta");
-    expect(cta).toHaveAttribute("href", "/missions");
-    expect(cta).toHaveTextContent(/Run a Validation Snapshot/i);
+
+    const firstHour = await screen.findByTestId("findings-first-hour");
+    expect(
+      within(firstHour).getByText("leaked.js:2 · slack-bot-token")
+    ).toBeInTheDocument();
+    expect(
+      within(firstHour).getAllByText(/^Validated$/).length
+    ).toBeGreaterThan(0);
+    expect(within(firstHour).queryByText("EXV SecretExposure")).not.toBeInTheDocument();
+
+    const primary = screen.getByTestId("findings-first-hour-primary");
+    expect(primary).toHaveTextContent(/^Review remediations$/);
+    expect(primary).toHaveAttribute("href", "/remediation");
+    expect(
+      screen.queryByTestId("findings-header-primary-cta")
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /Mark Fixed/i })
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/Mark Fixed/i)).not.toBeInTheDocument();
+
+    expect(within(firstHour).queryByText(/Measure path hops/i)).not.toBeInTheDocument();
+    expect(within(firstHour).queryByText(/Detection-eng/i)).not.toBeInTheDocument();
+    expect(within(firstHour).queryByText(/^Views$/i)).not.toBeInTheDocument();
+    expect(
+      within(firstHour).queryByText(/Run a Validation Snapshot/i)
+    ).not.toBeInTheDocument();
+    expect(within(firstHour).queryByTestId("proof-stage-strip")).not.toBeInTheDocument();
+    expect(within(firstHour).queryByTestId("findings-view-active")).not.toBeInTheDocument();
+
+    const more = screen.getByTestId("findings-more-triage");
+    expect(more).not.toHaveAttribute("open");
+    fireEvent.click(screen.getByTestId("findings-more-summary"));
+    expect(more).toHaveAttribute("open");
+    expect(
+      within(more).getByRole("link", { name: /Run a Validation Snapshot/i })
+    ).toHaveAttribute("href", "/missions");
+    expect(
+      within(more).getByRole("link", { name: /Measure path hops/i })
+    ).toBeInTheDocument();
+    expect(
+      within(more).getByRole("status", {
+        name: "Disposition feedback summary"
+      })
+    ).toHaveTextContent(/Detection-eng feedback/i);
+    expect(within(more).getByTestId("findings-view-active")).toBeInTheDocument();
+    expect(within(more).getByTestId("findings-filters-details")).toBeInTheDocument();
+    expect(within(more).getByTestId("proof-stage-strip")).toBeInTheDocument();
+  });
+
+  it("P2-FINDINGSMALL: Create remediations is the first-hour verb when a Community mission has no task yet", async () => {
+    const missionId = "66666666-6666-4666-8666-666666666666";
+    const remediationId = "77777777-7777-4777-8777-777777777777";
+    const gitleaksFinding = {
+      ...finding,
+      findingId: "88888888-8888-4888-8888-888888888888",
+      title: "EXV SecretExposure",
+      source: "gitleaks.repo_secrets.scan",
+      sourceEntityType: "Exposure" as const,
+      sourceMotion: "EXV" as const,
+      relatedPathIds: [],
+      relatedRemediationIds: [],
+      pathProof: null,
+      location: "leaked.js:2",
+      ruleId: "slack-bot-token",
+      impact: "Exposure validation observed SecretExposure.",
+      status: "Validated" as const,
+      validationState: "Validated" as const
+    };
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const route = String(input).split("?")[0] ?? "";
+      if (route === `/api/v1/community/validation-runs/${missionId}/remediations`) {
+        return {
+          json: async () => ({
+            createdCount: 1,
+            missionId,
+            remediationIds: [remediationId]
+          }),
+          ok: true,
+          status: 200
+        };
+      }
+      if (route === "/api/v1/findings") {
+        return {
+          json: async () => ({
+            items: [gitleaksFinding],
+            page: { hasMore: false, limit: 50, offset: 0 }
+          }),
+          ok: true,
+          status: 200
+        };
+      }
+      return mockFetch()(input);
+    }) as unknown as typeof fetch;
+    vi.stubGlobal("fetch", fetchMock);
+    window.history.replaceState(null, "", `/findings?missionId=${missionId}`);
+
+    render(<FindingsWorkbench />);
+
+    const primary = await screen.findByTestId("findings-first-hour-primary");
+    expect(primary).toHaveTextContent(/^Create remediations$/);
+    expect(primary.tagName).toBe("BUTTON");
+    expect(screen.queryByText(/Mark Fixed/i)).not.toBeInTheDocument();
+    expect(screen.getByTestId("findings-more-triage")).not.toHaveAttribute("open");
+
+    fireEvent.click(primary);
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        `/api/v1/community/validation-runs/${missionId}/remediations`,
+        expect.objectContaining({ method: "POST" })
+      );
+      expect(screen.getByTestId("findings-first-hour-primary")).toHaveTextContent(
+        /^Review remediations$/
+      );
+    });
+    const review = screen.getByTestId("findings-first-hour-primary");
+    expect(review).toHaveAttribute("href", `/remediation/${remediationId}`);
+    expect(
+      screen.getAllByText(/Fixed still requires a verification event/i).length
+    ).toBeGreaterThan(0);
+    expect(
+      screen.queryByRole("button", { name: /Mark Fixed/i })
+    ).not.toBeInTheDocument();
+  });
+
+  it("P2-HOMEFIXED: after measured Fixed, honesty keeps pathless Gitleaks Open", async () => {
+    const gitleaksFinding = {
+      ...finding,
+      findingId: "88888888-8888-4888-8888-888888888888",
+      title: "EXV SecretExposure",
+      source: "gitleaks.repo_secrets.scan",
+      relatedPathIds: [],
+      relatedRemediationIds: ["99999999-9999-4999-8999-999999999999"],
+      pathProof: null,
+      location: "leaked.js:2",
+      ruleId: "slack-bot-token",
+      status: "Inconclusive" as const,
+      validationState: "Validated" as const
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const route = String(input).split("?")[0] ?? "";
+        if (route === "/api/v1/findings") {
+          return {
+            json: async () => ({
+              items: [gitleaksFinding],
+              page: { hasMore: false, limit: 50, offset: 0 }
+            }),
+            ok: true,
+            status: 200
+          };
+        }
+        if (route === "/api/v1/remediations") {
+          return {
+            json: async () => ({
+              items: [
+                {
+                  latestVerification: { outcome: "Fixed" },
+                  relatedFindingFingerprint: gitleaksFinding.fingerprint,
+                  status: "Fixed"
+                }
+              ],
+              page: { hasMore: false }
+            }),
+            ok: true,
+            status: 200
+          };
+        }
+        return mockFetch()(input);
+      }) as unknown as typeof fetch
+    );
+
+    render(<FindingsWorkbench />);
+
+    expect(
+      await screen.findByText(/Remediation Fixed after retest/i)
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Pathless Gitleaks stay Open/i)
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Fixed still requires a verification event/i)
+    ).not.toBeInTheDocument();
+  });
+
+  it("P2-FINDINGSMALL: Review remediations is the first-hour verb when the VALIDATED row already has an Open task", async () => {
+    const remediationId = "99999999-9999-4999-8999-999999999999";
+    const gitleaksFinding = {
+      ...finding,
+      findingId: "88888888-8888-4888-8888-888888888888",
+      title: "EXV SecretExposure",
+      source: "gitleaks.repo_secrets.scan",
+      sourceEntityType: "Exposure" as const,
+      sourceMotion: "EXV" as const,
+      relatedPathIds: [],
+      relatedRemediationIds: [remediationId],
+      pathProof: null,
+      location: "leaked.js:2",
+      ruleId: "slack-bot-token",
+      impact: "Exposure validation observed SecretExposure.",
+      status: "Validated" as const,
+      validationState: "Validated" as const
+    };
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const route = String(input).split("?")[0] ?? "";
+      if (route === "/api/v1/findings") {
+        return {
+          json: async () => ({
+            items: [gitleaksFinding],
+            page: { hasMore: false, limit: 50, offset: 0 }
+          }),
+          ok: true,
+          status: 200
+        };
+      }
+      return mockFetch()(input);
+    }) as unknown as typeof fetch;
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<FindingsWorkbench />);
+
+    const primary = await screen.findByTestId("findings-first-hour-primary");
+    expect(primary).toHaveTextContent(/^Review remediations$/);
+    expect(primary).toHaveAttribute("href", `/remediation/${remediationId}`);
+    expect(screen.getAllByTestId("findings-first-hour-primary")).toHaveLength(1);
+    expect(screen.queryByText(/Mark Fixed/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /^Create remediations$/i })
+    ).not.toBeInTheDocument();
   });
 
   it("collapses Filters behind details by default on small screens (P09)", async () => {
@@ -442,6 +717,20 @@ describe("FindingsWorkbench v2", () => {
     // Workflow status Validated may still appear (attention tone) — that is
     // not path certainty. Raw path certainty Validated must not be the claim-safe badge.
     expect(claimSafeState).not.toHaveTextContent("Validated");
+  });
+
+  it("collapsed row shows claim-safe Discovered, not Validated from Critical severity", async () => {
+    vi.stubGlobal("fetch", mockFetch());
+
+    render(<FindingsWorkbench />);
+
+    const row = await screen.findByTestId(`finding-row-${findingId}`);
+    const claimSafe = within(row).getByTestId(
+      `finding-row-claim-safe-${findingId}`
+    );
+    expect(claimSafe).toHaveTextContent("Discovered");
+    expect(claimSafe).not.toHaveTextContent("Validated");
+    expect(row.textContent).not.toMatch(/Validated high-impact path/i);
   });
 
   it("reveals governed accepted-risk fields in the bulk workflow", async () => {
@@ -1323,6 +1612,47 @@ describe("FindingsWorkbench v2", () => {
     });
   });
 
+  it("P3-MISSIONLAND: client navigation from Home CTA keeps missionId and shows the Community-mission chip", async () => {
+    const missionId = "e135b27b-272c-4c6c-ad92-b060c2e7991e";
+    vi.stubGlobal("fetch", mockFetch());
+
+    const hrefs: string[] = [];
+    const nativeReplace = window.history.replaceState.bind(window.history);
+    vi.spyOn(window.history, "replaceState").mockImplementation(
+      (state, title, url) => {
+        if (typeof url === "string") {
+          hrefs.push(url);
+        }
+        return nativeReplace(state, title, url);
+      }
+    );
+
+    // Client nav can mount /findings (Active defaults) before Next applies the
+    // Home Review findings href, then replaceState from filter state.
+    window.history.replaceState(null, "", "/findings");
+    render(<FindingsWorkbench />);
+    await screen.findByText("Public workload identity reaches production");
+    hrefs.length = 0;
+
+    window.history.replaceState(
+      null,
+      "",
+      `/findings?missionId=${missionId}`
+    );
+    fireEvent.click(screen.getByRole("button", { name: "All" }));
+
+    expect(
+      await screen.findByTestId("findings-community-mission-chip")
+    ).toHaveTextContent("This Community mission");
+    expect(window.location.pathname).toBe("/findings");
+    expect(window.location.search).toContain(`missionId=${missionId}`);
+    expect(
+      hrefs.filter(
+        (href) => href.includes("/findings") && !href.includes("missionId=")
+      )
+    ).toEqual([]);
+  });
+
   it("passes disposition and status filters to listFindings", async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       const route = String(input).split("?")[0] ?? "";
@@ -1945,5 +2275,303 @@ describe("FindingsWorkbench v2", () => {
     expect(within(detail).getByText("Evidence")).toBeInTheDocument();
     expect(detail.textContent).not.toMatch(/tool\.driver/);
     expect(detail.textContent).not.toMatch(/^Fixed$/);
+  });
+
+  it("P3-HYDRATE: after mount, Community-mission chip and LiveUpdatePill coexist; no Route the smallest fix", async () => {
+    const missionId = "adba52fd-420d-4637-a93d-e3fe6b603ea2";
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const route = String(input).split("?")[0] ?? "";
+      if (route === "/api/v1/findings") {
+        return {
+          json: async () => ({
+            items: [finding],
+            page: { hasMore: false, limit: 50, offset: 0 }
+          }),
+          ok: true,
+          status: 200
+        };
+      }
+      return mockFetch()(input);
+    });
+    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch);
+    window.history.replaceState(
+      null,
+      "",
+      `/findings?missionId=${missionId}`
+    );
+
+    render(<FindingsWorkbench />);
+
+    const chip = await screen.findByTestId("findings-community-mission-chip");
+    expect(chip).toHaveTextContent("This Community mission");
+    const slot = screen.getByTestId("findings-live-update-slot");
+    expect(within(slot).getByRole("status")).toHaveTextContent(/Polled/i);
+    expect(screen.queryByText(/Route the smallest fix/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Mark Fixed/i)).not.toBeInTheDocument();
+  });
+});
+
+describe("P3-HYDRATE findings header meta", () => {
+  const missionId = "adba52fd-420d-4637-a93d-e3fe6b603ea2";
+
+  it("does not ready the Community-mission chip before mount even when missionId is set", () => {
+    expect(findingsCommunityMissionChipReady(false, missionId)).toBe(false);
+    expect(findingsCommunityMissionChipReady(true, null)).toBe(false);
+    expect(findingsCommunityMissionChipReady(true, missionId)).toBe(true);
+  });
+
+  it("SSR HTML keeps the LiveUpdatePill slot and omits the Community-mission chip", () => {
+    const html = renderToString(
+      <FindingsHeaderMeta
+        missionId={missionId}
+        lastUpdatedAt={null}
+        refreshing={false}
+      />
+    );
+    expect(html).toContain("findings-live-update-slot");
+    expect(html).toContain("Polled");
+    expect(html).not.toContain("findings-community-mission-chip");
+    expect(html).not.toContain("This Community mission");
+  });
+
+  it("after mount paints the Community-mission chip without dropping the pill slot", () => {
+    render(
+      <FindingsHeaderMeta
+        missionId={missionId}
+        lastUpdatedAt={null}
+        refreshing={false}
+      />
+    );
+    expect(screen.getByTestId("findings-community-mission-chip")).toHaveTextContent(
+      "This Community mission"
+    );
+    const slot = screen.getByTestId("findings-live-update-slot");
+    expect(slot.compareDocumentPosition(screen.getByTestId("findings-community-mission-chip"))).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING
+    );
+    expect(within(slot).getByRole("status")).toHaveTextContent(
+      "Polled · waiting for data"
+    );
+  });
+});
+
+describe("P3-MISSIONLAND findings URL sync", () => {
+  const missionId = "e135b27b-272c-4c6c-ad92-b060c2e7991e";
+  const defaults = {
+    pathname: "/findings",
+    savedView: "active",
+    query: "",
+    severity: "all",
+    status: "all",
+    disposition: "all"
+  };
+
+  it("keeps Home CTA missionId when filter state has not adopted it yet", () => {
+    expect(
+      findingsWorkbenchHref({
+        ...defaults,
+        currentSearch: `?missionId=${missionId}`,
+        missionId: null
+      })
+    ).toBe(`/findings?missionId=${missionId}`);
+  });
+
+  it("keeps missionId from state on a clean Active landing", () => {
+    expect(
+      findingsWorkbenchHref({
+        ...defaults,
+        currentSearch: `?missionId=${missionId}`,
+        missionId
+      })
+    ).toBe(`/findings?missionId=${missionId}`);
+  });
+
+  it("blank mission keeps the tenant /findings queue", () => {
+    expect(
+      findingsWorkbenchHref({
+        ...defaults,
+        currentSearch: "",
+        missionId: null
+      })
+    ).toBe("/findings");
+  });
+});
+
+describe("loop 14 390 Findings filter chips", () => {
+  const gitleaksFinding = {
+    ...finding,
+    findingId: "88888888-8888-4888-8888-888888888888",
+    title: "EXV SecretExposure",
+    source: "gitleaks.repo_secrets.scan",
+    sourceEntityType: "Exposure" as const,
+    sourceMotion: "EXV" as const,
+    relatedPathIds: [],
+    relatedRemediationIds: [],
+    pathProof: null,
+    location: "leaked.js:2",
+    ruleId: "slack-bot-token",
+    impact: "Exposure validation observed SecretExposure.",
+    rootCauseSummary:
+      "Exposure / SecretExposure from Gitleaks (gitleaks.repo_secrets.scan); no linked assets.",
+    status: "Validated" as const,
+    validationState: "Validated" as const
+  };
+
+  beforeEach(() => {
+    window.history.replaceState(null, "", "/findings");
+    Object.defineProperty(window, "innerWidth", {
+      configurable: true,
+      value: 390
+    });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    window.history.replaceState(null, "", "/findings");
+  });
+
+  it("layout helper: wrap/scroll at 390 does not cover the VALIDATED row", () => {
+    expect(FINDINGS_FILTER_CHIPS_390_VIEWPORT).toBe(390);
+    expect(findingsFilterChips390ClassName()).toMatch(/findings-filter-chips/);
+    expect(findingsFilterChips390ClassName()).toMatch(/overflow-x-auto/);
+    expect(findingsFilterChips390ClassName()).toMatch(/min-w-0/);
+    expect(findingsFilterChips390RailClassName()).toMatch(/flex-wrap/);
+    expect(findingsFilterChips390RailClassName()).toMatch(/overflow-x-auto/);
+
+    const row = { top: 120, right: 370, bottom: 168, left: 16 };
+    const chipsBelow = { top: 180, right: 370, bottom: 240, left: 16 };
+    const chipsOverlay = { top: 130, right: 370, bottom: 190, left: 16 };
+    expect(findingsFilterChipsCoverValidatedRow(chipsBelow, row)).toBe(false);
+    expect(findingsFilterChipsCoverValidatedRow(chipsOverlay, row)).toBe(true);
+
+    expect(
+      findingsFilterChips390LayoutOk({
+        viewportWidth: 390,
+        documentOverflowX: false,
+        chipsCoverValidatedRow: false,
+        chipsWrapOrScroll: true
+      })
+    ).toBe(true);
+    expect(
+      findingsFilterChips390LayoutOk({
+        viewportWidth: 390,
+        documentOverflowX: true,
+        chipsCoverValidatedRow: false,
+        chipsWrapOrScroll: true
+      })
+    ).toBe(false);
+    expect(
+      findingsFilterChips390LayoutOk({
+        viewportWidth: 390,
+        documentOverflowX: false,
+        chipsCoverValidatedRow: true,
+        chipsWrapOrScroll: true
+      })
+    ).toBe(false);
+  });
+
+  it("populated first-hour at 390: chips wrap/scroll under More and do not cover leaked.js path·rule", async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const route = String(input).split("?")[0] ?? "";
+      if (route === "/api/v1/findings") {
+        return {
+          json: async () => ({
+            items: [gitleaksFinding],
+            page: { hasMore: false, limit: 50, offset: 0 }
+          }),
+          ok: true,
+          status: 200
+        };
+      }
+      return mockFetch()(input);
+    }) as unknown as typeof fetch;
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<FindingsWorkbench />);
+
+    expect(window.innerWidth).toBe(390);
+    const firstHour = await screen.findByTestId("findings-first-hour");
+    expect(
+      within(firstHour).getByText("leaked.js:2 · slack-bot-token")
+    ).toBeInTheDocument();
+    expect(within(firstHour).queryByTestId("findings-filter-chips")).toBeNull();
+    expect(screen.getAllByTestId("findings-first-hour-primary")).toHaveLength(1);
+    expect(screen.queryByText(/Route the smallest fix/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Mark Fixed/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/High-danger/i)).not.toBeInTheDocument();
+
+    const more = screen.getByTestId("findings-more-triage");
+    expect(more).toHaveClass("order-last");
+    fireEvent.click(screen.getByTestId("findings-more-summary"));
+
+    const chips = screen.getByTestId("findings-filter-chips");
+    expect(more.contains(chips)).toBe(true);
+    expect(firstHour.contains(chips)).toBe(false);
+    expect(chips.className).toMatch(/findings-filter-chips/);
+    expect(chips.className).toMatch(/overflow-x-auto/);
+    expect(chips.querySelector(".findings-filter-chips-rail")).not.toBeNull();
+    expect(chips.querySelector(".findings-filter-chips-rail")?.className).toMatch(
+      /flex-wrap/
+    );
+    expect(
+      within(chips).getByTestId("findings-severity-chip-Critical")
+    ).toBeInTheDocument();
+    expect(within(chips).getByTestId("findings-view-active")).toBeInTheDocument();
+    expect(within(chips).queryByText("Skip to content")).not.toBeInTheDocument();
+    expect(within(chips).queryByText(/^Home$/)).not.toBeInTheDocument();
+    expect(
+      within(firstHour).getByText("leaked.js:2 · slack-bot-token")
+    ).toBeInTheDocument();
+    const copyView = within(chips).getByTestId("findings-copy-view-link");
+    expect(copyView).toHaveTextContent("Copy view link");
+    expect(copyView.className).toMatch(/min-h-6/);
+    expect(copyView.className).toMatch(/min-w-6/);
+    expect(copyView.className).toMatch(/sm:ml-auto/);
+  });
+});
+
+describe("WCAG 2.5.8 copy-view-link target size (loop 15 residual)", () => {
+  it("treats loop-15 desktop Copy view link 92.2×18 as below 24×24 CSS px", () => {
+    expect(WCAG_TARGET_SIZE_MINIMUM_PX).toBe(24);
+    expect(targetSizeBelowMinimumPx(92.2, 18)).toBe(true);
+    expect(targetSizeBelowMinimumPx(92.2, 24)).toBe(false);
+    expect(targetSizeBelowMinimumPx(24, 24)).toBe(false);
+    expect(targetSizeBelowMinimumPx(23.9, 24)).toBe(true);
+    expect(targetSizeBelowMinimumPx(24, 23.9)).toBe(true);
+  });
+
+  it("copy-link control class is at least 24×24 CSS px (min-h-6 min-w-6)", () => {
+    const copyView = findingsCopyLinkControlClassName({ alignEndOnSm: true });
+    expect(copyView).toMatch(/inline-flex/);
+    expect(copyView).toMatch(/min-h-6/);
+    expect(copyView).toMatch(/min-w-6/);
+    expect(copyView).toMatch(/sm:ml-auto/);
+    expect(copyView).not.toMatch(/min-h-4/);
+    expect(copyView).not.toMatch(/min-h-5/);
+
+    const sibling = findingsCopyLinkControlClassName();
+    expect(sibling).toMatch(/min-h-6/);
+    expect(sibling).toMatch(/min-w-6/);
+    expect(sibling).not.toMatch(/sm:ml-auto/);
+  });
+
+  it("populated findings Copy view link uses the 24×24 copy-link class", async () => {
+    vi.stubGlobal("fetch", mockFetch());
+    render(<FindingsWorkbench />);
+
+    await screen.findByText("Public workload identity reaches production");
+    fireEvent.click(screen.getByTestId("findings-more-summary"));
+
+    const copyView = screen.getByTestId("findings-copy-view-link");
+    expect(copyView).toHaveAttribute("type", "button");
+    expect(copyView).toHaveTextContent("Copy view link");
+    expect(copyView.className).toBe(
+      findingsCopyLinkControlClassName({ alignEndOnSm: true })
+    );
+    expect(copyView.className).toMatch(/min-h-6/);
+    expect(copyView.className).toMatch(/min-w-6/);
+    expect(screen.queryByText(/High-danger/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Mark Fixed/i)).not.toBeInTheDocument();
+    expect(screen.getAllByTestId("findings-first-hour-primary")).toHaveLength(1);
   });
 });

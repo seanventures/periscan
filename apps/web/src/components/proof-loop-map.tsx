@@ -508,10 +508,12 @@ function PanelMap({
 
 function RailMap({
   nodes,
-  nextAction
+  nextAction,
+  suppressNextAction = false
 }: {
   nodes: ProofLoopMapNode[];
   nextAction?: ProductActivationState["nextAction"] | null;
+  suppressNextAction?: boolean;
 }) {
   const progress = proofLoopMapProgress(nodes);
   const current = progress.current;
@@ -562,7 +564,7 @@ function RailMap({
           );
         })}
       </ol>
-      {current || nextAction ? (
+      {suppressNextAction ? null : current || nextAction ? (
         <Link
           href={nextAction?.href ?? current?.href ?? "/getting-started"}
           className="mt-2 block truncate font-mono text-[10px] font-medium text-brand hover:text-brand-2"
@@ -595,7 +597,8 @@ export function ProofLoopMap({
   variant = "panel",
   className,
   loading = false,
-  community = false
+  community = false,
+  suppressNextAction = false
 }: {
   activation?: ProductActivationState | null;
   variant?: ProofLoopMapVariant;
@@ -604,6 +607,8 @@ export function ProofLoopMap({
   loading?: boolean;
   /** Community first-run map: Authorize is node 1, not Connect. */
   community?: boolean;
+  /** Findings first-hour owns the next verb — hide the competing rail link. */
+  suppressNextAction?: boolean;
 }) {
   const nodes = useMemo(
     () => buildProofLoopMapNodes(loading ? null : activation, { community }),
@@ -630,7 +635,11 @@ export function ProofLoopMap({
       {variant === "hero" ? (
         <HeroMap nodes={nodes} nextAction={nextAction} />
       ) : variant === "rail" ? (
-        <RailMap nodes={nodes} nextAction={nextAction} />
+        <RailMap
+          nodes={nodes}
+          nextAction={nextAction}
+          suppressNextAction={suppressNextAction}
+        />
       ) : (
         <PanelMap nodes={nodes} nextAction={nextAction} />
       )}

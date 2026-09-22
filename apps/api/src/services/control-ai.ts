@@ -924,12 +924,12 @@ export function createControlAiServices(
         );
       }
 
-      // Wave D dual gate (SOW + tenant inject flag + operator approval) is not an
-      // enablement path yet. Until a signed SOW lands, refuse all live inject
-      // attempts hard — no dual-gate bypass, no Atomic/Caldera live.
+      // Generic inject has no qualified execution adapter yet. Keep denial
+      // before queueing; implement scenario-bound policy, runner execution,
+      // cancellation, cleanup and receipts before adding a live path.
       if (input.executionMode === "LiveRunner" || input.dryRun === false) {
         throw new AppServiceError(
-          "Inject loop not available: closed inject→measure control execution is disabled on the control-plane API (control_live_execution_disabled). Wave D lab inject requires a signed SOW and dual gates (tenant inject flag + operator approval); neither is an enablement path in product today. Dry-run remains telemetry-only observation against connected SIEM/EDR — it does not claim a closed inject-measure loop. Atomic remains dry-run scenario import only (not live inject BAS). Use executionMode DryRun, or an explicitly approved internal-runner mission when a limited safe stimulus is authorized. Next step: connect a SIEM/EDR control source and run Observe telemetry (DryRun), or dispatch an approved endpoint benign-marker mission — do not treat this as live Atomic/BAS inject.",
+          "Inject loop not available on this endpoint (control_live_execution_disabled). Use Observe telemetry (DryRun) for connected SIEM/EDR observation, or an approved endpoint benign-marker mission for bounded emit-and-observe. Additional BAS scenarios require qualified adapters, verified scope, policy approval, cleanup and measured receipts.",
           400,
           "control_live_execution_disabled"
         );

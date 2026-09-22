@@ -143,6 +143,13 @@ export function estimateNextRunAt(
   const [hour, minute] = timing.runAtLocalTime.split(":").map(Number);
   let date = { day: local.day, month: local.month, year: local.year };
 
+  if (frequency === "Hourly" || frequency === "Continuous") {
+    return moveScheduleOutsideBlackout(
+      new Date(from.getTime() + 60 * 60 * 1000),
+      timing
+    );
+  }
+
   if (frequency === "Weekly") {
     const targetDay = timing.dayOfWeek ?? local.dayOfWeek;
     date = shiftLocalScheduleDate(

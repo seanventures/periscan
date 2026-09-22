@@ -84,4 +84,21 @@ describe("TuiApp chrome", () => {
     await frameHas(instance, "[6:findings]");
     instance.unmount();
   });
+
+  it("opens BAS with b and keeps 1–9 + ? + q; High-danger stays off Home", async () => {
+    const instance = render(<TuiApp apiUrl="http://127.0.0.1:3001" />);
+    const home = await frameHas(instance, "[1:home]");
+    expect(home).not.toMatch(/High-danger|High danger/iu);
+    expect(home).toContain("1:home");
+    expect(home).toContain("9:health");
+    expect(home).toMatch(/1–9/u);
+
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    instance.stdin.write("b");
+    const bas = await frameHas(instance, /High danger/i);
+    expect(bas).toContain("1:home");
+    expect(bas).toContain("9:health");
+    expect(bas).toMatch(/liveSupported false/i);
+    instance.unmount();
+  });
 });

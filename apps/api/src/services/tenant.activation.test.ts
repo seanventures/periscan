@@ -777,7 +777,7 @@ describe("product activation first-run diagnostic ranking", () => {
     ).toMatchObject({ severity: "Info" });
   });
 
-  it("restores source_missing Attention once the tenant is Measured", async () => {
+  it("keeps source_missing optional Info after a measured Community Gitleaks result", async () => {
     const services = buildServices({
       measuredRun: {
         completedAt: now,
@@ -805,6 +805,6 @@ describe("product activation first-run diagnostic ranking", () => {
       activation.diagnostics.find(
         (diagnostic) => diagnostic.code === "source_missing"
       )
-    ).toMatchObject({ severity: "Attention" });
+    ).toMatchObject({ severity: "Info" });
   });
 });

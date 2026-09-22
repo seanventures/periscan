@@ -45,6 +45,15 @@ describe("LabsPortal (UX-W6 / UX-W10 portal-only)", () => {
     expect(
       LABS_PORTAL_DEEP_LINKS.some((d) => d.href === "/validation-ops")
     ).toBe(true);
+    expect(
+      within(deep).getByRole("link", { name: /Control validation/i })
+    ).toHaveAttribute("href", "/control-validation");
+    expect(
+      within(deep).getByRole("link", { name: /BAS operator workspace/i })
+    ).toHaveAttribute("href", "/bas");
+    expect(
+      within(deep).getByRole("link", { name: /ATT&CK Navigator overlay/i })
+    ).toHaveAttribute("href", "/attack-navigator");
   });
 
   it("lists LABS_DESTINATIONS independent of PRIMARY_NAV peers (UX-W10)", () => {

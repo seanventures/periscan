@@ -1,0 +1,31 @@
+{
+  "finding_count": 99,
+  "summary": { "failed": 7 },
+  "attack_plan": {
+    "objective": "chain SQLi to RCE on unverified hosts",
+    "steps": ["enumerate", "exploit", "persist"]
+  },
+  "findings": [
+    {
+      "id": "C1-sqli-login",
+      "title": "SQL injection in login",
+      "severity": "critical",
+      "cwe": "CWE-89",
+      "file": "src/login.go",
+      "poc": "UNION SELECT hashed_secret FROM users",
+      "poc_script": "sqlmap -u https://lab.example.test/login --data 'user=admin'",
+      "evidence": {
+        "secret": "AKIAIOSFODNN7EXAMPLE",
+        "key": "-----BEGIN RSA PRIVATE KEY-----\nfixture\n-----END RSA PRIVATE KEY-----"
+      }
+    },
+    {
+      "id": "H1-path-traversal-export",
+      "title": "Path traversal in export",
+      "severity": "high",
+      "cwe": "CWE-22",
+      "file": "src/export.go",
+      "attack_plan": "read /etc/shadow after path traversal"
+    }
+  ]
+}

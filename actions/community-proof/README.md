@@ -26,7 +26,7 @@ Refuse language (never in this Action, comments, or copy that wraps it):
 | certified          | last authorized Community measurement          |
 | we are open source | Community edition / open-core validation slice |
 
-Also never: live Atomic / Caldera / SharpHound / sqlmap / Metasploit, “Fixed”
+Also disallowed: unqualified scenario execution, “Fixed”
 without a verification event, or “exploitable” inferred from severity.
 
 Contract: `CLAIM_LANGUAGE_CATALOG` in `packages/shared/src/claim-deny-list.ts`.

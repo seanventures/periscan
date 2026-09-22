@@ -458,7 +458,7 @@ function getReportTemplateConfig(
     case "CTEMProgramSummary":
       return {
         audienceGuidance:
-          "CTEM program view organized around scope, discover, prioritize, validate, mobilize, and verify stages.",
+          "CTEM program view organized around scope, discover, prioritize, validate, mobilize, and verify stages. This pack is a program summary of authorized proof, not a certification.",
         includeAiRisks: true,
         includeComplianceSupport: false,
         includeControlObservations: true,
@@ -467,7 +467,8 @@ function getReportTemplateConfig(
         includeMSSPDelivery: false,
         includeRemediationClosure: false,
         label: "Periscan CTEM Program Summary",
-        primaryUse: "Continuous Threat Exposure Management program review",
+        primaryUse:
+          "Continuous Threat Exposure Management program review (not certification)",
         redactionPosture:
           "Program-level evidence IDs and normalized details included."
       };
@@ -1194,6 +1195,12 @@ function buildCTEMProgramFromSnapshot(
         ? options.snapshotId
         : snapshot.snapshotId,
     source: options?.source ?? "Snapshot",
+    ...(typeof options?.nonSnapValidateEvidence === "number"
+      ? { nonSnapValidateEvidence: options.nonSnapValidateEvidence }
+      : {}),
+    ...(typeof options?.nonSnapVerifyEvidence === "number"
+      ? { nonSnapVerifyEvidence: options.nonSnapVerifyEvidence }
+      : {}),
     stages: [
       {
         evidenceCount: snapshot.metrics.verifiedScopeCount,

@@ -321,6 +321,7 @@ export function createAuthServices(
       // evaluate tenant.requireMfa and SSO enforcement against the right tenant.
       const membership = await prisma.membership.findFirst({
         where: {
+          status: "Active",
           userId: user.userId
         },
         orderBy: {
@@ -501,6 +502,7 @@ export function createAuthServices(
     async getSessionContext(session, requestedTenantId) {
       const membership = await prisma.membership.findFirst({
         where: {
+          status: "Active",
           tenantId: requestedTenantId ?? session.defaultTenantId,
           userId: session.userId
         },

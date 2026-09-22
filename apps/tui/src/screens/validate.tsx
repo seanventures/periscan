@@ -6,7 +6,13 @@ import {
   type SafetyLevel
 } from "@periscan/shared";
 
+import {
+  GITLEAKS_REPO_SECRETS,
+  pinGitleaksRepoSecretsModuleIds
+} from "../lib/gitleaks-pin.js";
 import { theme } from "../theme.js";
+
+export { GITLEAKS_REPO_SECRETS };
 
 export const HTTP_200_NOT_QUEUED =
   "HTTP 200 is not jobs queued — read jobsQueued and mission.status.";
@@ -59,8 +65,6 @@ export type ValidatePolicyPreviewInput = {
   scopeId: string;
   target: Record<string, unknown>;
 };
-
-export const GITLEAKS_REPO_SECRETS = "gitleaks.repo_secrets";
 
 export type ValidateApi = {
   communitySuite: (scopeId: string) => Promise<ValidateSuite>;
@@ -256,16 +260,16 @@ export function ValidateScreen(props: {
       return;
     }
     const firstHour = communityFirstHourStartModuleIds(suite.startableModuleIds);
+    const pinned = pinGitleaksRepoSecretsModuleIds(suite.startableModuleIds);
     let moduleIds: string[] | undefined;
     if (pack === "full") {
       moduleIds = [...suite.startableModuleIds];
-    } else if (
-      pinnedGitleaks &&
-      suite.startableModuleIds.includes(GITLEAKS_REPO_SECRETS)
-    ) {
-      moduleIds = [GITLEAKS_REPO_SECRETS];
+    } else if (pinnedGitleaks && pinned) {
+      moduleIds = pinned;
     } else if (firstHour.length > 0) {
       moduleIds = firstHour;
+    } else if (pinned) {
+      moduleIds = pinned;
     }
     setBusy("start");
     setError(null);

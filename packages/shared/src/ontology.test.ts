@@ -239,7 +239,13 @@ describe("P10-17 segment runner profiles", () => {
     expect(resolveModuleSegmentFamily("runner.reachability_check")).toBe(
       "reachability"
     );
+    expect(resolveModuleSegmentFamily("runner.port_connect_check")).toBe(
+      "reachability"
+    );
     expect(resolveModuleSegmentFamily("periscan.dns_resolution_check")).toBe(
+      "dns-resolve"
+    );
+    expect(resolveModuleSegmentFamily("runner.ptr_lookup_check")).toBe(
       "dns-resolve"
     );
     expect(resolveModuleSegmentFamily("recon.http_probe")).toBe("http-probe");

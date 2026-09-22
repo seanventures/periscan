@@ -4,6 +4,12 @@ import { getConnectorByKey } from "./index.js";
 
 const OKTA_API_TOKEN = "okta-secret-ssws-api-token";
 const OKTA_ORG_URL = "https://periscan.okta.test";
+const OKTA_CLIENT_ID = "okta-oauth-client-id";
+const OKTA_CLIENT_SECRET = "okta-oauth-client-secret";
+const OKTA_ACCESS_TOKEN = "okta-oauth-access-token";
+const OKTA_TOKEN_URL = `${OKTA_ORG_URL}/oauth2/v1/token`;
+const TENANT_ID = "55555555-5555-4555-8555-555555555555";
+const INTEGRATION_ID = "66666666-6666-4666-8666-666666666666";
 
 /**
  * Recorded-fixture contract test for the live `okta` connector.
@@ -241,5 +247,244 @@ describe("okta contract", () => {
       ])
     );
     expect(JSON.stringify(result)).not.toContain(OKTA_API_TOKEN);
+  });
+});
+
+function tokenBody(init?: RequestInit): URLSearchParams {
+  const raw = init?.body;
+  if (raw instanceof URLSearchParams) {
+    return raw;
+  }
+  return new URLSearchParams(String(raw ?? ""));
+}
+
+function oauthInventoryFetch(
+  assertToken: (init?: RequestInit) => void,
+  apiStatus = 200
+) {
+  return vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+    const url = String(input);
+    if (url === OKTA_TOKEN_URL || url.includes("/oauth2/v1/token")) {
+      expect(init?.method).toBe("POST");
+      assertToken(init);
+      return new Response(
+        JSON.stringify({
+          access_token: OKTA_ACCESS_TOKEN,
+          expires_in: 3600,
+          token_type: "Bearer"
+        }),
+        {
+          headers: { "content-type": "application/json" },
+          status: 200
+        }
+      );
+    }
+
+    if (apiStatus !== 200) {
+      return new Response("unauthorized", { status: apiStatus });
+    }
+
+    expect(init?.method ?? "GET").toBe("GET");
+    expect(
+      (init?.headers as Record<string, string> | undefined)?.authorization
+    ).toBe(`Bearer ${OKTA_ACCESS_TOKEN}`);
+    expect((init?.headers as Record<string, string> | undefined)?.accept).toBe(
+      "application/json"
+    );
+
+    if (url.includes("/api/v1/users/me")) {
+      return jsonResponse({
+        id: "00u-me",
+        profile: { login: "okta-oauth-app@example.com" }
+      });
+    }
+
+    if (url.includes("/api/v1/users/00u-admin/factors")) {
+      return jsonResponse([
+        {
+          factorType: "token:software:totp",
+          id: "opf-admin",
+          provider: "OKTA",
+          status: "ACTIVE"
+        }
+      ]);
+    }
+
+    if (url.includes("/api/v1/users/00u-eng/factors")) {
+      return jsonResponse([]);
+    }
+
+    if (url.includes("/api/v1/users")) {
+      return jsonResponse([ADMIN_USER, STANDARD_USER]);
+    }
+
+    if (url.includes("/api/v1/groups")) {
+      return jsonResponse([
+        {
+          id: "00g-admins",
+          profile: {
+            description: "Tenant administrators with privileged access.",
+            name: "Okta Administrators"
+          },
+          type: "OKTA_GROUP"
+        }
+      ]);
+    }
+
+    if (url.includes("/api/v1/apps")) {
+      return jsonResponse([
+        {
+          id: "0oa-prod",
+          label: "Production Console",
+          name: "prod-console",
+          signOnMode: "SAML_2_0",
+          status: "ACTIVE"
+        }
+      ]);
+    }
+
+    return new Response(JSON.stringify({ errorSummary: "not found" }), {
+      status: 404
+    });
+  });
+}
+
+const oauthConfig = {
+  clientId: OKTA_CLIENT_ID,
+  clientSecret: OKTA_CLIENT_SECRET,
+  connectorKey: "okta",
+  lastRotatedAt: "2026-09-01T00:00:00.000Z",
+  orgUrl: OKTA_ORG_URL,
+  scopes: [
+    "okta.users.read",
+    "okta.groups.read",
+    "okta.apps.read",
+    "okta.factors.read"
+  ],
+  tokenUrl: OKTA_TOKEN_URL
+} as const;
+
+const oauthContext = {
+  authType: "oauth2ClientCredentials",
+  config: oauthConfig,
+  integrationId: INTEGRATION_ID,
+  mockMode: false,
+  tenantId: TENANT_ID
+} as const;
+
+describe("okta OAuth2 client_credentials grant", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it("advertises OAuth2 client_credentials while keeping SSWS apiToken", () => {
+    const connector = getConnectorByKey("okta");
+    const kinds = connector!.manifest.authMethods.map((method) => method.kind);
+
+    expect(kinds).toEqual(
+      expect.arrayContaining(["mock", "apiToken", "oauth2ClientCredentials"])
+    );
+
+    const oauth = connector!.manifest.authMethods.find(
+      (method) => method.kind === "oauth2ClientCredentials"
+    );
+    expect(oauth?.fields.map((field) => field.key)).toEqual(
+      expect.arrayContaining(["orgUrl", "clientId", "clientSecret"])
+    );
+    expect(
+      oauth?.fields.find((field) => field.key === "clientSecret")?.secret
+    ).toBe(true);
+
+    const ssws = connector!.manifest.authMethods.find(
+      (method) => method.kind === "apiToken"
+    );
+    expect(ssws?.fields.map((field) => field.key)).toEqual(
+      expect.arrayContaining(["orgUrl", "apiToken"])
+    );
+    expect(ssws?.fields.find((field) => field.key === "apiToken")?.secret).toBe(
+      true
+    );
+  });
+
+  it("exchanges client_credentials then reads inventory with Bearer and never logs tokens", async () => {
+    const fetchMock = oauthInventoryFetch((init) => {
+      const body = tokenBody(init);
+      expect(body.get("grant_type")).toBe("client_credentials");
+      expect(body.get("client_id")).toBe(OKTA_CLIENT_ID);
+      expect(body.get("client_secret")).toBe(OKTA_CLIENT_SECRET);
+      expect(body.get("scope")).toBe(
+        "okta.users.read okta.groups.read okta.apps.read okta.factors.read"
+      );
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const connector = getConnectorByKey("okta");
+    const result = await connector!.sync(oauthContext);
+
+    expect(
+      fetchMock.mock.calls.some((call) => String(call[0]) === OKTA_TOKEN_URL)
+    ).toBe(true);
+    expect(result.health.status).toBe("Healthy");
+    expect(result.health.authorizationVerified).toBe(true);
+    expect(result.assets.map((asset) => asset.assetType)).toEqual(
+      expect.arrayContaining(["IdentityStore", "Application"])
+    );
+    expect(result.signals.map((signal) => signal.signalSubcategory)).toEqual(
+      expect.arrayContaining([
+        "IdentityStore",
+        "PrivilegedIdentity",
+        "MFAEnabled",
+        "PrivilegedGroup",
+        "SaaSApplication"
+      ])
+    );
+
+    const serialized = JSON.stringify(result);
+    expect(serialized).not.toContain(OKTA_CLIENT_SECRET);
+    expect(serialized).not.toContain(OKTA_ACCESS_TOKEN);
+    expect(serialized).not.toContain(OKTA_API_TOKEN);
+  });
+
+  it("maps vendor 401 on token exchange to Degraded with empty findings", async () => {
+    const fetchMock = vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            error: "invalid_client",
+            error_description: `bad secret ${OKTA_CLIENT_SECRET}`
+          }),
+          { status: 401 }
+        )
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const connector = getConnectorByKey("okta");
+    const result = await connector!.sync(oauthContext);
+
+    expect(result.health.status).toBe("Degraded");
+    expect(result.health.authorizationVerified).toBe(false);
+    expect(result.assets).toEqual([]);
+    expect(result.signals).toEqual([]);
+    expect(result.identityCandidates ?? []).toEqual([]);
+    expect(result.health.detail).not.toContain(OKTA_CLIENT_SECRET);
+    expect(JSON.stringify(result)).not.toContain(OKTA_CLIENT_SECRET);
+    expect(JSON.stringify(result)).not.toContain(OKTA_ACCESS_TOKEN);
+  });
+
+  it("maps Okta API 401 after a token to Degraded instead of inventing findings", async () => {
+    const fetchMock = oauthInventoryFetch(() => undefined, 401);
+    vi.stubGlobal("fetch", fetchMock);
+
+    const connector = getConnectorByKey("okta");
+    const result = await connector!.sync(oauthContext);
+
+    expect(result.health.status).toBe("Degraded");
+    expect(result.health.authorizationVerified).toBe(false);
+    expect(result.assets).toEqual([]);
+    expect(result.signals).toEqual([]);
+    expect(result.identityCandidates ?? []).toEqual([]);
+    expect(JSON.stringify(result)).not.toContain(OKTA_CLIENT_SECRET);
+    expect(JSON.stringify(result)).not.toContain(OKTA_ACCESS_TOKEN);
   });
 });

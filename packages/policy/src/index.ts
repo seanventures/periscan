@@ -10,6 +10,8 @@ import {
   SafetyLevelSchema,
   ScopeClassificationSchema,
   ScopeVerificationStatusSchema,
+  denyReasonForLivePack,
+  liveOffensivePackFromTarget,
   resolveScopeSafetyEnvelope,
   type ApprovalState,
   type PolicyDecisionOutcome
@@ -144,6 +146,25 @@ export function evaluatePolicy(
       rationale:
         "Uncontrolled exploit chaining is never permitted — validation must be scoped, bounded, and abortable."
     };
+  }
+
+  // Unqualified live packs are denied until a stored qualification record and
+  // tenant authorization exist. PERISCAN_LIVE_OFFENSIVE is not an enablement
+  // switch. Forbidden classes stay denied even when authorized.
+  const liveOffensivePack = liveOffensivePackFromTarget(input.target);
+  if (liveOffensivePack) {
+    const target = input.target ?? {};
+    const qualifiedAndAuthorized =
+      target.livePackQualified === true &&
+      target.tenantAuthorized === true &&
+      target.forbidden !== true;
+    if (!qualifiedAndAuthorized) {
+      return {
+        outcome: "Denied",
+        approvalState: "Rejected",
+        rationale: denyReasonForLivePack(liveOffensivePack)
+      };
+    }
   }
 
   // Destructive-class actions (destructive / real-data exfiltration / persistence

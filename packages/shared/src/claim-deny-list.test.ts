@@ -21,11 +21,11 @@ describe("claim deny-list productization (P19-20)", () => {
     expect(listClaimLanguageByBucket("refuse").length).toBeGreaterThanOrEqual(5);
   });
 
-  it("refuses full BAS, live ransomware, and certification overclaims", () => {
+  it("refuses unsupported shipped parity, live ransomware, and certification overclaims", () => {
     const refused = listRefusedClaimPhrases().join(" | ").toLowerCase();
     expect(refused).toMatch(/bas/);
     expect(refused).toMatch(/ransomware/);
-    expect(refused).toMatch(/kill-chain|apt/);
+    expect(refused).toMatch(/default start|unmarked/);
     expect(refused).toMatch(/dora|certified|certif/);
     expect(isRefusedClaimPhrase("Full multi-vector BAS platform like Cymulate")).toBe(
       true
@@ -33,6 +33,22 @@ describe("claim deny-list productization (P19-20)", () => {
     expect(
       isRefusedClaimPhrase("Measured vs Heuristic path labels with hop receipts")
     ).toBe(false);
+  });
+
+  it("permits BAS/AEV development and replaces the partner-or-walk mandate", () => {
+    expect(isRefusedClaimPhrase("Full BAS/AEV is our development objective")).toBe(false);
+    expect(CLAIM_LANGUAGE_CATALOG.some((entry) => entry.id === "bas-library-partner")).toBe(false);
+    expect(CLAIM_LANGUAGE_CATALOG.find((entry) => entry.id === "bas-library-interoperability")?.bucket).toBe("integrate");
+    expect(CLAIM_LANGUAGE_CATALOG.find((entry) => entry.id === "full-bas-peer")?.rationale).toContain("development objective");
+    expect(
+      CLAIM_LANGUAGE_CATALOG.find((entry) => entry.id === "high-danger-section")
+        ?.bucket
+    ).toBe("prove");
+    expect(
+      CLAIM_LANGUAGE_CATALOG.find(
+        (entry) => entry.id === "unmarked-ransomware-first-hour"
+      )?.bucket
+    ).toBe("refuse");
   });
 
   it("Wave J/K freeze: refuses auto-mitigate push, TEE host, Leading on Partial, Ray shipped", () => {
@@ -103,6 +119,24 @@ describe("claim deny-list productization (P19-20)", () => {
     ).toBe(true);
   });
 
+  it("PERISCAN-589: refuses treating Metasploit check() as exploitability or safety", () => {
+    expect(
+      CLAIM_LANGUAGE_CATALOG.find(
+        (entry) => entry.id === "metasploit-check-claim-split"
+      )?.bucket
+    ).toBe("prove");
+    expect(
+      isRefusedClaimPhrase(
+        "A Metasploit check() method proves exploitability or is a safety guarantee"
+      )
+    ).toBe(true);
+    expect(
+      isRefusedClaimPhrase(
+        "Distinguish Metasploit vulnerability presence, check support, and measured exploitability"
+      )
+    ).toBe(false);
+  });
+
   it("PERISCAN-30: refuses SCIM Production and fake vendor Type II claims", () => {
     const ids = CLAIM_LANGUAGE_CATALOG.filter((e) => e.bucket === "refuse").map(
       (e) => e.id
@@ -118,12 +152,57 @@ describe("claim deny-list productization (P19-20)", () => {
     expect(refused).toMatch(/type ii|soc 2/);
     expect(
       isRefusedClaimPhrase(
-        "Inbound SCIM 2.0 for Periscan users is Production / shipped / full IdP lifecycle"
+        "Inbound SCIM is Okta/Azure certified or a full IdP lifecycle including JIT"
       )
     ).toBe(true);
     expect(
       isRefusedClaimPhrase(
         "Vendor SOC 2 Type II certified / product packs equal Type II attestation"
+      )
+    ).toBe(true);
+  });
+
+  it("refuses always-on BAS / NodeZero autonomous pentest as Continuous validation copy", () => {
+    expect(
+      CLAIM_LANGUAGE_CATALOG.find(
+        (entry) => entry.id === "continuous-validation-cadence"
+      )?.bucket
+    ).toBe("prove");
+    expect(
+      isRefusedClaimPhrase(
+        "Always-on BAS / always-on live BAS / NodeZero-class autonomous pentest"
+      )
+    ).toBe(true);
+    expect(
+      isRefusedClaimPhrase(
+        "Continuous validation as a policy-approved Hourly/Daily/Weekly/Monthly cadence"
+      )
+    ).toBe(false);
+  });
+
+  it("PERISCAN-591: refuses Stratus customer-cloud destruction and Navigator-import-as-executed-coverage", () => {
+    const ids = CLAIM_LANGUAGE_CATALOG.filter((e) => e.bucket === "refuse").map(
+      (e) => e.id
+    );
+    expect(ids).toEqual(
+      expect.arrayContaining([
+        "stratus-customer-cloud-destroy",
+        "navigator-import-executed-coverage"
+      ])
+    );
+    const refused = listRefusedClaimPhrases().join(" | ").toLowerCase();
+    expect(refused).toMatch(/stratus/);
+    expect(refused).toMatch(/customer cloud/);
+    expect(refused).toMatch(/navigator/);
+    expect(refused).toMatch(/executed coverage/);
+    expect(
+      isRefusedClaimPhrase(
+        "Stratus Red Team live detonation that destroys customer cloud resources"
+      )
+    ).toBe(true);
+    expect(
+      isRefusedClaimPhrase(
+        "Imported ATT&CK Navigator layer is executed coverage or 100% ATT&CK"
       )
     ).toBe(true);
   });

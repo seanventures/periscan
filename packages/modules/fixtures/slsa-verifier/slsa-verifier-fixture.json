@@ -1,0 +1,20 @@
+{
+  "failed": 99,
+  "results": [
+    {
+      "artifact": "fixture-linux-amd64",
+      "status": "FAILED",
+      "error": "unexpected source URI. Trap secret AKIAIOSFODNN7EXAMPLE"
+    },
+    {
+      "artifact": "fixture-linux-arm64",
+      "status": "FAILED",
+      "error": "-----BEGIN RSA PRIVATE KEY-----\nfixture\n-----END RSA PRIVATE KEY-----"
+    },
+    {
+      "artifact": "ok-linux-amd64",
+      "status": "PASSED",
+      "error": "ghp_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    }
+  ]
+}

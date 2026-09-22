@@ -1,0 +1,47 @@
+[
+  {
+    "config": {
+      "protocol_version": "v1.0.0",
+      "scanner_name": "govulncheck",
+      "scan_level": "symbol"
+    }
+  },
+  {
+    "progress": {
+      "message": "Trap secret AKIAIOSFODNN7EXAMPLE"
+    }
+  },
+  {
+    "osv": {
+      "id": "GO-2023-1840",
+      "details": "-----BEGIN RSA PRIVATE KEY-----\nfixture\n-----END RSA PRIVATE KEY-----"
+    }
+  },
+  {
+    "finding": {
+      "osv": "GO-2023-1840",
+      "fixed_version": "v0.7.0",
+      "trace": [
+        {
+          "module": "golang.org/x/net",
+          "version": "v0.1.0",
+          "package": "golang.org/x/net/http2/hpack",
+          "function": "NewDecoder"
+        }
+      ]
+    }
+  },
+  {
+    "finding": {
+      "osv": "GO-2024-2687",
+      "fixed_version": "v1.9.1",
+      "trace": [
+        {
+          "module": "github.com/gin-gonic/gin",
+          "version": "v1.9.0",
+          "package": "github.com/gin-gonic/gin"
+        }
+      ]
+    }
+  }
+]

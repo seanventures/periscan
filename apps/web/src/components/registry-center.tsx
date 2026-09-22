@@ -2855,7 +2855,7 @@ export function RegistryCenter() {
                 <p className="text-xs text-muted">
                   Browse, enable, load &amp; evolve open source packages (incl.
                   AttackPack / PillarPack for ATT&amp;CK-mapped, safety-gated
-                  validation — AEV/CTEM proof, not full multi-vector BAS). Add
+                  validation — AEV/CTEM proof, qualification tracked per scenario). Add
                   more as the catalog grows.
                 </p>
               </div>

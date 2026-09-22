@@ -46,15 +46,12 @@ describe("safety-equivalent packs (PERISCAN-13 Phase C + Slice C partner)", () =
     );
   });
 
-  it("row 21 ransomware is forever refuse for impact emulation", () => {
+  it("row 21 ransomware is High-danger, not hidden forever-refuse", () => {
     const ransomware = getSafetyEquivalentPack(21);
-    expect(ransomware?.claimClass).toBe("forever_refuse");
-    expect(ransomware?.honestSubstituteVerdict).toBe("ForeverRefuse");
-    expect(ransomware?.canElevateSubstituteToPartial).toBe(false);
-    expect(ransomware?.foreverRefuse.join(" ")).toMatch(/ransomware/i);
-    expect(ransomware?.safeModules).not.toContain(
-      "exploitation.ransomware_live"
-    );
+    expect(ransomware?.claimClass).toBe("danger_section");
+    expect(ransomware?.honestSubstituteVerdict).toBe("DangerSection");
+    expect(ransomware?.safeModules).toContain("exploitation.impact_t1486");
+    expect(ransomware?.foreverRefuse.join(" ")).toMatch(/default.start/i);
   });
 
   it("row 16 APT substitute is plan_only Partial, not live APT", () => {
@@ -72,12 +69,12 @@ describe("safety-equivalent packs (PERISCAN-13 Phase C + Slice C partner)", () =
     expect(dns?.foreverRefuse.join(" ")).toMatch(/bulk data exfiltration/i);
   });
 
-  it("row 22 identity is exposure_only Partial with live spray refused", () => {
+  it("row 22 identity is exposure_only Partial with spray/harvest in High danger", () => {
     const identity = getSafetyEquivalentPack(22);
     expect(identity?.claimClass).toBe("exposure_only");
     expect(identity?.honestSubstituteVerdict).toBe("Partial");
     expect(identity?.safeModules).toContain("gitleaks.repo_secrets");
-    expect(identity?.foreverRefuse.join(" ")).toMatch(/spray|harvest|SharpHound/i);
+    expect(identity?.foreverRefuse.join(" ")).toMatch(/default start|High-danger/i);
   });
 
   it("lists partial-eligible vs forever-refuse without inventing live offense", () => {
@@ -88,7 +85,7 @@ describe("safety-equivalent packs (PERISCAN-13 Phase C + Slice C partner)", () =
     expect(partial).toContain(22);
     expect(partial).not.toContain(21);
     expect(partial).not.toContain(2);
-    expect(forever).toContain(21);
+    expect(forever).not.toContain(21);
     expect(forever).toContain(2);
     expect(forever).toContain(26);
     expect(forever).toContain(28);
@@ -100,19 +97,19 @@ describe("safety-equivalent packs (PERISCAN-13 Phase C + Slice C partner)", () =
     expect(response.partnerGatedScorecardIds).toEqual([2, 26, 28]);
     expect(response.safetyEquivalentScorecardIds).toEqual([16, 19, 21, 22]);
     expect(response.scaffoldCoreScorecardIds).toEqual([16, 21, 22]);
-    expect(response.note).toMatch(/never authorize live ransomware/i);
+    expect(response.note).toMatch(/High-danger section/i);
     expect(response.note).toMatch(/Partner rows \(2\/26\/28\)/i);
     expect(response.note).toMatch(/16=plan_only/);
-    expect(response.note).toMatch(/21=forever_refuse/);
+    expect(response.note).toMatch(/21=danger_section/);
     expect(response.note).toMatch(/22=exposure_only/);
   });
 
-  it("scaffold core helpers pin 16 plan_only / 21 forever_refuse / 22 exposure_only", () => {
+  it("scaffold core helpers pin 16 plan_only / 21 danger_section / 22 exposure_only", () => {
     const core = listSafetyScaffoldCorePacks();
     expect(core.map((p) => p.scorecardId)).toEqual([16, 21, 22]);
     expect(core.find((p) => p.scorecardId === 16)?.claimClass).toBe("plan_only");
     expect(core.find((p) => p.scorecardId === 21)?.claimClass).toBe(
-      "forever_refuse"
+      "danger_section"
     );
     expect(core.find((p) => p.scorecardId === 22)?.claimClass).toBe(
       "exposure_only"

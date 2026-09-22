@@ -1,0 +1,41 @@
+{
+  "results": {
+    "violations": [
+      {
+        "rule_name": "s3BucketPublicReadForbidden",
+        "description": "S3 bucket should not have a public-read ACL",
+        "rule_id": "AC_AWS_0207",
+        "severity": "HIGH",
+        "category": "Identity And Access Management",
+        "resource_name": "fixture",
+        "resource_type": "aws_s3_bucket",
+        "file": "s3.tf",
+        "line": 1,
+        "code": "acl = \"public-read\" # AKIAIOSFODNN7EXAMPLE"
+      },
+      {
+        "rule_name": "s3BucketSSEEncryptionEnabled",
+        "description": "S3 bucket should have server-side encryption enabled",
+        "rule_id": "AC_AWS_0214",
+        "severity": "MEDIUM",
+        "category": "Encryption",
+        "resource_name": "fixture",
+        "resource_type": "aws_s3_bucket",
+        "file": "s3.tf",
+        "line": 1,
+        "code": "-----BEGIN RSA PRIVATE KEY-----\nfixture\n-----END RSA PRIVATE KEY-----"
+      }
+    ],
+    "skipped_violations": null,
+    "scan_summary": {
+      "file/folder": "/src",
+      "iac_type": "terraform",
+      "scanned_at": "2026-01-01 00:00:00.000000 +0000 UTC",
+      "policies_validated": 12,
+      "violated_policies": 2,
+      "low": 0,
+      "medium": 1,
+      "high": 1
+    }
+  }
+}

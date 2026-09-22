@@ -71,9 +71,11 @@ describe("FindingsScreen", () => {
 
     const frame = await waitForFrame(instance.lastFrame, "No findings");
     expect(frame).toMatch(/not a clean bill of health/i);
+    expect(frame).toMatch(/4 run/i);
     expect(frame).not.toMatch(/all clear/i);
     expect(frame).not.toMatch(/sample/i);
     expect(frame).not.toMatch(/SQL injection/i);
+    expect(frame).not.toMatch(/CTEM/u);
     expect(fetchImpl.mock.calls[0]?.[0]).toBe(`${API_URL}/api/v1/findings`);
     expect(onStatus).toHaveBeenCalledWith(
       expect.stringMatching(/no findings/i)

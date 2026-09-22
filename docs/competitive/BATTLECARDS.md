@@ -1,11 +1,13 @@
 # Competitive battlecards (one-pagers)
 
+> **BAS/AEV program:** [../BAS_AEV_PROGRAM.md](../BAS_AEV_PROGRAM.md) — qualified open-source simulation, emulation and evidence-backed validation (PERISCAN-583).
+
 Use with [POSITIONING.md](./POSITIONING.md). Keep claims within
 [COMPETITIVE_COVERAGE_MATRIX.md](../COMPETITIVE_COVERAGE_MATRIX.md).
 
 ---
 
-## Product walk — BAS refuse + Wiz co-exist (honest)
+## Product walk — BAS coverage + Wiz co-exist (honest)
 
 Single in-product playbook that deep-links **real UI routes only**. No fake demo
 data, no inject-library claims, no CNAPP replacement, no score inflation.
@@ -13,45 +15,35 @@ data, no inject-library claims, no CNAPP replacement, no score inflation.
 | | |
 |---|---|
 | **Help guide id** | `competitive-walk` |
-| **Help title** | Competitive walk: BAS refuse + Wiz co-exist |
+| **Help title** | Competitive walk: BAS coverage + Wiz co-exist |
 | **Continuous hub label** | **Sales walk (honest)** (`/continuous`) |
 | **Source** | `apps/web/src/lib/product-help.ts` |
 
 ### Ordered UI routes
 
 1. `/scopes` — Authorize verified scope (nothing measures without it)
-2. `/engines` — Engine Lab honesty (Ready / Needs install / Not available; not competitive inject BAS)
-3. `/controls` — Atomic dry-run only; refuse full multi-vector BAS bake-offs
+2. `/engines` — Engine Lab honesty (Ready / Needs install / Not available; actual runtime readiness)
+3. `/controls` — Atomic dry-run only; disclose current coverage while developing full BAS/AEV
 4. `/findings` — Active queue (default; measured exposure, not noise)
 5. `/attack-paths` — Measure path hops CTA (FullyMeasured only with edge receipts)
 6. `/continuous` — Scorecard honesty note (specialist Scaffold/gated rows stay Scaffold)
 
-**Battlecard anchors:** [A. BAS refuse](#a-category-home--aevctem-proof-vs-full-bas-libraries) + [B. Wiz co-exist](#b-wiz--never-replace-cnapp-p19-2).  
+**Battlecard anchors:** [A. BAS coverage](#a-category-home--bas--aev--ctem-validation-and-proof) + [B. Wiz co-exist](#b-wiz--never-replace-cnapp-p19-2).
 **Recipe name remains:** **Wiz → Attack Path → Remediation** (inventory context → path proof → Fixed re-verify).
 
 ---
 
-## A. Category home — AEV/CTEM proof (vs full BAS libraries)
+## A. Category home — BAS / AEV / CTEM validation and proof
 
-**Peers in a wrong bake-off:** Cymulate, AttackIQ, Picus (scenario-library demos)
+Evaluate BAS requirements against executable scenarios, platforms, content
+pins, detector correlation and evidence quality. Full BAS/AEV is the product
+objective. Current Atomic and Caldera imports do not establish live execution;
+report actual readiness and close gaps through the qualification program.
 
-| | |
-|---|---|
-| **Our home** | AEV / CTEM **proof layer** — measure authorized exposure, prove paths, re-measure Fixed |
-| **Their home** | Large multi-vector scenario libraries (malware, phishing, DNS exfil, ransomware packs) |
-| **Win** | Honesty architecture: measured vs heuristic labels; Fixed demotion; signed runner path; evidence packs |
-| **Lose if** | You open with “show me your scenario catalog” or “simulate ransomware live” |
-| **SE rule** | Walk away from full-BAS RFPs or partner with a BAS library vendor — do not fake parity |
-
-**Talk track (30s):**
-
-> We are not a scenario-library BAS product. We prove which exposures are real on
-> your verified scope and whether the fix held. If you need continuous inject
-> libraries for every vector, keep or buy a BAS platform — and put Periscan on
-> top for path proof and Fixed honesty.
-
-**Out of scope as success criteria:** live malware, phishing, DNS-exfil, ransomware
-emulation, competitive inject-and-measure library parity.
+**Talk track:** Periscan combines governed simulation and exposure validation
+with path evidence and measured retesting. Show the qualified scenario, its
+scope and policy decision, execution receipt, observed control outcome and
+cleanup. Explain missing adapters and coverage without inventing parity.
 
 ---
 
@@ -118,13 +110,13 @@ persistence, no credential theft, no uncontrolled exploit chaining
 
 **Win themes:**
 
-- Every run policy-decided and audited  
-- Fixed only on measured revalidation (can demote)  
-- MSSP multi-tenant isolation  
-- Evidence packs for customers and auditors  
+- Every run policy-decided and audited
+- Fixed only on measured revalidation (can demote)
+- MSSP multi-tenant isolation
+- Evidence packs for customers and auditors
 
 **Lose if:** You demo kill-chain theater or claim live offensive kit parity
-(Metasploit/Caldera/SharpHound live remain blocked by product policy).
+(Metasploit/Caldera/SharpHound live adapters require qualification under the BAS/AEV program).
 
 **Talk track:**
 
@@ -222,10 +214,10 @@ Wartime buyer diligence will ask for logos, peer references, or ARR proof.
 
 **SE kill list until G2+G3 in the reference pack:**
 
-- Case study one-pagers with fictional companies  
-- Logo slides or “join leading enterprises” copy  
-- Treating internal verify / Playwright / seed demo as peer proof  
-- Paying for MQ/Wave inquiry spend while references = 0  
+- Case study one-pagers with fictional companies
+- Logo slides or “join leading enterprises” copy
+- Treating internal verify / Playwright / seed demo as peer proof
+- Paying for MQ/Wave inquiry spend while references = 0
 
 Source checklist: `docs/DESIGN_PARTNER/REFERENCE_PACK_CHECKLIST.md`.
 
@@ -247,7 +239,7 @@ Marketplace UI surfaces depth badges from `connectable` + `executionReadiness`. 
 
 | Situation | Say | Never say |
 |---|---|---|
-| Category | AEV/CTEM proof layer | Full BAS platform |
+| Category | BAS/AEV/CTEM with qualified coverage | Unsupported parity claims |
 | Wiz customer | Bring inventory; we prove path + fix | Replace CNAPP / Wiz alternative |
 | Tenable customer | Validate on top of RBVM; prove Fixed | Replace Tenable / VM |
 | Defender customer | Cross-stack path + external PoA; keep Defender | Rip out Defender / MS CTEM replacement |
@@ -256,5 +248,5 @@ Marketplace UI surfaces depth badges from `connectable` + `executionReadiness`. 
 | Compliance RFP | Attach measured evidence to claims | We make you DORA/PCI compliant |
 | Integrations slide | Connectable vs planned depth | 100+ deep native integrations |
 | Pentera bake-off | Hard floor; governed validation; Fixed honesty | Automated pentest / we break in deeper |
-| BAS library RFP | Partner or walk; refuse library bake-off | Multi-vector BAS parity |
+| BAS library RFP | Evaluate scenario-level requirements against qualified BAS/AEV coverage; disclose gaps | Multi-vector BAS parity |
 | Analyst MQ | Visionaries until AtE refs + multi-hop + SCV | Leaders without execution proof |

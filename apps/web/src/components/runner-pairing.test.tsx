@@ -13,6 +13,7 @@ function emptyRunners(): ApiResource<RunnerRecord[]> {
     loading: false,
     refreshing: false,
     error: null,
+    errorStatus: null,
     lastUpdatedAt: null,
     refetch: async () => undefined
   };

@@ -1,5 +1,24 @@
 # Implementation Status
 
+## BAS/AEV foundation — 2026-09-17
+
+The [BAS/AEV program](BAS_AEV_PROGRAM.md) defines full BAS/AEV as the product
+objective (PERISCAN-583). Atomic/Caldera content preview and immutable tenant
+content versions are implemented, including auth, RLS, digest conflicts,
+pagination and transactional audit. Imported content remains unreviewed and
+cannot queue execution.
+
+The [disposable local lab harness](BAS_LOCAL_LAB.md) has measured one pinned
+Atomic T1082 Hostname Discovery execution with verified container cleanup.
+Detection was not measured. Production Atomic runner integration, reviewed
+campaign binding, Caldera operations, SharpHound collection and Metasploit
+checks remain under development in PERISCAN-585 through PERISCAN-591.
+
+API, shared, module, registry acceptance and lab checks passed for these slices.
+The full release gate is not green: `pnpm verify` stopped at three unchanged web
+tests (`scopes-workbench`, `controls-workbench`, `validation-community-status`).
+These checks do not establish a full BAS release or a production deployment.
+
 ## Current Addendum — 2026-08-03 Slice F catch-up rescore
 
 Continuous-loop **Slice F** raised the internal engineering index from **78.9 → 79.2**
@@ -1285,12 +1304,14 @@ execute, or expose credentials/raw scanner output.
 
 Runner local-lab coverage now exercises every implemented safe Go runner module,
 not only TCP reachability. `pnpm test:runner:lab` runs signed in-scope
-reachability, DNS resolution, TLS certificate inspection, and HTTP health tasks
-against local loopback fixtures, uploads normalized evidence through the same
-artifact callback path, and verifies evidence manifests without touching
-external targets. This aligns first-customer runner readiness evidence with the
-implemented `runner.reachability_check`, `runner.dns_resolution_check`,
-`runner.tls_certificate_check`, and `runner.http_health_check` module set.
+reachability, DNS resolution, TLS certificate inspection, HTTP health, banner-free
+port-present, and PTR lookup tasks against local loopback fixtures, uploads
+normalized evidence through the same artifact callback path, and verifies evidence
+manifests without touching external targets. This aligns first-customer runner
+readiness evidence with the implemented `runner.reachability_check`,
+`runner.dns_resolution_check`, `runner.tls_certificate_check`,
+`runner.http_health_check`, `runner.port_connect_check`, and
+`runner.ptr_lookup_check` module set.
 
 Third-Party Tool Governance now includes trusted upstream version checks.
 `/api/v1/third-party-tools/:toolId/upstream-version-checks` lets tenant
@@ -1660,7 +1681,7 @@ Status labels: `Done`, `In progress`, `Blocked`, `Not started`, `Needs credentia
 - Armis read-only asset, unmanaged-device, coverage-gap, exposure, and CVE summary sync is implemented; live tenant use requires customer API-token credentials and read-only asset/device visibility.
 - Cortex Xpanse read-only external attack-surface asset, service, exposure, risk, and CVE summary sync is implemented; live tenant use requires customer API-token credentials and read-only asset/exposure visibility.
 - Planned catalog entries must remain non-connectable until real connectors and tests exist.
-- Live Atomic/Caldera/advanced adversarial execution remains blocked by policy.
+- The current production Atomic/Caldera modules provide content imports. Qualified execution adapters are planned under PERISCAN-583; Atomic local lab evidence is recorded in BAS_LOCAL_LAB.md.
 
 ## Next Foundation Slice
 

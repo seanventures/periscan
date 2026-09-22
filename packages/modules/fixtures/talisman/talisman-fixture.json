@@ -1,0 +1,24 @@
+{
+  "summary": {
+    "types": {
+      "filecontent": 99,
+      "filename": 0,
+      "filesize": 0
+    }
+  },
+  "results": [
+    {
+      "filename": "config/demo.env",
+      "failure_list": [
+        {
+          "type": "filecontent",
+          "message": "Expected file to not to contain hex encoded texts such as: AKIAIOSFODNN7EXAMPLE hashed_secret=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        {
+          "type": "filecontent",
+          "message": "Expected file to not to contain -----BEGIN RSA PRIVATE KEY-----\nfixture\n-----END RSA PRIVATE KEY-----"
+        }
+      ]
+    }
+  ]
+}

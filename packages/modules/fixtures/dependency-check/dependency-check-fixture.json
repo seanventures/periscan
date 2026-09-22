@@ -1,0 +1,42 @@
+{
+  "reportSchema": "1.1",
+  "scanInfo": {
+    "engineVersion": "12.1.0"
+  },
+  "projectInfo": {
+    "name": "lab-repo",
+    "reportDate": "2026-01-01T00:00:00Z"
+  },
+  "vulnerableSoftwareCount": 99,
+  "dependencies": [
+    {
+      "fileName": "log4j-core-2.14.1.jar",
+      "filePath": "/src/lib/log4j-core-2.14.1.jar",
+      "md5": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "sha1": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "vulnerabilities": [
+        {
+          "source": "NVD",
+          "name": "CVE-2021-44228",
+          "severity": "CRITICAL",
+          "description": "JNDI lookup. hashed_secret=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa AKIAIOSFODNN7EXAMPLE",
+          "cvssv3": {
+            "baseScore": 10.0,
+            "baseSeverity": "CRITICAL"
+          }
+        },
+        {
+          "source": "NVD",
+          "name": "CVE-2021-45046",
+          "severity": "HIGH",
+          "description": "Thread Context lookup. -----BEGIN RSA PRIVATE KEY-----\nfixture\n-----END RSA PRIVATE KEY-----"
+        }
+      ]
+    },
+    {
+      "fileName": "safe-lib-1.0.0.jar",
+      "filePath": "/src/lib/safe-lib-1.0.0.jar",
+      "vulnerabilities": []
+    }
+  ]
+}

@@ -9,8 +9,8 @@ product includes software developed by the upstream projects named here.
 
 ## Policy Summary
 
-- Allowed entries: 273
-- Legal-review blocked entries: 48
+- Allowed entries: 278
+- Legal-review blocked entries: 50
 - Blocking entries: 0
 - CI fails on blocking entries or stale notices.
 
@@ -52,6 +52,7 @@ the linked upstream project before redistribution.
 | Invoke-AtomicRedTeam | latest | MIT | https://www.atomicredteam.io/docs/invoke-atomicredteam/docker-containers | Deferred — not redistributed by default |
 | BloodHound Community Edition | latest | Apache-2.0 | https://specterops.io/bloodhound-community-edition/ | May ship when Enabled in runtime allowlist |
 | SharpHound | latest | GPL-3.0 | https://github.com/SpecterOps/SharpHound | Optional lab / Engine Lab only (not default image) |
+| Infection Monkey | v2.3.0 | GPL-3.0 | https://github.com/guardicore/monkey | Optional lab / Engine Lab only (not default image) |
 | MITRE Caldera | v5.3.0 | Apache-2.0 | https://github.com/mitre/caldera | Deferred — not redistributed by default |
 | Nmap | 7.95 | NPSL | https://nmap.org/book/man.html | May ship when Enabled in runtime allowlist |
 | Subfinder | 2.6.6 | MIT | https://github.com/projectdiscovery/subfinder | May ship when Enabled in runtime allowlist |
@@ -204,6 +205,7 @@ the linked upstream project before redistribution.
 | invoke-atomicredteam | Invoke-AtomicRedTeam | latest | MIT | Deferred | atomic.control_validation_safe |
 | bloodhound-ce | BloodHound Community Edition | latest | Apache-2.0 | Enabled | bloodhound.identity_pathing |
 | sharphound | SharpHound | latest | GPL-3.0 | RequiresLegalReview | bloodhound.identity_pathing |
+| infection-monkey | Infection Monkey | v2.3.0 | GPL-3.0 | RequiresLegalReview | infection-monkey.discover |
 | caldera | MITRE Caldera | v5.3.0 | Apache-2.0 | Deferred | caldera.advanced_adversarial |
 | nmap | Nmap | 7.95 | NPSL | Enabled | recon.host_discovery, recon.service_inventory |
 | subfinder | Subfinder | 2.6.6 | MIT | Enabled | recon.subdomain_enum |
@@ -250,7 +252,7 @@ the linked upstream project before redistribution.
 | horusec | Horusec | 2.9.0 | Apache-2.0 | Enabled | horusec.multi_sast |
 | dependency-check | OWASP Dependency-Check | 12.1.0 | Apache-2.0 | Enabled | dependency_check.sca |
 | talisman | Talisman | 1.32.0 | Apache-2.0 | Enabled | talisman.repo_secrets |
-| kingfisher | Kingfisher | 1.0.0 | Apache-2.0 | Enabled |  |
+| kingfisher | Kingfisher | 1.0.0 | Apache-2.0 | Enabled | kingfisher.repo_secrets |
 | polaris | Polaris | 9.6.0 | Apache-2.0 | Enabled | polaris.k8s_posture |
 | kubeaudit | kubeaudit | 0.22.2 | MIT | Enabled | kubeaudit.k8s_posture |
 | dive | dive | 0.12.0 | MIT | Enabled |  |
@@ -258,15 +260,15 @@ the linked upstream project before redistribution.
 | cloudlist | cloudlist | 1.2.0 | MIT | Enabled | cloudlist.cloud_assets |
 | parliament | Parliament | 1.6.2 | BSD-3-Clause | Enabled | parliament.iam_policy |
 | katana | katana | 1.1.0 | MIT | Enabled | katana.web_crawl |
-| assetfinder | assetfinder | 0.1.1 | MIT | Enabled |  |
-| gau | gau | 2.2.3 | MIT | Enabled |  |
+| assetfinder | assetfinder | 0.1.1 | MIT | Enabled | assetfinder.passive_enum |
+| gau | gau | 2.2.3 | MIT | Enabled | gau.known_urls |
 | crowdsec | CrowdSec | 1.6.4 | MIT | Enabled |  |
 | zeek | Zeek | 7.0.0 | BSD-3-Clause | Enabled |  |
 | tfsec | tfsec | 1.28.10 | MIT | Enabled | tfsec.iac_posture |
 | cfn-nag | cfn-nag | 0.8.10 | MIT | Enabled | cfn_nag.cloudformation |
 | cfn-lint | cfn-lint | 1.22.0 | MIT | Enabled | cfn_lint.cloudformation |
 | tflint | TFLint | 0.54.0 | MPL-2.0 | Enabled |  |
-| kyverno | Kyverno CLI | 1.13.0 | Apache-2.0 | Enabled |  |
+| kyverno | Kyverno CLI | 1.13.0 | Apache-2.0 | Enabled | kyverno.repo_policy |
 | notation | Notation | 1.2.0 | Apache-2.0 | Enabled |  |
 | in-toto | in-toto | 2.2.0 | Apache-2.0 | Enabled |  |
 | bundler-audit | bundler-audit | 0.9.2 | GPL-3.0 | RequiresLegalReview |  |
@@ -275,7 +277,7 @@ the linked upstream project before redistribution.
 | popeye | Popeye | 0.21.3 | Apache-2.0 | Enabled | popeye.cluster_sanitizer |
 | tracee | Tracee | 0.22.0 | Apache-2.0 | Enabled |  |
 | tetragon | Tetragon | 1.2.0 | Apache-2.0 | Enabled |  |
-| inspec | InSpec | 6.8.0 | Apache-2.0 | Enabled |  |
+| inspec | InSpec | 6.8.0 | Apache-2.0 | Enabled | inspec.repo_profile |
 | ghidra | Ghidra | 11.2 | Apache-2.0 | Enabled |  |
 | binwalk | Binwalk | 2.4.2 | MIT | Enabled |  |
 | mitmproxy | mitmproxy | 11.0.0 | MIT | Enabled |  |
@@ -403,6 +405,11 @@ Modules that wrap catalog tools must declare the **upstream SPDX** (not Propriet
 | katana.web_crawl | katana | 0.1.0 | MIT | ActiveNonInvasive |
 | cloudlist.cloud_assets | cloudlist | 0.1.0 | MIT | PassiveReadOnly |
 | parliament.iam_policy | Parliament | 0.1.0 | BSD-3-Clause | PassiveReadOnly |
+| kingfisher.repo_secrets | Kingfisher | 0.1.0 | Apache-2.0 | PassiveReadOnly |
+| kyverno.repo_policy | Kyverno | 0.1.0 | Apache-2.0 | PassiveReadOnly |
+| inspec.repo_profile | InSpec | 0.1.0 | Apache-2.0 | PassiveReadOnly |
+| assetfinder.passive_enum | assetfinder | 0.1.0 | MIT | ActiveNonInvasive |
+| gau.known_urls | gau | 0.1.0 | MIT | ActiveNonInvasive |
 | semgrep.repo_sast | semgrep | 0.1.0 | LGPL-2.1 | PassiveReadOnly |
 | trufflehog.repo_secrets | trufflehog | 0.1.0 | AGPL-3.0 | PassiveReadOnly |
 | hadolint.dockerfile | hadolint | 0.1.0 | GPL-3.0 | PassiveReadOnly |
@@ -410,6 +417,7 @@ Modules that wrap catalog tools must declare the **upstream SPDX** (not Propriet
 | lynis.host_audit | lynis | 0.1.0 | GPL-3.0 | PassiveReadOnly |
 | rustscan.port_inventory | rustscan | 0.1.0 | GPL-3.0 | ActiveNonInvasive |
 | cve_bin_tool.binary_cves | cve-bin-tool | 0.1.0 | GPL-3.0 | PassiveReadOnly |
+| infection-monkey.discover | infection-monkey | 0.1.0 | GPL-3.0 | ActiveNonInvasive |
 
 ## First-party module license metadata
 
@@ -475,7 +483,7 @@ Periscan-owned adapters and content with no third-party tool laundering.
 | @testing-library/jest-dom | 6.9.1 | MIT | periscan |
 | @testing-library/react | 16.3.2 | MIT | periscan |
 | @types/cytoscape | 3.31.0 | MIT | @periscan/web |
-| @types/node | 25.9.1 | MIT | periscan |
+| @types/node | 20.19.43 | MIT | periscan |
 | @types/node-forge | 1.3.14 | MIT | @periscan/api |
 | @types/qrcode | 1.5.6 | MIT | @periscan/web |
 | @types/react | 18.3.31 | MIT | @periscan/tui, periscan |

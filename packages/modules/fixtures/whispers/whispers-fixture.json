@@ -1,0 +1,19 @@
+[
+  {
+    "key": "aws_access_key_id",
+    "value": "AKIAIOSFODNN7EXAMPLE",
+    "file": "config/demo.env",
+    "line": 3,
+    "message": "AWS Access Key ID",
+    "severity": "Critical"
+  },
+  {
+    "key": "private_key",
+    "value": "-----BEGIN RSA PRIVATE KEY-----\nfixture\n-----END RSA PRIVATE KEY-----",
+    "file": "deploy/id_rsa",
+    "line": 1,
+    "message": "Private key",
+    "severity": "Critical",
+    "hashed_secret": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  }
+]

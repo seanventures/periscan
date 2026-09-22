@@ -276,7 +276,7 @@ export function ScopesScreen(props: {
 
   const verifyHint = useMemo(() => {
     if (!selected) {
-      return "Verify via DNS TXT.";
+      return "n new · first-hour is a local path.";
     }
     const kind = communityScopeVerificationKind(selected.scopeType);
     const hint = communityScopeAuthorizationHint(selected.scopeType);
@@ -297,7 +297,9 @@ export function ScopesScreen(props: {
   return (
     <Box flexDirection="column">
       <Text bold>Scopes</Text>
-      <Text color={theme.muted}>Verify via DNS TXT.</Text>
+      <Text color={theme.muted}>
+        Authorize then verify. n new · first-hour is a local path.
+      </Text>
       {labMode ? (
         <Text color={theme.warn}>m lab only (devModeManual)</Text>
       ) : null}
@@ -324,7 +326,7 @@ export function ScopesScreen(props: {
         </Box>
       ) : null}
       {!loading && scopes.length === 0 && mode === "list" ? (
-        <Text color={theme.muted}>No authorized scopes yet</Text>
+        <Text color={theme.muted}>No authorized scopes yet. n new.</Text>
       ) : null}
       {scopes.length > 0 ? (
         <Box flexDirection="column" marginTop={1}>

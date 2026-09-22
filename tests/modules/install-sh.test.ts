@@ -1,5 +1,6 @@
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import {
+  chmodSync,
   cpSync,
   mkdirSync,
   mkdtempSync,
@@ -215,8 +216,31 @@ function combined(result: ReturnType<typeof spawnSync>) {
   return `${result.stdout ?? ""}${result.stderr ?? ""}`;
 }
 
+/** PATH stub so CI (Node 24) still exercises the Node 20 stranger path. */
+function stubNodeEnv(major: number): NodeJS.ProcessEnv {
+  const bin = mkdtempSync(join(tmpdir(), "periscan-stub-node-"));
+  cloneHomes.push(bin);
+  writeFileSync(
+    join(bin, "node"),
+    [
+      "#!/bin/sh",
+      `if [ "$1" = "-v" ] || [ "$1" = "--version" ]; then echo "v${major}.0.0"; exit 0; fi`,
+      `if [ "$1" = "-p" ]; then echo "${major}"; exit 0; fi`,
+      `echo "v${major}.0.0"`,
+      "exit 0",
+      ""
+    ].join("\n")
+  );
+  chmodSync(join(bin, "node"), 0o755);
+  return withoutLabPorts({ PATH: `${bin}:${process.env.PATH ?? ""}` });
+}
+
 const FIRST_HOUR_NEXT =
-  "Next: open the printed URL, create an account, git clone YOUR repo, paste the absolute path (not github.com/org/repo). First hour runs Gitleaks. Fixed only after a retest.";
+  "Next: open the printed URL, create an account, git clone YOUR repo, paste the absolute path (not github.com/org/repo). Default start runs Gitleaks. Keep proving. Fixed only after a retest.";
+
+/** Product floor is Node 24 (require_node). Hosts below that still run install dry-run copy checks. */
+const NODE_MAJOR = Number.parseInt(process.versions.node.split(".")[0] ?? "0", 10);
+const HAS_NODE_24 = NODE_MAJOR >= 24;
 
 describe("install.sh (PERISCAN-576)", { timeout: 20_000 }, () => {
   it("help lists doctor/health/install", () => {
@@ -292,7 +316,37 @@ describe("install.sh (PERISCAN-576)", { timeout: 20_000 }, () => {
     expect(dryOut).not.toMatch(/==> docker compose up/);
   });
 
-  it("install.sh and periscan.sh start print local-path first-hour next step", () => {
+  it("Node 24 floor is honest: nvm/fnm hints; Node 20 is not silently supported", () => {
+    const root = readRepo("install.sh");
+    expect(root).toMatch(/NODE_MAJOR_MIN=24/);
+    expect(root).toContain("nvm install");
+    expect(root).toContain("fnm");
+    expect(root).toMatch(/does not silently continue on Node 20/i);
+    expect(root).not.toMatch(/NODE_MAJOR_MIN=20/);
+
+    const pkg = JSON.parse(readRepo("package.json")) as {
+      engines?: { node?: string };
+    };
+    expect(pkg.engines?.node).toMatch(/^>=24(\.0\.0)?$/);
+
+    const tooOld = runInstall(["--dry-run"], stubNodeEnv(20));
+    expect(tooOld.status).toBe(0);
+    const oldOut = combined(tooOld);
+    expect(oldOut).toMatch(/NEED>=24/);
+    expect(oldOut).toMatch(/nvm install 24/);
+    expect(oldOut).toMatch(/fnm/);
+    expect(oldOut).toMatch(/does not silently continue on Node 20/i);
+    expect(oldOut).not.toMatch(/==> docker compose up/);
+    expect(oldOut).not.toMatch(/starting api \+ worker \+ web/);
+
+    const ok = runInstall(["--dry-run"], stubNodeEnv(24));
+    expect(ok.status).toBe(0);
+    const okOut = combined(ok);
+    expect(okOut).toMatch(/major>=24/);
+    expect(okOut).not.toMatch(/NEED>=24/);
+  });
+
+  it("install.sh dry-run prints local-path first-hour next step", () => {
     const install = runInstall(["--dry-run"]);
     expect(install.status).toBe(0);
     expect(combined(install)).toContain(FIRST_HOUR_NEXT);
@@ -301,18 +355,25 @@ describe("install.sh (PERISCAN-576)", { timeout: 20_000 }, () => {
     expect(wrapper.status).toBe(0);
     expect(combined(wrapper)).toContain(FIRST_HOUR_NEXT);
 
-    const start = spawnSync("bash", ["scripts/periscan.sh", "start"], {
-      cwd: repoRoot,
-      encoding: "utf8",
-      env: { ...process.env, PERISCAN_PERISCAN_SH_DRY_RUN: "1" }
-    });
-    expect(start.status).toBe(0);
-    expect(combined(start)).toContain(FIRST_HOUR_NEXT);
-
     const health = runInstall(["health", "--dry-run"]);
     expect(health.status).toBe(0);
     expect(combined(health)).not.toContain(FIRST_HOUR_NEXT);
   });
+
+  // periscan.sh start dry-run calls require_node (>=24). Skip on hosts below the floor
+  // so documenting Node 24 does not make `pnpm verify` fail on a Node 20 runner.
+  it.skipIf(!HAS_NODE_24)(
+    "periscan.sh start dry-run prints local-path first-hour next step",
+    () => {
+      const start = spawnSync("bash", ["scripts/periscan.sh", "start"], {
+        cwd: repoRoot,
+        encoding: "utf8",
+        env: { ...process.env, PERISCAN_PERISCAN_SH_DRY_RUN: "1" }
+      });
+      expect(start.status).toBe(0);
+      expect(combined(start)).toContain(FIRST_HOUR_NEXT);
+    }
+  );
 
   it("reuses periscan.sh, first-hour, env.sh; never root compose.yaml, FLUSHDB, or Atomic", () => {
     const root = readRepo("install.sh");

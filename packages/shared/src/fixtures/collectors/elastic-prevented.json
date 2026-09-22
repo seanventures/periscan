@@ -1,0 +1,22 @@
+{
+  "took": 4,
+  "timed_out": false,
+  "hits": {
+    "total": { "value": 1, "relation": "eq" },
+    "hits": [
+      {
+        "_index": ".alerts-security.alerts-default",
+        "_id": "elastic-block-1",
+        "_source": {
+          "@timestamp": "2026-09-17T14:01:00.000Z",
+          "host": { "name": "lab-elastic-01" },
+          "kibana.alert.rule.name": "sigma.proc_canary",
+          "kibana.alert.severity": "high",
+          "event": { "category": "process", "action": "blocked", "outcome": "prevented" },
+          "process": { "command_line": "benign-canary periscan-r-aaaa-s-bbbb-nonce1" },
+          "message": "endpoint prevented periscan-r-aaaa-s-bbbb-nonce1"
+        }
+      }
+    ]
+  }
+}

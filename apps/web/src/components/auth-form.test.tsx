@@ -184,7 +184,7 @@ describe("AuthForm", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("says what Periscan is on login first paint, not BAS or a scanner", () => {
+  it("says what Periscan is on login first paint, with measured capability scope", () => {
     vi.stubGlobal("fetch", vi.fn());
 
     render(<AuthForm mode="login" />);

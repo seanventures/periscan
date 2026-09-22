@@ -10,7 +10,10 @@ import {
 } from "@node-saml/node-saml";
 import { createRemoteJWKSet, jwtVerify, type JWTPayload } from "jose";
 
-import type { MembershipRole, TenantSsoRoleMappingRule } from "@periscan/shared";
+import type {
+  MembershipRole,
+  TenantSsoRoleMappingRule
+} from "@periscan/shared";
 
 import { decryptSecret, encryptSecret } from "../integration-credentials.js";
 import { serializeMembership, serializeUser } from "../serializers/entities.js";
@@ -26,6 +29,11 @@ import {
   writeAuditEvent
 } from "../runtime-services.js";
 import type { AppServices, RuntimeServiceDeps } from "../runtime-services.js";
+import {
+  evaluateSsoJitProvisioning,
+  normalizeSsoJitConfig,
+  SSO_JIT_DEFAULT_ROLE
+} from "./sso-jit.js";
 import {
   parseStoredRoleMappings,
   resolveSsoMappedRole
@@ -80,6 +88,18 @@ function isEmailLike(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(value);
 }
 
+function displayNameFromClaims(
+  claims: Record<string, unknown>,
+  email: string
+): string {
+  const name = claims.name;
+  if (typeof name === "string" && name.trim()) {
+    return name.trim().slice(0, 200);
+  }
+  const local = email.split("@")[0]?.trim() ?? "";
+  return local.length > 0 ? local.slice(0, 200) : email;
+}
+
 function buildAuthorizationUrl(
   config: {
     authorizationEndpoint: string;
@@ -129,6 +149,9 @@ function sanitizedAuditMetadata(config: {
   defaultMappedRole?: MembershipRole | null;
   emailDomainAllowlist: string[];
   enforced: boolean;
+  jitDefaultRole?: MembershipRole | null;
+  jitEmailDomains?: string[];
+  jitEnabled?: boolean;
   issuerUrl: string;
   providerType: string;
   roleClaimName?: string | null;
@@ -145,6 +168,9 @@ function sanitizedAuditMetadata(config: {
     defaultMappedRole: config.defaultMappedRole ?? null,
     emailDomainAllowlist: config.emailDomainAllowlist,
     enforced: config.enforced,
+    jitDefaultRole: config.jitDefaultRole ?? SSO_JIT_DEFAULT_ROLE,
+    jitEmailDomains: config.jitEmailDomains ?? [],
+    jitEnabled: Boolean(config.jitEnabled),
     issuerUrl: config.issuerUrl,
     providerType: config.providerType,
     roleClaimName: config.roleClaimName ?? null,
@@ -216,7 +242,9 @@ function normalizeRoleMappings(
 // Tenant SSO/OIDC management and generic authorization-code login. The flow is
 // vendor-neutral: customers configure issuer/token/JWKS/authorization endpoints,
 // Periscan verifies ID tokens, then creates the same session cookie as password
-// login for pre-provisioned users with an existing tenant membership.
+// login. Pre-provisioned Active members authenticate as today. Optional JIT
+// (domain allowlist + default Viewer, never Owner) may create an Active
+// membership on first verified SSO; otherwise login stays sso_user_not_provisioned.
 export function createSsoServices(
   deps: RuntimeServiceDeps
 ): Pick<
@@ -618,13 +646,11 @@ export function createSsoServices(
         let nextRole = resolved.role!;
         let skippedLastOwner = false;
 
-        if (
-          input.membership.role === "Owner" &&
-          nextRole !== "Owner"
-        ) {
+        if (input.membership.role === "Owner" && nextRole !== "Owner") {
           const owners = await tx.membership.count({
             where: {
               role: "Owner",
+              status: "Active",
               tenantId: input.tenantId
             }
           });
@@ -674,6 +700,85 @@ export function createSsoServices(
       },
       { isolationLevel: "Serializable" }
     );
+  }
+
+  async function provisionJitMembership(input: {
+    email: string;
+    name: string;
+    role: MembershipRole;
+    tenantId: string;
+  }) {
+    return prisma.$transaction(async (tx) => {
+      let user = await tx.user.findUnique({
+        where: { email: input.email }
+      });
+      if (!user) {
+        try {
+          user = await tx.user.create({
+            data: {
+              email: input.email,
+              emailVerifiedAt: new Date(),
+              name: input.name,
+              passwordHash: null,
+              status: "Active"
+            }
+          });
+        } catch {
+          user = await tx.user.findUnique({
+            where: { email: input.email }
+          });
+          if (!user) {
+            throw new AppServiceError(
+              "No active provisioned user exists for this tenant SSO login.",
+              403,
+              "sso_user_not_provisioned"
+            );
+          }
+        }
+      }
+      if (user.status !== "Active") {
+        throw new AppServiceError(
+          "No active provisioned user exists for this tenant SSO login.",
+          403,
+          "sso_user_not_provisioned"
+        );
+      }
+
+      let membership = await tx.membership.findUnique({
+        include: { tenant: true },
+        where: {
+          tenantId_userId: {
+            tenantId: input.tenantId,
+            userId: user.userId
+          }
+        }
+      });
+      if (!membership) {
+        membership = await tx.membership.create({
+          data: {
+            role: input.role,
+            tenantId: input.tenantId,
+            userId: user.userId
+          },
+          include: { tenant: true }
+        });
+        await writeAuditEvent(tx, {
+          action: "user.jit_provisioned",
+          actorType: "System",
+          entityId: user.userId,
+          entityType: "Tenant",
+          metadata: {
+            email: user.email,
+            role: membership.role,
+            source: "sso_jit"
+          },
+          tenantId: input.tenantId,
+          userId: user.userId
+        });
+      }
+
+      return { membership, user };
+    });
   }
 
   return {
@@ -888,23 +993,47 @@ export function createSsoServices(
           );
         }
 
-        const user = await prisma.user.findUnique({
+        let user = await prisma.user.findUnique({
           include: {
             memberships: {
               include: { tenant: true },
               take: 1,
-              where: { tenantId: authRequest.tenantId }
+              where: { status: "Active", tenantId: authRequest.tenantId }
             }
           },
           where: { email }
         });
-        const membership = user?.memberships[0] ?? null;
+        let membership = user?.memberships[0] ?? null;
         if (!user || user.status !== "Active" || !membership) {
-          throw new AppServiceError(
-            "No active provisioned user exists for this tenant SSO login.",
-            403,
-            "sso_user_not_provisioned"
-          );
+          const ssoVerified =
+            config.providerType === "SAML" ||
+            claimBoolean(identityClaims, "email_verified") === true;
+          const jit = evaluateSsoJitProvisioning({
+            email,
+            existingUserStatus: user?.status ?? null,
+            jitDefaultRole: config.jitDefaultRole,
+            jitEmailDomains: config.jitEmailDomains ?? [],
+            jitEnabled: Boolean(config.jitEnabled),
+            ssoVerified
+          });
+          if (!jit.ok) {
+            throw new AppServiceError(
+              "No active provisioned user exists for this tenant SSO login.",
+              403,
+              "sso_user_not_provisioned"
+            );
+          }
+          const provisioned = await provisionJitMembership({
+            email,
+            name: displayNameFromClaims(identityClaims, email),
+            role: jit.role,
+            tenantId: authRequest.tenantId
+          });
+          user = {
+            ...provisioned.user,
+            memberships: [provisioned.membership]
+          };
+          membership = provisioned.membership;
         }
 
         const savedUser = user.emailVerifiedAt
@@ -1062,6 +1191,29 @@ export function createSsoServices(
         input.defaultMappedRole !== undefined
           ? input.defaultMappedRole
           : (existing?.defaultMappedRole ?? null);
+      const jitNormalized = normalizeSsoJitConfig({
+        jitDefaultRole:
+          input.jitDefaultRole !== undefined
+            ? input.jitDefaultRole
+            : (existing?.jitDefaultRole ?? SSO_JIT_DEFAULT_ROLE),
+        jitEmailDomains:
+          input.jitEmailDomains !== undefined
+            ? input.jitEmailDomains
+            : (existing?.jitEmailDomains ?? []),
+        jitEnabled:
+          input.jitEnabled !== undefined
+            ? input.jitEnabled
+            : (existing?.jitEnabled ?? false)
+      });
+      if (!jitNormalized.ok) {
+        throw new AppServiceError(
+          jitNormalized.code === "sso_jit_owner_forbidden"
+            ? "JIT default role cannot be Owner."
+            : "JIT provisioning requires a non-empty email domain allowlist.",
+          400,
+          jitNormalized.code
+        );
+      }
       const saved = await prisma.tenantSsoConfig.upsert({
         create: {
           authorizationEndpoint: normalizeUrl(input.authorizationEndpoint),
@@ -1072,14 +1224,16 @@ export function createSsoServices(
           emailDomainAllowlist,
           enforced: input.enforced,
           issuerUrl: normalizeUrl(input.issuerUrl),
+          jitDefaultRole: jitNormalized.jitDefaultRole,
+          jitEmailDomains: jitNormalized.jitEmailDomains,
+          jitEnabled: jitNormalized.jitEnabled,
           jwksUri,
           providerType: input.providerType,
           redirectUri: input.redirectUri
             ? normalizeUrl(input.redirectUri)
             : null,
           roleClaimName:
-            roleClaimName ??
-            (roleMappings.length > 0 ? "groups" : null),
+            roleClaimName ?? (roleMappings.length > 0 ? "groups" : null),
           roleMappings,
           samlIdpCertificate,
           samlNameIdFormat,
@@ -1097,6 +1251,9 @@ export function createSsoServices(
           emailDomainAllowlist,
           enforced: input.enforced,
           issuerUrl: normalizeUrl(input.issuerUrl),
+          jitDefaultRole: jitNormalized.jitDefaultRole,
+          jitEmailDomains: jitNormalized.jitEmailDomains,
+          jitEnabled: jitNormalized.jitEnabled,
           jwksUri,
           providerType: input.providerType,
           redirectUri: input.redirectUri

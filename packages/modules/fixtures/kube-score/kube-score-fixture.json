@@ -1,0 +1,73 @@
+{
+  "score": 99,
+  "grade": "F",
+  "objects": [
+    {
+      "object_name": "apps/v1/Deployment/default/fixture-web",
+      "type_meta": {
+        "kind": "Deployment",
+        "apiVersion": "apps/v1"
+      },
+      "object_meta": {
+        "name": "fixture-web",
+        "namespace": "default"
+      },
+      "file_name": "deployment.yaml",
+      "checks": [
+        {
+          "check": {
+            "name": "Container Resources",
+            "id": "container-resources",
+            "target_type": "PodSpecV1"
+          },
+          "grade": 1,
+          "skipped": false,
+          "comments": [
+            {
+              "path": "spec.template.spec.containers[0].resources",
+              "summary": "CPU limit is not set",
+              "description": "Trap secret AKIAIOSFODNN7EXAMPLE"
+            }
+          ]
+        },
+        {
+          "check": {
+            "name": "Pod NetworkPolicy",
+            "id": "pod-networkpolicy"
+          },
+          "grade": 5,
+          "skipped": false,
+          "comments": [
+            {
+              "path": "spec.template",
+              "summary": "The pod does not have a matching network policy",
+              "description": "-----BEGIN RSA PRIVATE KEY-----\nfixture\n-----END RSA PRIVATE KEY-----"
+            }
+          ]
+        },
+        {
+          "check": {
+            "name": "Container Image Tag",
+            "id": "container-image-tag"
+          },
+          "grade": 10,
+          "skipped": false
+        },
+        {
+          "check": {
+            "name": "Pod Probes",
+            "id": "pod-probes"
+          },
+          "grade": 1,
+          "skipped": true,
+          "comments": [
+            {
+              "summary": "trap",
+              "description": "hashed_secret=fixture"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

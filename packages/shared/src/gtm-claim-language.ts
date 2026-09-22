@@ -45,9 +45,9 @@ export const GTM_INTEGRATE_PLANES = [
 
 export const GTM_DENY_PHRASES = [
   {
-    denied: "Full BAS platform / multi-vector BAS peer / scenario-library bake-off parity",
+    denied: "Unsupported shipped BAS coverage / unmeasured scenario-library parity",
     substitute:
-      "AEV/CTEM proof layer on authorized scope; refuse BAS library RFPs"
+      "Full BAS/AEV development program; publish qualified scenarios and measured outcomes on authorized scope"
   },
   {
     denied: "Replace your CNAPP / Wiz alternative",

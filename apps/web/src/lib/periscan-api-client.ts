@@ -73,9 +73,26 @@ import {
   ComplianceGovernanceMultiFrameworkSummarySchema,
   MultiFrameworkComplianceExportInputSchema,
   MultiFrameworkComplianceExportResultSchema,
+  SnapshotComplianceCoverageSchema,
   PartnerCapabilityHonestySchema,
   ControlSourceSchema,
+  BasAtomicScenarioCatalogItemSchema,
+  BasAtomicScenarioRunInputSchema,
+  BasAtomicScenarioRunResultSchema,
   CreateValidationStimulusResponseSchema,
+  BasControlPlaneScenarioSchema,
+  BasContentVersionListSchema,
+  BasContentVersionSchema,
+  BasCampaignListSchema,
+  DangerOperatorGateSchema,
+  QualifyBasPackResultSchema,
+  AuthorizeBasPackResultSchema,
+  CompileBasCampaignResultSchema,
+  StartBasCampaignResultSchema,
+  CancelBasCampaignResultSchema,
+  AtomicTestCatalogSchema,
+  StartAtomicTestResultSchema,
+  StartBasScenarioResultSchema,
   DetectionMarkerProofResultSchema,
   DnsExfilCanaryProofResultSchema,
   DataResidencyOptionsSchema,
@@ -115,6 +132,8 @@ import {
   EvidenceChainVerificationReportSchema,
   EvidencePackSchema,
   EnterpriseBreadthReadinessSchema,
+  EnterpriseSiteListEnvelopeSchema,
+  SecurityFeedListEnvelopeSchema,
   ExecutionIntegrityHonestySchema,
   ModelExtractionHonestySchema,
   SafetyEquivalentPacksResponseSchema,
@@ -317,11 +336,36 @@ import {
   type ComplianceGovernanceMultiFrameworkSummary,
   type MultiFrameworkComplianceExportInput,
   type MultiFrameworkComplianceExportResult,
+  type SnapshotComplianceCoverage,
   type PartnerCapabilityHonesty,
   type UpdateComplianceControlGovernanceInput,
   type ControlSource,
+  type BasAtomicScenarioCatalogItem,
+  type BasAtomicScenarioRunInput,
+  type BasAtomicScenarioRunResult,
   type CreateValidationStimulusInput,
   type CreateValidationStimulusResponse,
+  type BasControlPlaneScenario,
+  type BasContentVersion,
+  type BasContentVersionList,
+  type BasCampaignList,
+  type DangerOperatorGate,
+  emptyDangerOperatorGate,
+  type QualifyBasPackInput,
+  type QualifyBasPackResult,
+  type AuthorizeBasPackInput,
+  type AuthorizeBasPackResult,
+  type CompileBasCampaignInput,
+  type CompileBasCampaignResult,
+  type StartBasCampaignInput,
+  type StartBasCampaignResult,
+  type CancelBasCampaignInput,
+  type CancelBasCampaignResult,
+  type AtomicTestCatalog,
+  type StartAtomicTestInput,
+  type StartAtomicTestResult,
+  type StartBasScenarioInput,
+  type StartBasScenarioResult,
   type DetectionMarkerProofInput,
   type DetectionMarkerProofResult,
   type DnsExfilCanaryProofInput,
@@ -541,7 +585,9 @@ import {
   type UpdateModelToolInput,
   type UpdateModelGatewayFinOpsInput,
   type UpdateMissionScheduleInput,
+  type EnterpriseSite,
   type ExecutionIntegrityHonesty,
+  type SecurityFeedOperatorItem,
   type ModelExtractionHonesty,
   type SafetyEquivalentPacksResponse
 } from "@periscan/shared";
@@ -1791,6 +1837,20 @@ export class PeriscanApiClient {
     );
   }
 
+  async getComplianceCoverage(
+    framework: ComplianceFrameworkKey = "SOC2Attestation",
+    snapshotId?: string
+  ): Promise<SnapshotComplianceCoverage> {
+    const query = new URLSearchParams({ framework });
+    if (snapshotId) query.set("snapshotId", snapshotId);
+    return this.requestJson(
+      `/compliance/coverage?${query.toString()}`,
+      undefined,
+      (payload) => SnapshotComplianceCoverageSchema.parse(payload),
+      "Unable to read compliance coverage"
+    );
+  }
+
   async getComplianceGovernance(
     framework: ComplianceFrameworkKey
   ): Promise<ComplianceGovernanceInventory> {
@@ -2347,6 +2407,33 @@ export class PeriscanApiClient {
     );
   }
 
+  async listBasAtomicScenarios(): Promise<BasAtomicScenarioCatalogItem[]> {
+    return this.requestJson(
+      "/bas/scenarios",
+      undefined,
+      (payload) =>
+        (payload as { items: unknown[] }).items.map((item) =>
+          BasAtomicScenarioCatalogItemSchema.parse(item)
+        ),
+      "Unable to read the Atomic scenario catalog"
+    );
+  }
+
+  async runBasAtomicScenario(
+    scenarioId: string,
+    input: BasAtomicScenarioRunInput = { executionMode: "live" }
+  ): Promise<BasAtomicScenarioRunResult> {
+    return this.requestJson(
+      `/bas/scenarios/${encodeURIComponent(scenarioId)}/run`,
+      {
+        body: JSON.stringify(BasAtomicScenarioRunInputSchema.parse(input)),
+        method: "POST"
+      },
+      (payload) => BasAtomicScenarioRunResultSchema.parse(payload),
+      "Unable to run the Atomic catalog scenario"
+    );
+  }
+
   async listValidationStimuli(): Promise<ValidationStimulus[]> {
     return this.requestJson(
       "/control-sources/stimuli",
@@ -2488,6 +2575,161 @@ export class PeriscanApiClient {
     );
   }
 
+  async listBasContentVersions(input?: {
+    cursor?: string;
+    limit?: number;
+    provider?: "AtomicRedTeam" | "Caldera";
+  }): Promise<BasContentVersionList> {
+    const query = new URLSearchParams();
+    if (input?.provider) query.set("provider", input.provider);
+    if (input?.limit != null) query.set("limit", String(input.limit));
+    if (input?.cursor) query.set("cursor", input.cursor);
+    const suffix = query.size > 0 ? `?${query.toString()}` : "";
+    return this.requestJson(
+      `/bas/content/versions${suffix}`,
+      undefined,
+      (payload) => BasContentVersionListSchema.parse(payload),
+      "Unable to read BAS content versions"
+    );
+  }
+
+  async getBasContentVersion(
+    basContentVersionId: string
+  ): Promise<BasContentVersion> {
+    return this.requestJson(
+      `/bas/content/versions/${basContentVersionId}`,
+      undefined,
+      (payload) => BasContentVersionSchema.parse(payload),
+      "Unable to read BAS content version"
+    );
+  }
+
+  async listBasCampaigns(): Promise<BasCampaignList> {
+    return this.requestJson(
+      "/bas/campaigns",
+      undefined,
+      (payload) => BasCampaignListSchema.parse(payload),
+      "Unable to read BAS campaign plans"
+    );
+  }
+
+  async getBasDangerOperatorGate(): Promise<DangerOperatorGate> {
+    const response = await this.request("/bas/danger-catalog");
+    if (response.status === 404) {
+      return emptyDangerOperatorGate();
+    }
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) {
+      throw new PeriscanApiClientError(
+        response.status,
+        toErrorMessage(
+          response.status,
+          payload,
+          "Unable to read High-danger catalog"
+        )
+      );
+    }
+    return DangerOperatorGateSchema.parse(payload);
+  }
+
+  async qualifyBasPack(
+    input: QualifyBasPackInput
+  ): Promise<QualifyBasPackResult> {
+    return this.requestJson(
+      "/bas/packs/qualify",
+      { body: JSON.stringify(input), method: "POST" },
+      (payload) => QualifyBasPackResultSchema.parse(payload),
+      "Unable to qualify the BAS pack"
+    );
+  }
+
+  async authorizeBasPack(
+    input: AuthorizeBasPackInput
+  ): Promise<AuthorizeBasPackResult> {
+    return this.requestJson(
+      "/bas/packs/authorize",
+      { body: JSON.stringify(input), method: "POST" },
+      (payload) => AuthorizeBasPackResultSchema.parse(payload),
+      "Unable to authorize the BAS pack"
+    );
+  }
+
+  async compileBasCampaign(
+    input: CompileBasCampaignInput
+  ): Promise<CompileBasCampaignResult> {
+    return this.requestJson(
+      "/bas/campaigns/compile",
+      { body: JSON.stringify(input), method: "POST" },
+      (payload) => CompileBasCampaignResultSchema.parse(payload),
+      "Unable to compile the BAS campaign"
+    );
+  }
+
+  async startBasCampaign(
+    input: StartBasCampaignInput
+  ): Promise<StartBasCampaignResult> {
+    return this.requestJson(
+      "/bas/campaigns/start",
+      { body: JSON.stringify(input), method: "POST" },
+      (payload) => StartBasCampaignResultSchema.parse(payload),
+      "Unable to start the BAS campaign"
+    );
+  }
+
+  async cancelBasCampaign(
+    input: CancelBasCampaignInput
+  ): Promise<CancelBasCampaignResult> {
+    return this.requestJson(
+      "/bas/campaigns/cancel",
+      { body: JSON.stringify(input), method: "POST" },
+      (payload) => CancelBasCampaignResultSchema.parse(payload),
+      "Unable to stop the BAS campaign"
+    );
+  }
+
+  async listAtomicTests(): Promise<AtomicTestCatalog> {
+    return this.requestJson(
+      "/bas/atomic-tests",
+      undefined,
+      (payload) => AtomicTestCatalogSchema.parse(payload),
+      "Unable to read atomic tests"
+    );
+  }
+
+  async startAtomicTest(
+    input: StartAtomicTestInput
+  ): Promise<StartAtomicTestResult> {
+    return this.requestJson(
+      "/bas/atomic-tests",
+      { body: JSON.stringify(input), method: "POST" },
+      (payload) => StartAtomicTestResultSchema.parse(payload),
+      "Unable to start the atomic test"
+    );
+  }
+
+  async listBasControlPlaneScenarios(): Promise<BasControlPlaneScenario[]> {
+    return this.requestJson(
+      "/control-sources/bas-scenarios",
+      undefined,
+      (payload) =>
+        (payload as { items: unknown[] }).items.map((item) =>
+          BasControlPlaneScenarioSchema.parse(item)
+        ),
+      "Unable to read BAS control-plane scenarios"
+    );
+  }
+
+  async startBasScenario(
+    input: StartBasScenarioInput
+  ): Promise<StartBasScenarioResult> {
+    return this.requestJson(
+      "/control-sources/bas-scenarios/start",
+      { body: JSON.stringify(input), method: "POST" },
+      (payload) => StartBasScenarioResultSchema.parse(payload),
+      "Unable to start the BAS scenario"
+    );
+  }
+
   async validateControlSource(
     controlSourceId: string,
     input: { executionMode?: "DryRun"; techniqueId?: string } = {}
@@ -2502,7 +2744,7 @@ export class PeriscanApiClient {
 
   /**
    * Wave B DRV product path: allowlisted benign marker emit→observe.
-   * Benign-marker class only — not full ATT&CK BAS library inject.
+   * Benign-marker class only — coverage limited to measured markers.
    */
   async runDetectionMarkerProof(
     controlSourceId: string,
@@ -2543,6 +2785,34 @@ export class PeriscanApiClient {
         ),
       "Unable to read runners"
     );
+  }
+
+  async listSecurityFeeds(): Promise<SecurityFeedOperatorItem[]> {
+    return this.requestJson(
+      "/security-feeds",
+      undefined,
+      (payload) => SecurityFeedListEnvelopeSchema.parse(payload).items,
+      "Unable to read security feeds"
+    );
+  }
+
+  async listEnterpriseSites(): Promise<EnterpriseSite[]> {
+    const response = await this.request("/enterprise-sites");
+    if (response.status === 404) {
+      return [];
+    }
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) {
+      throw new PeriscanApiClientError(
+        response.status,
+        toErrorMessage(
+          response.status,
+          payload,
+          "Unable to read enterprise sites"
+        )
+      );
+    }
+    return EnterpriseSiteListEnvelopeSchema.parse(payload).items;
   }
 
   async getRunnerFleetWorkspace(): Promise<RunnerFleetWorkspace> {

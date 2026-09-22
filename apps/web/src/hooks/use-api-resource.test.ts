@@ -1,6 +1,7 @@
 import { renderHook, waitFor, act } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { PeriscanApiClientError } from "../lib/periscan-api-client";
 import { useApiResource } from "./use-api-resource";
 
 describe("useApiResource", () => {
@@ -26,6 +27,23 @@ describe("useApiResource", () => {
     const { result } = renderHook(() => useApiResource(loader, []));
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.error).toBe("nope");
+    expect(result.current.data).toBeNull();
+    expect(result.current.errorStatus).toBeNull();
+  });
+
+  it("records API error status so a 429 is not treated as signed-out", async () => {
+    const loader = vi.fn(async () => {
+      throw new PeriscanApiClientError(
+        429,
+        "Rate limit exceeded, retry in 1 second"
+      );
+    });
+    const { result } = renderHook(() => useApiResource(loader, []));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.error).toBe(
+      "Rate limit exceeded, retry in 1 second"
+    );
+    expect(result.current.errorStatus).toBe(429);
     expect(result.current.data).toBeNull();
   });
 

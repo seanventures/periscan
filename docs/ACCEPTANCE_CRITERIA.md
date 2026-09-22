@@ -18,7 +18,7 @@ Given a full-product completion claim is attempted, when `pnpm prd:audit:strict`
 
 Requirement labels: `SRC-1-VISION`, `PRD-VISION-001`, `PRD-VISION-002`, `PRD-VISION-003`, `PRD-VISION-004`, `PRD-VISION-005`, `PRD-VISION-006`.
 
-Given the long-form PRD section 1 defines Product Vision, when source coverage tests run, then the validation/proof-layer claim, six customer questions, continuous-validation domains, anti-scanner/pentest/BAS statement, and third-party proof gate must be parsed directly from source.
+Given the long-form PRD section 1 defines Product Vision, when source coverage tests run, then the validation/proof-layer claim, six customer questions, continuous-validation domains, evidence-backed BAS/AEV statement, and third-party proof gate must be parsed directly from source.
 
 Given the six Product Vision questions are audited, when API/backend/report source is inspected, then findings, attack paths, control validation, remediation, fix verification, evidence, reports, and Snapshots must map to concrete public API routes and services.
 
@@ -1298,17 +1298,17 @@ Given a runner is active, when a tenant admin creates a reachability task for ve
 
 Given a signed runner task includes an artifact upload URL, when the runner uploads evidence for that task, then the API authenticates the runner, enforces the signed max artifact size, verifies raw SHA-256 and byte length, stores redacted evidence through the evidence service, audits `evidence.created`, and allows the final result manifest to reference the uploaded evidence ID.
 
-Given the release suite runs `pnpm test:runner:lab`, when the local runner lab executes, then loopback TCP/HTTP/TLS fixtures, signed in-scope reachability, DNS resolution, TLS certificate, and HTTP health tasks, artifact upload callbacks, and uploaded evidence manifests are validated without touching external targets.
+Given the release suite runs `pnpm test:runner:lab`, when the local runner lab executes, then loopback TCP/HTTP/TLS fixtures, signed in-scope reachability, DNS resolution, TLS certificate, HTTP health, banner-free port-present, and PTR lookup tasks, artifact upload callbacks, and uploaded evidence manifests are validated without touching external targets.
 
 Given scope is unverified or the target is outside scope constraints, when a tenant admin creates a reachability task, then the API denies the task before it can be polled.
 
 Given a runner polls with its issued credential, when queued tasks exist, then the API returns signed `InternalRunner` envelopes only for that runner and marks them leased.
 
-Given the Go runner receives a signed task envelope, when the envelope runner ID, expiry, digest, nonce, Ed25519 signature, execution environment, module allowlist, and scope constraints all validate, then the runner may execute only allowlisted safe internal modules: `runner.reachability_check`, `runner.dns_resolution_check`, `runner.tls_certificate_check`, or `runner.http_health_check`.
+Given the Go runner receives a signed task envelope, when the envelope runner ID, expiry, digest, nonce, Ed25519 signature, execution environment, module allowlist, and scope constraints all validate, then the runner may execute only allowlisted safe internal modules: `runner.reachability_check`, `runner.dns_resolution_check`, `runner.tls_certificate_check`, `runner.http_health_check`, `runner.port_connect_check`, or `runner.ptr_lookup_check`.
 
 Given the Go runner receives an invalid signature, expired envelope, runner mismatch, non-`InternalRunner` task, unallowlisted module, out-of-scope host, out-of-scope DNS suffix, out-of-scope CIDR, or out-of-scope port, then it rejects the task locally before network execution and returns a failed evidence-backed result.
 
-Given the Go runner receives an in-scope reachability, DNS, TLS certificate, or HTTP health task, when the scoped target can be checked safely, then it emits normalized evidence, a local audit hash, `Completed` status, and an evidence-backed validation state.
+Given the Go runner receives an in-scope reachability, DNS, TLS certificate, HTTP health, banner-free port-present, or PTR lookup task, when the scoped target can be checked safely, then it emits normalized evidence, a local audit hash, `Completed` status, and an evidence-backed validation state.
 
 Given a runner submits a result for the correct tenant, runner, task, and run, when the result includes an evidence manifest, then the API stores evidence metadata, updates the validation run, updates the runner task, and writes an audit event.
 

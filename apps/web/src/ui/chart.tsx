@@ -103,8 +103,7 @@ export function DistributionChart({
             <div
               className="w-full"
               style={{ height: `${height}px` }}
-              role="img"
-              aria-label={`${ariaLabel} (chart)`}
+              aria-hidden="true"
             >
               {variant === "pie" ? (
                 <ResponsivePie

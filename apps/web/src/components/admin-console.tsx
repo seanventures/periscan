@@ -264,9 +264,10 @@ function ForceMfaPanel() {
           </div>
           {envOn ? (
             <p className="rounded-control border border-approval/30 bg-approval/5 px-3 py-2 text-[12px] text-muted">
-              Deployment-wide <span className="font-mono">PERISCAN_REQUIRE_MFA</span>{" "}
-              is on. Turning the tenant flag off will not relax enforcement until
-              the deployment flag is cleared.
+              Deployment-wide{" "}
+              <span className="font-mono">PERISCAN_REQUIRE_MFA</span> is on.
+              Turning the tenant flag off will not relax enforcement until the
+              deployment flag is cleared.
             </p>
           ) : null}
           <div className="flex flex-wrap items-center gap-2">
@@ -334,9 +335,10 @@ function IdentityLifecycleHonestyPanel() {
         <p className="rounded-control border border-line bg-surface px-3 py-2 text-[12px]">
           <strong className="text-ink">Partial vs NotConfigured:</strong>{" "}
           <span className="font-mono text-ink">Partial</span> is the overall
-          plane (SSO + force-MFA + IdP group→role map). Inbound SCIM and JIT are
-          literal <span className="font-mono text-ink">NotConfigured</span> —
-          never sold as SCIM Production.
+          plane (SSO + force-MFA + IdP group→role map + optional JIT). Inbound
+          SCIM is literal{" "}
+          <span className="font-mono text-ink">NotConfigured</span> — never sold
+          as SCIM Production.
         </p>
         <ul className="flex flex-col gap-2">
           <li className="flex gap-2">
@@ -358,24 +360,27 @@ function IdentityLifecycleHonestyPanel() {
               mover / leaver). Discovery stubs under{" "}
               <span className="font-mono text-ink">/api/v1/scim/v2/*</span>{" "}
               return HTTP 501 (not silent 404). CyberArk SCIM in Integrations is{" "}
-              <em>read-only identity inventory</em> for attack-path context — not
-              control-plane user lifecycle.
+              <em>read-only identity inventory</em> for attack-path context —
+              not control-plane user lifecycle.
             </span>
           </li>
           <li className="flex gap-2">
-            <StateBadge tone="inconclusive" dot={false}>
-              NotConfigured
+            <StateBadge tone="fixed" dot={false}>
+              Optional
             </StateBadge>
             <span>
               Just-in-time (JIT) auto-create of tenant memberships on first SSO
-              login is{" "}
-              <span className="font-mono text-ink">NotConfigured</span> (P17-14).
-              SSO requires an existing Active membership. Trust Safety reports{" "}
+              is tenant opt-in (P17-14):{" "}
+              <span className="font-mono text-ink">jitEnabled</span> + domain
+              allowlist + default Viewer (never Owner) + audit{" "}
+              <span className="font-mono">user.jit_provisioned</span>. Disabled
+              tenants still fail unknown emails with{" "}
+              <span className="font-mono">sso_user_not_provisioned</span>. Trust
+              Safety reports{" "}
               <span className="font-mono text-ink">
                 identityProvisioning.jitProvisioning.status
               </span>
-              ; if JIT ships later it would be domain allowlist + default Viewer
-              + audit <span className="font-mono">user.jit_provisioned</span>.
+              .
             </span>
           </li>
           <li className="flex gap-2">
@@ -1041,9 +1046,8 @@ function WebhooksPanel() {
   const [copyCurl, setCopyCurl] = useState<string | null>(null);
   const [copiedCurl, setCopiedCurl] = useState(false);
 
-  const catalogEvents =
-    eventCatalog.data?.eventTypes?.length ?
-      eventCatalog.data.eventTypes
+  const catalogEvents = eventCatalog.data?.eventTypes?.length
+    ? eventCatalog.data.eventTypes
     : WEBHOOK_EVENTS;
   const signatureHeader =
     eventCatalog.data?.headers.signature ?? "x-periscan-signature";
@@ -1051,10 +1055,8 @@ function WebhooksPanel() {
   const deliveryHeader =
     eventCatalog.data?.headers.delivery ?? "x-periscan-delivery";
   const idempotencyHeader =
-    eventCatalog.data?.headers.idempotencyKey ??
-    "x-periscan-idempotency-key";
-  const signatureFormat =
-    eventCatalog.data?.signatureFormat ?? "sha256=<hex>";
+    eventCatalog.data?.headers.idempotencyKey ?? "x-periscan-idempotency-key";
+  const signatureFormat = eventCatalog.data?.signatureFormat ?? "sha256=<hex>";
 
   function toggleEvent(e: string) {
     setEvents((prev) => {
@@ -1114,7 +1116,9 @@ function WebhooksPanel() {
       await deadLetters.refetch();
     } catch (caught) {
       setError(
-        caught instanceof Error ? caught.message : "Couldn't send test delivery."
+        caught instanceof Error
+          ? caught.message
+          : "Couldn't send test delivery."
       );
     }
   }
@@ -1167,8 +1171,8 @@ function WebhooksPanel() {
       />
       <div className="flex flex-col gap-3 p-4">
         <p className="text-sm leading-6 text-muted">
-          Subscribe to product events for SOAR/chat automation. Every delivery is
-          HMAC-signed; secrets are shown once on create or rotate. Use{" "}
+          Subscribe to product events for SOAR/chat automation. Every delivery
+          is HMAC-signed; secrets are shown once on create or rotate. Use{" "}
           <strong className="font-medium text-ink">Rotate secret</strong> and{" "}
           <strong className="font-medium text-ink">Redrive</strong> for ops
           hygiene without delete-and-recreate.
@@ -1212,10 +1216,14 @@ function WebhooksPanel() {
                 </div>
                 <div>
                   <dt className="inline font-semibold text-ink">Delivery: </dt>
-                  <dd className="inline font-mono text-ink">{deliveryHeader}</dd>
+                  <dd className="inline font-mono text-ink">
+                    {deliveryHeader}
+                  </dd>
                 </div>
                 <div>
-                  <dt className="inline font-semibold text-ink">Idempotency: </dt>
+                  <dt className="inline font-semibold text-ink">
+                    Idempotency:{" "}
+                  </dt>
                   <dd className="inline font-mono text-ink">
                     {idempotencyHeader}
                   </dd>
@@ -1228,8 +1236,7 @@ function WebhooksPanel() {
                 </code>
                 . Secret prefix{" "}
                 <span className="font-mono text-ink">whsec_</span> is shown once
-                on create/rotate — never listed back. External automation
-                guide:{" "}
+                on create/rotate — never listed back. External automation guide:{" "}
                 <span className="font-mono text-ink">
                   docs/examples/automation-readme.md
                 </span>
@@ -1300,7 +1307,10 @@ function WebhooksPanel() {
               <button
                 type="button"
                 onClick={copyAsCurl}
-                className={buttonClassName({ size: "sm", variant: "secondary" })}
+                className={buttonClassName({
+                  size: "sm",
+                  variant: "secondary"
+                })}
               >
                 {copiedCurl ? "Copied" : "Copy as curl"}
               </button>
@@ -1410,7 +1420,9 @@ function WebhooksPanel() {
               onRetry={deadLetters.refetch}
             />
           ) : (deadLetters.data ?? []).length === 0 ? (
-            <p className="mt-2 text-sm text-subtle">No dead-lettered deliveries.</p>
+            <p className="mt-2 text-sm text-subtle">
+              No dead-lettered deliveries.
+            </p>
           ) : (
             <ul className="mt-2 flex flex-col gap-1">
               {(deadLetters.data ?? []).map((d) => (

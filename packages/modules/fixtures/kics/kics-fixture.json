@@ -1,0 +1,62 @@
+{
+  "kics_version": "2.1.7",
+  "files_scanned": 1,
+  "queries_total": 40,
+  "queries_failed_to_execute": 0,
+  "queries_failed": 2,
+  "severity_counters": {
+    "HIGH": 1,
+    "MEDIUM": 1,
+    "LOW": 0,
+    "INFO": 0,
+    "TRACE": 0
+  },
+  "total_counter": 2,
+  "start": "2026-01-01T00:00:00.000000-00:00",
+  "end": "2026-01-01T00:00:00.100000-00:00",
+  "paths": ["."],
+  "queries": [
+    {
+      "query_name": "S3 Bucket Without Server-side-encryption",
+      "query_id": "b2e6184c-f327-4d49-8c5d-fixture",
+      "severity": "HIGH",
+      "platform": "Terraform",
+      "cloud_provider": "AWS",
+      "category": "Encryption",
+      "description": "S3 bucket should define server_side_encryption_configuration",
+      "files": [
+        {
+          "file_name": "s3.tf",
+          "similarity_id": "fixture-sse",
+          "line": 1,
+          "issue_type": "MissingAttribute",
+          "search_key": "aws_s3_bucket[fixture]",
+          "search_value": "AKIAIOSFODNN7EXAMPLE",
+          "expected_value": "server_side_encryption_configuration should be defined",
+          "actual_value": "hashed_secret=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      ]
+    },
+    {
+      "query_name": "S3 Bucket ACL Grants Public Read",
+      "query_id": "38c5ee0d-7f22-4121-8fd5-fixture",
+      "severity": "HIGH",
+      "platform": "Terraform",
+      "cloud_provider": "AWS",
+      "category": "Access Control",
+      "description": "S3 bucket ACL should not be public-read",
+      "files": [
+        {
+          "file_name": "s3.tf",
+          "similarity_id": "fixture-acl",
+          "line": 3,
+          "issue_type": "IncorrectValue",
+          "search_key": "aws_s3_bucket[fixture].acl",
+          "search_value": "ghp_abcdefghijklmnopqrstuv",
+          "expected_value": "acl is private",
+          "actual_value": "acl is public-read"
+        }
+      ]
+    }
+  ]
+}

@@ -135,6 +135,7 @@ function queryString(entries: Record<string, string | undefined>): string {
 
 /** Operator TUI HTTP client: in-memory cookie jar + double-submit CSRF. */
 export class PeriscanApi {
+  private apiKey: string | undefined;
   private readonly cookies = new Map<string, string>();
   private readonly fetcher: typeof fetch;
 
@@ -147,21 +148,23 @@ export class PeriscanApi {
   }
 
   /**
-   * Seed cookie-auth from lab-session exports (python Set-Cookie parse):
-   * PERISCAN_API_TOKEN=`periscan_session=…` and PERISCAN_CSRF_TOKEN cookie value.
-   * Mutating calls then send Cookie plus x-csrf-token.
+   * Seed auth from lab-session exports or a `psk_` API key:
+   * PERISCAN_API_TOKEN=`periscan_session=…` and PERISCAN_CSRF_TOKEN cookie value,
+   * or PERISCAN_API_TOKEN=`psk_…` (Bearer; CSRF is not required).
    */
   applyLabAuth(sessionToken?: string, csrfToken?: string): void {
     const token = sessionToken?.trim() ?? "";
     const csrf = csrfToken?.trim() ?? "";
-    if (token.includes("=")) {
+    if (token.startsWith("psk_")) {
+      this.apiKey = token;
+    } else if (token.includes("=")) {
       for (const part of token.split(";")) {
         const parsed = parseSetCookie(part.trim());
         if (parsed) {
           this.cookies.set(parsed.name, parsed.value);
         }
       }
-    } else if (token.length > 0 && !token.startsWith("psk_")) {
+    } else if (token.length > 0) {
       this.cookies.set(SESSION_COOKIE_NAME, token);
     }
     if (csrf) {
@@ -195,12 +198,19 @@ export class PeriscanApi {
     if (init.body != null && !headers.has("content-type")) {
       headers.set("content-type", "application/json");
     }
+    if (this.apiKey) {
+      headers.set("authorization", `Bearer ${this.apiKey}`);
+    }
     const cookie = this.cookieHeader();
     if (cookie) {
       headers.set("cookie", cookie);
     }
     const pathName = path.split("?")[0] ?? path;
-    if (mutating && !CSRF_EXEMPT_PATHS.has(pathName)) {
+    if (
+      mutating &&
+      !this.apiKey &&
+      !CSRF_EXEMPT_PATHS.has(pathName)
+    ) {
       const csrf = this.cookies.get(CSRF_COOKIE_NAME);
       if (csrf) {
         headers.set(CSRF_HEADER_NAME, csrf);
@@ -403,5 +413,66 @@ export class PeriscanApi {
     return itemsOf<EvidenceArtifact>(
       await this.requestJson("/api/v1/evidence")
     );
+  }
+
+  async getBasDangerOperatorGate(): Promise<unknown> {
+    return this.requestJson("/api/v1/bas/danger-catalog");
+  }
+
+  async qualifyBasPack(input: {
+    labReceiptHash: string;
+    pack: string;
+    pinIds: string[];
+  }): Promise<unknown> {
+    return this.requestJson("/api/v1/bas/packs/qualify", {
+      body: JSON.stringify(input),
+      method: "POST"
+    });
+  }
+
+  async authorizeBasPack(input: {
+    expiresAt: string;
+    pack: string;
+    scopeId: string;
+  }): Promise<unknown> {
+    return this.requestJson("/api/v1/bas/packs/authorize", {
+      body: JSON.stringify(input),
+      method: "POST"
+    });
+  }
+
+  async compileBasCampaign(input: {
+    scenarioPins: Array<{
+      provider: string;
+      typedInputs?: Record<string, string | number | boolean>;
+      upstreamId: string;
+    }>;
+    scopeId: string;
+  }): Promise<unknown> {
+    return this.requestJson("/api/v1/bas/campaigns/compile", {
+      body: JSON.stringify(input),
+      method: "POST"
+    });
+  }
+
+  async startBasCampaign(input: {
+    compiledDigest: string;
+    dangerAckDigest?: string;
+    dangerAcknowledged?: boolean;
+  }): Promise<unknown> {
+    return this.requestJson("/api/v1/bas/campaigns/start", {
+      body: JSON.stringify(input),
+      method: "POST"
+    });
+  }
+
+  async cancelBasCampaign(input: {
+    cleanupReceipts: unknown[];
+    compiledDigest: string;
+  }): Promise<unknown> {
+    return this.requestJson("/api/v1/bas/campaigns/cancel", {
+      body: JSON.stringify(input),
+      method: "POST"
+    });
   }
 }

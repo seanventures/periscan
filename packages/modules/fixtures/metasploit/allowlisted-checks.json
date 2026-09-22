@@ -1,0 +1,177 @@
+[
+  {
+    "checkCertifiedNonDestructive": true,
+    "checkId": "msf.smb_version",
+    "checkIsNotSafetyGuarantee": true,
+    "claimKind": "vulnerability_presence",
+    "consoleAllowed": false,
+    "displayName": "SMB version probe",
+    "executionMode": "fixture",
+    "frameworkVersionPin": "6.4.0",
+    "hasCheckMethod": false,
+    "liveExecutionDisabled": true,
+    "liveSupported": false,
+    "moduleFullname": "auxiliary/scanner/smb/smb_version",
+    "moduleId": "exploit.metasploit_check",
+    "payloadInputAllowed": false,
+    "sideEffects": {
+      "crashRisk": "none",
+      "dataExfiltration": false,
+      "networkProbe": true,
+      "notes": "SMB protocol negotiation fingerprint only. Presence, not exploitability.",
+      "payloadDelivery": false,
+      "sessionOpen": false,
+      "stateMutation": false
+    },
+    "spdxLicenseId": "BSD-3-Clause",
+    "techniqueId": "T1046",
+    "typedOptions": [
+      { "name": "RHOSTS", "required": true, "type": "hostname" },
+      {
+        "defaultValue": 445,
+        "name": "RPORT",
+        "required": false,
+        "type": "port"
+      }
+    ]
+  },
+  {
+    "checkCertifiedNonDestructive": true,
+    "checkId": "msf.ssh_version",
+    "checkIsNotSafetyGuarantee": true,
+    "claimKind": "vulnerability_presence",
+    "consoleAllowed": false,
+    "displayName": "SSH version probe",
+    "executionMode": "fixture",
+    "frameworkVersionPin": "6.4.0",
+    "hasCheckMethod": false,
+    "liveExecutionDisabled": true,
+    "liveSupported": false,
+    "moduleFullname": "auxiliary/scanner/ssh/ssh_version",
+    "moduleId": "exploit.metasploit_check",
+    "payloadInputAllowed": false,
+    "sideEffects": {
+      "crashRisk": "none",
+      "dataExfiltration": false,
+      "networkProbe": true,
+      "notes": "SSH banner/version fingerprint only. Presence, not exploitability.",
+      "payloadDelivery": false,
+      "sessionOpen": false,
+      "stateMutation": false
+    },
+    "spdxLicenseId": "BSD-3-Clause",
+    "techniqueId": "T1046",
+    "typedOptions": [
+      { "name": "RHOSTS", "required": true, "type": "hostname" },
+      { "defaultValue": 22, "name": "RPORT", "required": false, "type": "port" }
+    ]
+  },
+  {
+    "checkCertifiedNonDestructive": true,
+    "checkId": "msf.http_version",
+    "checkIsNotSafetyGuarantee": true,
+    "claimKind": "vulnerability_presence",
+    "consoleAllowed": false,
+    "displayName": "HTTP version probe",
+    "executionMode": "fixture",
+    "frameworkVersionPin": "6.4.0",
+    "hasCheckMethod": false,
+    "liveExecutionDisabled": true,
+    "liveSupported": false,
+    "moduleFullname": "auxiliary/scanner/http/http_version",
+    "moduleId": "exploit.metasploit_check",
+    "payloadInputAllowed": false,
+    "sideEffects": {
+      "crashRisk": "none",
+      "dataExfiltration": false,
+      "networkProbe": true,
+      "notes": "HTTP GET / Server-header fingerprint only. Presence, not exploitability. check() is not a safety guarantee.",
+      "payloadDelivery": false,
+      "sessionOpen": false,
+      "stateMutation": false
+    },
+    "spdxLicenseId": "BSD-3-Clause",
+    "techniqueId": "T1046",
+    "typedOptions": [
+      { "name": "RHOSTS", "required": true, "type": "hostname" },
+      {
+        "defaultValue": 80,
+        "name": "RPORT",
+        "required": false,
+        "type": "port"
+      }
+    ]
+  },
+  {
+    "checkCertifiedNonDestructive": false,
+    "checkId": "msf.smb_ms17_010",
+    "checkIsNotSafetyGuarantee": true,
+    "claimKind": "check_supported",
+    "consoleAllowed": false,
+    "displayName": "MS17-010 SMB probe (side effects reviewed)",
+    "executionMode": "fixture",
+    "frameworkVersionPin": "6.4.0",
+    "hasCheckMethod": false,
+    "liveExecutionDisabled": true,
+    "liveSupported": false,
+    "moduleFullname": "auxiliary/scanner/smb/smb_ms17_010",
+    "moduleId": "exploit.metasploit_check",
+    "payloadInputAllowed": false,
+    "sideEffects": {
+      "crashRisk": "possible",
+      "dataExfiltration": false,
+      "networkProbe": true,
+      "notes": "Auxiliary MS17-010 probe can crash unpatched SMBv1. Reviewed, not certified non-destructive. Not measured exploitability.",
+      "payloadDelivery": false,
+      "sessionOpen": false,
+      "stateMutation": false
+    },
+    "spdxLicenseId": "BSD-3-Clause",
+    "techniqueId": "T1210",
+    "typedOptions": [
+      { "name": "RHOSTS", "required": true, "type": "hostname" },
+      {
+        "defaultValue": 445,
+        "name": "RPORT",
+        "required": false,
+        "type": "port"
+      }
+    ]
+  },
+  {
+    "checkCertifiedNonDestructive": false,
+    "checkId": "msf.ms17_010_eternalblue_check",
+    "checkIsNotSafetyGuarantee": true,
+    "claimKind": "check_supported",
+    "consoleAllowed": false,
+    "displayName": "MS17-010 EternalBlue check() review",
+    "executionMode": "fixture",
+    "frameworkVersionPin": "6.4.0",
+    "hasCheckMethod": true,
+    "liveExecutionDisabled": true,
+    "liveSupported": false,
+    "moduleFullname": "exploit/windows/smb/ms17_010_eternalblue",
+    "moduleId": "exploit.metasploit_check",
+    "payloadInputAllowed": false,
+    "sideEffects": {
+      "crashRisk": "possible",
+      "dataExfiltration": false,
+      "networkProbe": true,
+      "notes": "Module exposes check(); that method is not a safety guarantee and can still crash SMBv1. Payload input is forbidden. Not measured exploitability.",
+      "payloadDelivery": false,
+      "sessionOpen": false,
+      "stateMutation": false
+    },
+    "spdxLicenseId": "BSD-3-Clause",
+    "techniqueId": "T1210",
+    "typedOptions": [
+      { "name": "RHOSTS", "required": true, "type": "hostname" },
+      {
+        "defaultValue": 445,
+        "name": "RPORT",
+        "required": false,
+        "type": "port"
+      }
+    ]
+  }
+]

@@ -304,12 +304,14 @@ describe("PRD section 2 Product Principles coverage", () => {
   });
 
   it("maps the land-with-proof expansion path to API-first platform surfaces", async () => {
-    const [prd, apiRoutes, sharedSchemas, msspUi] = await Promise.all([
-      readRepoFile("docs/PERISCAN_FULL_PRODUCT_PRD.md"),
-      readRepoFile("apps/api/src/app.ts"),
-      readRepoFile("packages/shared/src/domain.ts"),
-      readRepoFile("apps/web/src/components/mssp-portfolio-dashboard.tsx")
-    ]);
+    const [prd, apiRoutes, sharedSchemas, msspUi, msspClient] =
+      await Promise.all([
+        readRepoFile("docs/PERISCAN_FULL_PRODUCT_PRD.md"),
+        readRepoFile("apps/api/src/app.ts"),
+        readRepoFile("packages/shared/src/domain.ts"),
+        readRepoFile("apps/web/src/components/mssp-portfolio-workbench.tsx"),
+        readRepoFile("apps/web/src/lib/periscan-api-client.ts")
+      ]);
     const principles = sectionBetween(
       prd,
       "## 2. Product Principles",
@@ -344,7 +346,8 @@ describe("PRD section 2 Product Principles coverage", () => {
     }
     expect(sharedSchemas).toContain("EvidencePackSchema");
     expect(sharedSchemas).toContain("MSSPClientPortfolioSchema");
-    expect(msspUi).toContain("/api/v1/tenants/current/client-portfolio");
+    expect(msspUi).toContain("getClientPortfolio");
+    expect(msspClient).toContain("/tenants/current/client-portfolio");
     expect(apiRoutes).toContain(
       'summary: "Read the MSSP client portfolio summary"'
     );

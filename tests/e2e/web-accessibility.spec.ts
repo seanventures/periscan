@@ -57,7 +57,7 @@ test.describe("web route accessibility", () => {
       await page.goto(route);
 
       const results = await new AxeBuilder({ page })
-        .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+        .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
         .analyze();
 
       expect(summarizeViolations(results.violations)).toEqual([]);
@@ -86,7 +86,7 @@ test.describe("web route accessibility", () => {
       ).toBeVisible();
 
       const results = await new AxeBuilder({ page })
-        .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+        .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
         .analyze();
 
       expect(summarizeViolations(results.violations)).toEqual([]);
@@ -108,7 +108,7 @@ test.describe("web route accessibility", () => {
     ).toBeVisible();
 
     const results = await new AxeBuilder({ page })
-      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
       .analyze();
 
     expect(summarizeViolations(results.violations)).toEqual([]);

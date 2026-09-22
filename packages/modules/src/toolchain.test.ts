@@ -56,6 +56,9 @@ describe("open source toolchain registry", () => {
     expect(defaultTools.some((tool) => tool.toolId === "sharphound")).toBe(
       false
     );
+    expect(defaultTools.some((tool) => tool.toolId === "infection-monkey")).toBe(
+      false
+    );
 
     expect(defaultTools.some((tool) => tool.toolId === "caldera")).toBe(false);
 
@@ -100,6 +103,9 @@ describe("open source toolchain registry", () => {
     });
 
     expect(allTools.some((tool) => tool.toolId === "sharphound")).toBe(true);
+    expect(allTools.some((tool) => tool.toolId === "infection-monkey")).toBe(
+      true
+    );
 
     expect(allTools.some((tool) => tool.toolId === "caldera")).toBe(true);
     expect(allTools.some((tool) => tool.toolId === "atomic-red-team")).toBe(
@@ -169,6 +175,13 @@ describe("open source toolchain registry", () => {
     expect(getOpenSourceToolDefinition("sharphound")?.policyStatus).toBe(
       "RequiresLegalReview"
     );
+    expect(getOpenSourceToolDefinition("infection-monkey")?.policyStatus).toBe(
+      "RequiresLegalReview"
+    );
+    expect(getOpenSourceToolDefinition("infection-monkey")?.dockerImage).toBeNull();
+    expect(
+      getOpenSourceToolDefinition("infection-monkey")?.license
+    ).toBe("GPL-3.0");
   });
 
   it("exposes capability interfaces for every visible tool", () => {
@@ -455,6 +468,12 @@ describe("open source toolchain registry", () => {
       expect(metasploit?.executionReadiness).toBe("Blocked");
       expect(kerbrute?.executionReadiness).toBe("FixtureOnly");
       expect(sharphound?.executionReadiness).toBe("Blocked");
+      const infectionMonkey = await getOpenSourceToolCatalogEntryWithRuntime(
+        "infection-monkey",
+        { PATH: binDir }
+      );
+      expect(infectionMonkey?.executionReadiness).toBe("Blocked");
+      expect(infectionMonkey?.tool.dockerImage).toBeNull();
       expect(calderaCapability?.executionReadiness).toBe("Blocked");
       expect(trivy?.lastCheckedAt).toBeTruthy();
     } finally {

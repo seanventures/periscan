@@ -1,0 +1,20 @@
+{
+  "took": 2,
+  "timed_out": false,
+  "hits": {
+    "total": { "value": 1, "relation": "eq" },
+    "hits": [
+      {
+        "_index": "logs-endpoint.events-default",
+        "_id": "elastic-log-1",
+        "_source": {
+          "@timestamp": "2026-09-17T14:01:00.000Z",
+          "host": { "name": "lab-elastic-01" },
+          "event": { "category": "process", "action": "start", "dataset": "endpoint.events.process" },
+          "process": { "command_line": "hostname periscan-r-aaaa-s-bbbb-nonce1" },
+          "message": "process start periscan-r-aaaa-s-bbbb-nonce1"
+        }
+      }
+    ]
+  }
+}

@@ -26,6 +26,10 @@ export function HelpScreen() {
       </Text>
       <Text>q quit · ? this help</Text>
       <Text color={theme.muted}>{jumpKeys}</Text>
+      <Text color={theme.muted}>
+        g pin gitleaks.repo_secrets · run --scope pins the same engine
+      </Text>
+      <Text color={theme.muted}>e evidence · b BAS</Text>
 
       <Box marginTop={1} flexDirection="column">
         <Text bold color={theme.accent}>
@@ -45,15 +49,15 @@ export function HelpScreen() {
           SETTLED safety
         </Text>
         <Text color={theme.muted}>
-          Live Atomic, Caldera, SharpHound, ransomware, and exploit chaining
-          stay off.
+          BAS adapters require qualified scenarios, policy approval and
+          verified cleanup.
         </Text>
         <Text color={theme.muted}>
           Validate only verified authorized scope. Path words follow weakest-hop
           evidence.
         </Text>
         <Text color={theme.muted}>
-          Not full BAS. Not a certification or audit opinion.
+          BAS/AEV coverage follows measured evidence. Not a certification or audit opinion.
         </Text>
       </Box>
 

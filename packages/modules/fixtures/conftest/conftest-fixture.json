@@ -1,0 +1,34 @@
+[
+  {
+    "filename": "deployment.yaml",
+    "namespace": "main",
+    "successes": 99,
+    "failures": [
+      {
+        "msg": "Containers must not run as root in Deployment fixture-web. Trap AKIAIOSFODNN7EXAMPLE",
+        "metadata": {
+          "query": "data.main.deny",
+          "details": "hashed_secret=fixture"
+        }
+      },
+      {
+        "msg": "-----BEGIN RSA PRIVATE KEY-----\nfixture\n-----END RSA PRIVATE KEY-----",
+        "loc": {
+          "file": "deployment.yaml",
+          "line": 12
+        },
+        "metadata": {
+          "query": "data.main.deny"
+        }
+      }
+    ],
+    "warnings": [
+      {
+        "msg": "ghp_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "metadata": {
+          "query": "data.main.warn"
+        }
+      }
+    ]
+  }
+]

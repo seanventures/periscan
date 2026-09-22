@@ -173,9 +173,9 @@ Use only when the site needs AgentLocal measured or safe recon modules.
 2. **Run** `ghcr.io/seanheiney/periscan-runner-agent` with those issued credentials
    (`apps/runner-agent/deploy/`). Do not treat this image as the production LTS
    package.
-3. Keep the local module allowlist and safety levels narrow. Advanced adversarial,
-   credential, exploitation, and collector modules remain disabled unless a later
-   approved PRD/legal/security gate explicitly enables them.
+3. Keep the local module allowlist scoped to qualified scenarios. Add BAS/AEV
+   adapters through the authorized program with implementation tests, reviewed
+   licensing and scope-bound execution approval.
 4. **Verify** polling in `/runners` and Stage A–B of
    `docs/OFFENSIVE_KIT_LIVE_SMOKE.md` when exercising the agent image.
 
@@ -187,8 +187,9 @@ Use only when the site needs AgentLocal measured or safe recon modules.
   execution are not production-enabled by this guide.
 - The runner enforces a default-deny per-task egress allowlist and the kill
   switch; it never decides authorization.
-- CI never runs live offensive tools. Any controlled lab smoke must follow
-  `docs/OFFENSIVE_KIT_LIVE_SMOKE.md`, verified scope, and written authorization.
+- Routine CI uses fixture/parser/policy checks. Dedicated BAS qualification jobs
+  may execute reviewed scenarios in disposable isolated labs under
+  `docs/BAS_LOCAL_LAB.md`, with explicit scope, limits and verified cleanup.
 - Honor the GPL/NPSL and export-control obligations
   (`docs/EXPORT_CONTROL_AND_AUTHORIZED_USE.md`) before redistributing images.
   The default scan-executor image does not convey legal-review GPL tools; if you

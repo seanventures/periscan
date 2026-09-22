@@ -99,9 +99,9 @@ describe("TrustSafetyDashboard v2", () => {
               },
               jitProvisioning: {
                 defaultRoleIfEnabled: "Viewer",
-                detail: "JIT membership on first SSO is NotConfigured.",
+                detail: "JIT membership on first SSO is Optional.",
                 requiresDomainAllowlist: true,
-                status: "NotConfigured"
+                status: "Optional"
               },
               scimInbound: {
                 discoveryPath: "/api/v1/scim/v2/ServiceProviderConfig",
@@ -245,7 +245,7 @@ describe("TrustSafetyDashboard v2", () => {
       screen.getByText(/Inbound SCIM for Periscan users/i)
     ).toBeInTheDocument();
     expect(screen.getByText(/Not SCIM for Periscan users/i)).toBeInTheDocument();
-    // PERISCAN-30: Partial plane vs NotConfigured SCIM/JIT + order-form CTA
+    // PERISCAN-30: Partial plane vs NotConfigured SCIM + Optional JIT + order-form CTA
     expect(
       screen.getByTestId("identity-lifecycle-trust-panel")
     ).toBeInTheDocument();

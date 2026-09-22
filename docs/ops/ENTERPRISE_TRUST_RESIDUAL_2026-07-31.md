@@ -9,7 +9,7 @@
 | Surface | Product status | What operators may say |
 | ------- | -------------- | ---------------------- |
 | **Inbound SCIM 2.0** (Periscan memberships) | **NotConfigured** | Not shipped. Discovery under `/api/v1/scim/v2/*` returns **HTTP 501** with actionable body (not silent 404). |
-| **JIT create-on-first-SSO** | **NotConfigured** | SSO requires pre-provisioned Active membership. |
+| **JIT create-on-first-SSO** | **Optional** | Tenant opt-in: domain allowlist + default Viewer + audit `user.jit_provisioned`. Off by default (`sso_user_not_provisioned`). |
 | **IdP plane overall** | **Partial** | SSO OIDC/SAML + force-MFA + IdP group→role claim mapping ship. Full joiner/mover/leaver is **not** claimed. |
 | **CyberArk / connector SCIM** | Ready (inventory) | Read-only external identity inventory for attack-path context — **not** Periscan user provisioning. |
 | **Vendor SOC 2 Type II** | **None** (`NotClaimed`) | No publishable vendor Type II. Customer evidence packs ≠ vendor attestation. |
@@ -22,18 +22,19 @@ Do **not** close PERISCAN-30 as Done on this slice alone. Residual product/GTM w
 
 | Artifact | Truth |
 | -------- | ----- |
-| `buildIdentityProvisioningHonesty()` | `planeStatus: "Partial"`; `scimInbound.status` / `jitProvisioning.status`: **`NotConfigured`** |
+| `buildIdentityProvisioningHonesty()` | `planeStatus: "Partial"`; `scimInbound.status`: **`NotConfigured`**; `jitProvisioning.status`: **`Optional`** |
 | `orderFormDoc` | `docs/ENTERPRISE_IDENTITY_LIFECYCLE.md` (sales-assisted SLA for order form annex) |
 | `residualDoc` | this file |
 | `/api/v1/scim/v2/ServiceProviderConfig\|Users\|Groups…` | Always **501** + `statusName: NotConfigured` + `nextSteps` + order-form residual pointers |
-| Trust & Safety UI | `IdentityLifecycleTrustPanel` — Partial plane badge; SCIM/JIT rows NotConfigured; order-form CTA |
+| Trust & Safety UI | `IdentityLifecycleTrustPanel` — Partial plane badge; SCIM row NotConfigured; JIT row Optional; order-form CTA |
 | Admin console | `IdentityLifecycleHonestyPanel` — same honesty + CTA |
 | Claim refuse list | `scim-production-inbound`, `vendor-soc2-type-ii-claimed` in `packages/shared/src/claim-deny-list.ts` |
 
 ### Partial vs NotConfigured (do not conflate)
 
-- **Partial** = overall IdP *plane* can partially serve enterprise SSO buyers (pre-provisioned SSO works).
-- **NotConfigured** = specific capabilities (inbound SCIM, JIT) are absent. Never relabel as Partial “almost ready” theater or Production.
+- **Partial** = overall IdP *plane* can partially serve enterprise SSO buyers (SSO + optional JIT work; inbound SCIM does not).
+- **NotConfigured** = inbound SCIM for Periscan memberships is absent. Never relabel as Partial “almost ready” theater or Production.
+- **Optional** = JIT create-on-first-SSO is shipped as tenant opt-in (off by default).
 
 ### Order-form fill path (until SCIM ships)
 

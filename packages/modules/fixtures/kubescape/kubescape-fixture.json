@@ -1,0 +1,64 @@
+{
+  "summaryDetails": {
+    "score": 99,
+    "ResourceCounters": {
+      "failedResources": 9,
+      "passedResources": 1,
+      "skippedResources": 1
+    }
+  },
+  "results": [
+    {
+      "resourceID": "/v1/namespace/default/Deployment/fixture-web",
+      "resourceName": "fixture-web",
+      "controls": [
+        {
+          "controlID": "C-0016",
+          "name": "Allow privilege escalation",
+          "status": { "status": "failed" },
+          "rules": [
+            {
+              "name": "privileged-escalation",
+              "status": "failed",
+              "paths": [
+                {
+                  "failedPath": "spec.template.spec.containers[0].securityContext.allowPrivilegeEscalation",
+                  "fixPath": {
+                    "path": "spec.template.spec.containers[0].env[0].value",
+                    "value": "AKIAIOSFODNN7EXAMPLE"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "controlID": "C-0034",
+          "name": "Allow container with hostPath",
+          "status": { "status": "failed" },
+          "rules": [
+            {
+              "paths": [
+                {
+                  "fixPath": {
+                    "value": "-----BEGIN RSA PRIVATE KEY-----\nfixture\n-----END RSA PRIVATE KEY-----"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "controlID": "C-0001",
+          "name": "Prevent containers from running with root",
+          "status": { "status": "passed" }
+        },
+        {
+          "controlID": "C-0012",
+          "name": "Applications CPU limits",
+          "status": { "status": "skipped" }
+        }
+      ]
+    }
+  ]
+}

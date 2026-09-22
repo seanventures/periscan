@@ -7,6 +7,7 @@ import {
   SCOPE_EDITOR_ROLES,
   type AppServices
 } from "./runtime-services.js";
+import { runObserverHealthSamplerTick } from "./services/observer-health-sampler.js";
 
 // The four due-runners ticked per tenant, plus the per-tenant context build —
 // the distinct failure sites a sweep can hit. Per-runner attribution turns an
@@ -170,6 +171,23 @@ export async function runSystemValidationSweep({
     }
   }
 
+  try {
+    await runObserverHealthSamplerTick({
+      now,
+      prisma,
+      tenantIds
+    });
+  } catch (error) {
+    if (logger) {
+      logger.warn(
+        {
+          op: "observer.health.sample.error"
+        },
+        error instanceof Error ? error.message : String(error)
+      );
+    }
+  }
+
   const dueTenantIds = new Set<string>();
   for (const row of await prisma.integration.findMany({
     distinct: ["tenantId"],
@@ -199,7 +217,10 @@ export async function runSystemValidationSweep({
     distinct: ["tenantId"],
     select: { tenantId: true },
     where: {
-      nextRunAt: { lte: now },
+      OR: [
+        { nextRunAt: { lte: now } },
+        { frequency: { in: ["Hourly", "Continuous"] } }
+      ],
       status: "Active",
       ...(tenantFilter ? { tenantId: tenantFilter } : {})
     }

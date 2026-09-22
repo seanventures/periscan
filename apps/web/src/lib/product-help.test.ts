@@ -68,13 +68,17 @@ describe("product help content", () => {
         "Route evidence and re-test"
       ])
     );
-    expect(externalHelp.summary.toLowerCase()).toMatch(/not a full asv|pentest/);
+    expect(externalHelp.summary.toLowerCase()).toMatch(
+      /not a full asv|pentest/
+    );
     expect(externalHelp.caution?.toLowerCase()).toMatch(/full asv|pentest/);
     expect(resolveProductHelp("/findings").id).toBe("findings");
     expect(resolveProductHelp("/snapshots/snapshot-1").id).toBe("snapshot");
     expect(resolveProductHelp("/snapshots/snapshot-1/report").id).toBe(
       "reports"
     );
+    expect(resolveProductHelp("/remediation").id).toBe("remediation");
+    expect(resolveProductHelp("/remediations").id).toBe("remediation");
     expect(resolveProductHelp("/remediation/remediation-1").id).toBe(
       "remediation"
     );
@@ -90,9 +94,7 @@ describe("product help content", () => {
         "Recover by reviewed reactivation"
       ])
     );
-    expect(
-      resolveProductHelp("/admin").terms.map((term) => term.term)
-    ).toEqual(
+    expect(resolveProductHelp("/admin").terms.map((term) => term.term)).toEqual(
       expect.arrayContaining(["Webhook event catalog", "OpenAPI auth"])
     );
     const reportsHelp = resolveProductHelp("/reports");
@@ -104,6 +106,13 @@ describe("product help content", () => {
     );
     expect(resolveProductHelp("/controls").caution?.toLowerCase()).toMatch(
       /ransomware|kill-chain|not live inject/
+    );
+    expect(resolveProductHelp("/bas/scenarios").id).toBe("controls");
+    expect(resolveProductHelp("/bas").id).toBe("controls");
+    expect(resolveProductHelp("/control-validation").id).toBe("controls");
+    expect(resolveProductHelp("/attack-navigator").id).toBe("controls");
+    expect(resolveProductHelp("/bas").steps.map((step) => step.title)).toEqual(
+      expect.arrayContaining(["Operate inject → observe → verdict → retest"])
     );
     expect(resolveProductHelp("/workflows").id).toBe("workflows");
     expect(
@@ -131,9 +140,7 @@ describe("product help content", () => {
     );
     expect(resolveProductHelp("/mcp").id).toBe("mcp");
     expect(resolveProductHelp("/mcp").summary).toMatch(/read-only/i);
-    expect(
-      resolveProductHelp("/mcp").steps.map((step) => step.title)
-    ).toEqual(
+    expect(resolveProductHelp("/mcp").steps.map((step) => step.title)).toEqual(
       expect.arrayContaining([
         "Confirm Wave H catalog vs Community tools",
         "Mint a read-scope API key",
@@ -238,6 +245,43 @@ describe("product help content", () => {
     expect(resolveProductHelp("/unknown").id).toBe("generic");
   });
 
+  it("leads findings first-hour help with the VALIDATED row then create/review, mall under More", () => {
+    const help = resolveProductHelp("/findings");
+    expect(help.summary).toMatch(/VALIDATED/i);
+    expect(help.summary).toMatch(/path/i);
+    expect(help.summary).toMatch(/Create remediations|Review remediations/i);
+    expect(help.summary).toMatch(/\bMore\b/);
+    expect(help.steps[0]?.instruction).toMatch(/path/i);
+    expect(help.steps[0]?.instruction.toLowerCase()).not.toMatch(
+      /run a validation snapshot/
+    );
+    const body = help.steps.map((step) => step.instruction).join("\n");
+    expect(body).toMatch(/Create remediations|Review remediations/);
+    expect(body).toMatch(/\bMore\b/);
+    expect(body.toLowerCase()).toMatch(/measure path hops|false positive|snapshot/);
+    expect(body.toLowerCase()).toMatch(/390/);
+    expect(body.toLowerCase()).toMatch(/wrap|scroll/);
+    expect(body.toLowerCase()).toMatch(/copy view link/);
+    expect(body.toLowerCase()).toMatch(/24/);
+    expect(body.toLowerCase()).toMatch(/no mark fixed/);
+    expect(body.toLowerCase()).not.toMatch(/choose mark fixed|click mark fixed/);
+    expect(help.summary.toLowerCase()).not.toMatch(/route the smallest fix/);
+    expect(body.toLowerCase()).not.toMatch(/route the smallest fix/);
+    expect(`${help.summary}\n${body}`).toMatch(/one next verb|rail does not/i);
+  });
+
+  it("leads remediation first-hour help with Open then Re-verify, kitchen under More", () => {
+    const help = resolveProductHelp("/remediation");
+    expect(help.summary).toMatch(/Open/i);
+    expect(help.summary).toMatch(/Re-verify/i);
+    expect(help.steps[0]?.title).toMatch(/Open/i);
+    expect(help.steps[0]?.instruction).toMatch(/Re-verify/i);
+    expect(help.steps[0]?.instruction.toLowerCase()).not.toMatch(/github pat/);
+    const body = help.steps.map((step) => step.instruction).join("\n");
+    expect(body).toMatch(/\bMore\b/);
+    expect(body.toLowerCase()).toMatch(/github pat|ticketing|auto-revalidate/);
+  });
+
   it("teaches Wave H read catalog plus policy-gated Community MCP start", () => {
     const help = resolveProductHelp("/mcp");
     const body = [
@@ -259,11 +303,7 @@ describe("product help content", () => {
     expect(body).toMatch(/readOnlyHint/);
     expect(body).toMatch(/Wave H catalog metadata/i);
     expect(body).toMatch(/policy-gated in the tool description and run path/i);
-    expect(body).toMatch(/Atomic/);
-    expect(body).toMatch(/Caldera/);
-    expect(body).toMatch(/SharpHound/);
-    expect(body).toMatch(/sqlmap/);
-    expect(body).toMatch(/Metasploit/);
+    expect(body).toMatch(/BAS scenarios require qualified adapters/);
     expect(body).not.toMatch(/no MCP path to start missions/i);
     expect(body).not.toMatch(/cannot start missions/i);
     expect(body.toLowerCase()).not.toMatch(
@@ -285,10 +325,12 @@ describe("product help content", () => {
       "/attack-paths",
       "/schedules",
       "/getting-started",
-      // Competitive walk (P19-r2/r3): BAS refuse + Wiz co-exist
+      // Competitive walk (P19-r2/r3): BAS coverage + Wiz co-exist
       "/scopes",
       "/engines",
       "/controls",
+      "/bas",
+      "/bas/atomic-testing",
       "/continuous",
       // Overnight O6/O8 residuals: MCP keys + flight recorder, compliance export
       "/admin",
@@ -405,8 +447,12 @@ describe("product help content", () => {
     expect(markerStep?.instruction).toMatch(/periscan-\*/);
     expect(markerStep?.instruction).toMatch(/benign_marker_only/);
     expect(markerStep?.instruction).toMatch(/fullAttackLibrary=false/);
-    expect(markerStep?.instruction).toMatch(/Controls CTA|Run detection marker proof/i);
-    expect(markerStep?.instruction).not.toMatch(/full ATT&CK BAS library inject/i);
+    expect(markerStep?.instruction).toMatch(
+      /Controls CTA|Run detection marker proof/i
+    );
+    expect(markerStep?.instruction).not.toMatch(
+      /full ATT&CK BAS library inject/i
+    );
     // O2: product-help deep-links to the Controls marker-proof CTA surface.
     expect(markerStep?.href).toBe("/controls");
     expect(markerStep?.actionLabel).toMatch(/marker proof|Controls/i);
@@ -418,7 +464,9 @@ describe("product help content", () => {
         "Dry-run scenario import"
       ])
     );
-    const drvPartial = controls.terms.find((term) => term.term === "DRV Partial");
+    const drvPartial = controls.terms.find(
+      (term) => term.term === "DRV Partial"
+    );
     expect(drvPartial?.definition).toMatch(/Partial/);
     expect(drvPartial?.definition).toMatch(/benign-marker|marker class/i);
     expect(controls.caution).toMatch(/DRV remains Partial/i);
@@ -430,7 +478,9 @@ describe("product help content", () => {
     const continuous = resolveProductHelp("/continuous");
     expect(continuous.id).toBe("continuous");
     expect(continuous.summary).toMatch(/verified/i);
-    expect(continuous.summary).toMatch(/not an autonomous living map|not.*living map/i);
+    expect(continuous.summary).toMatch(
+      /not an autonomous living map|not.*living map/i
+    );
     expect(continuous.steps.map((step) => step.title)).toEqual(
       expect.arrayContaining(["Schedule continuous EASM on verified scope"])
     );
@@ -449,7 +499,9 @@ describe("product help content", () => {
     );
     expect(continuousEasm?.definition).toMatch(/verified customer scopes/i);
     expect(continuousEasm?.definition).toMatch(/not autonomous/i);
-    expect(continuous.caution).toMatch(/not an autonomous living external map/i);
+    expect(continuous.caution).toMatch(
+      /not an autonomous living external map/i
+    );
 
     const schedules = resolveProductHelp("/schedules");
     expect(schedules.id).toBe("schedules");
@@ -481,16 +533,56 @@ describe("product help content", () => {
     );
   });
 
-  it("catalogues the competitive walk for BAS refuse + Wiz co-exist", () => {
+  it("P2-CTEMCOPY: Home and Validate help summaries lead with the first-hour job, not AEV/CTEM platform copy", () => {
+    const dashboard = resolveProductHelp("/");
+    const missions = resolveProductHelp("/missions");
+
+    for (const help of [dashboard, missions]) {
+      expect(help.summary).toMatch(/authorized local path/i);
+      expect(help.summary).toMatch(/Gitleaks-class/i);
+      expect(help.summary).toMatch(/Fixed after retest/i);
+      expect(help.summary).not.toMatch(/AEV\/CTEM proof layer/i);
+      expect(help.summary).not.toMatch(
+        /Automated Security Validation platform/i
+      );
+      expect(help.summary).not.toMatch(/we are a CTEM platform/i);
+      expect(help.summary).not.toMatch(/attack-paths mall|attack paths, AI/i);
+    }
+
+    const belowFold = [dashboard, missions]
+      .map((help) => help.caution ?? "")
+      .join("\n");
+    expect(belowFold).toMatch(/AEV\/CTEM proof layer/i);
+    expect(belowFold).toMatch(/BAS\/AEV.*qualified|qualified.*BAS\/AEV/i);
+    expect(`${dashboard.summary}\n${missions.summary}`).not.toMatch(
+      /first[- ]hour/i
+    );
+  });
+
+  it("missions and integrations help state BAS/AEV direction and qualified coverage", () => {
+    const missions = resolveProductHelp("/missions");
+    const integrations = resolveProductHelp("/integrations");
+    const dashboard = resolveProductHelp("/");
+
+    for (const help of [missions, integrations, dashboard]) {
+      const text = `${help.summary}\n${help.caution ?? ""}`;
+      expect(text).toMatch(/we prove authorized exposure/i);
+      expect(text).toMatch(/BAS\/AEV.*qualified|qualified.*BAS\/AEV/i);
+      expect(text).toMatch(/AEV\/CTEM proof layer/i);
+      expect(text.toLowerCase()).not.toMatch(/full bas platform/);
+      expect(text.toLowerCase()).not.toMatch(/automated pentest/);
+      expect(text.toLowerCase()).not.toMatch(/ransomware emulation/);
+    }
+  });
+
+  it("catalogues the competitive walk for BAS coverage + Wiz co-exist", () => {
     const walk = getProductHelpGuide("competitive-walk");
     expect(walk).toBeDefined();
-    expect(walk?.title).toBe("Competitive walk: BAS refuse + Wiz co-exist");
+    expect(walk?.title).toBe("Competitive walk: BAS coverage + Wiz co-exist");
     expect(walk?.caution?.toLowerCase()).toMatch(
       /no fake demo|no inject|no cnapp/
     );
-    const hrefs = (walk?.steps ?? [])
-      .map((step) => step.href)
-      .filter(Boolean);
+    const hrefs = (walk?.steps ?? []).map((step) => step.href).filter(Boolean);
     expect(hrefs).toEqual([
       "/scopes",
       "/engines",
@@ -500,7 +592,9 @@ describe("product help content", () => {
       "/continuous"
     ]);
     expect(JSON.stringify(walk)).toMatch(/wiz co-exist|cnapp/i);
-    expect(JSON.stringify(walk)).toMatch(/not.*inject bas|refuse full/i);
+    expect(JSON.stringify(walk)).toMatch(
+      /qualified.*scenario|scenario.*qualified/i
+    );
     // Must not sell full BAS peer or "replace Wiz/CNAPP" as a product claim.
     expect(JSON.stringify(walk)).not.toMatch(/full bas platform/i);
     expect(JSON.stringify(walk)).not.toMatch(/wiz alternative|rip out wiz/i);
@@ -539,5 +633,30 @@ describe("product help content", () => {
     );
     // Must not overclaim Fully-E2E multi-hop BAS.
     expect(text.toLowerCase()).not.toMatch(/full bas|live ransomware/);
+  });
+
+  it("operator surfaces never use NodeZero, automated pentest, always-on BAS, or CTEM %", () => {
+    const guides = [
+      resolveProductHelp("/schedules"),
+      resolveProductHelp("/continuous"),
+      resolveProductHelp("/external-validation"),
+      resolveProductHelp("/scopes")
+    ];
+    for (const help of guides) {
+      const text = `${help.title}\n${help.summary}\n${help.caution ?? ""}\n${help.steps
+        .map((step) => `${step.title} ${step.instruction}`)
+        .join("\n")}`;
+      const claims = text.replace(
+        /not always-on BAS, NodeZero, or autonomous pentest/gi,
+        ""
+      );
+      expect(claims).not.toMatch(/NodeZero/i);
+      expect(claims.toLowerCase()).not.toMatch(/automated pentest/);
+      expect(claims.replace(/not always-on BAS/gi, "")).not.toMatch(
+        /always-on BAS/i
+      );
+      expect(text).not.toMatch(/CTEM\s*%/i);
+      expect(text).not.toMatch(/\b5\.0\b/);
+    }
   });
 });

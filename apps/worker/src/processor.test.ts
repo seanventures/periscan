@@ -163,13 +163,17 @@ class InMemoryMissionExecutionStore implements MissionExecutionStore {
 
   async markRunning() {
     const timestamp = new Date().toISOString();
+    const missionStillOpen =
+      this.mission.status !== "Completed" && this.mission.status !== "Failed";
 
-    this.mission = {
-      ...this.mission,
-      startedAt: timestamp,
-      status: "Running",
-      updatedAt: timestamp
-    };
+    this.mission = missionStillOpen
+      ? {
+          ...this.mission,
+          startedAt: timestamp,
+          status: "Running",
+          updatedAt: timestamp
+        }
+      : this.mission;
     this.run = {
       ...this.run,
       startedAt: timestamp,
@@ -311,19 +315,23 @@ class InMemoryMissionExecutionStore implements MissionExecutionStore {
 
   async reconcileMissionStatus() {
     const timestamp = new Date().toISOString();
+    const hasEvidence = this.run.evidenceIds.length > 0;
+    const status =
+      this.run.status === "Failed"
+        ? "Failed"
+        : this.run.status === "Completed" || hasEvidence
+          ? "Completed"
+          : "Running";
 
     this.mission = {
       ...this.mission,
       completedAt:
-        this.run.status === "Completed" || this.run.status === "Failed"
-          ? timestamp
-          : null,
-      status:
-        this.run.status === "Completed"
-          ? "Completed"
-          : this.run.status === "Failed"
-            ? "Failed"
-            : "Running",
+        status === "Completed" || status === "Failed" ? timestamp : null,
+      evidenceIds:
+        this.run.evidenceIds.length > 0
+          ? [...this.run.evidenceIds]
+          : this.mission.evidenceIds,
+      status,
       updatedAt: timestamp
     };
   }
@@ -358,6 +366,51 @@ describe("mission execution processor", () => {
 
     expect(projection.nodeType).toBe("Exposure.SecretExposure");
     expect(projection.nodeKey).toMatch(/^exposure:/);
+  });
+
+  it("completes the parent when the only Gitleaks run has evidence before signals persist", async () => {
+    const { execution, payload } = createExecution(
+      "gitleaks.repo_secrets",
+      gitleaksFixtureTarget()
+    );
+    const store = new InMemoryMissionExecutionStore(execution);
+    let missionStatusWhenSignalsPersisted: string | undefined;
+    const persistSignals = store.persistSignals.bind(store);
+    store.persistSignals = async (signals) => {
+      missionStatusWhenSignalsPersisted = store.mission.status;
+      return persistSignals(signals);
+    };
+    const processor = createMissionExecutionProcessor(store, {
+      allowFixtureTargets: true
+    });
+
+    const result = await processor.process(payload);
+
+    expect(result.signals.length).toBeGreaterThan(0);
+    expect(store.run.evidenceIds.length).toBeGreaterThan(0);
+    expect(missionStatusWhenSignalsPersisted).toBe("Completed");
+    expect(store.mission.status).toBe("Completed");
+    expect(store.run.status).toBe("Completed");
+  });
+
+  it("finishes a still-open Gitleaks run after the parent already Completed on evidence", async () => {
+    const { execution, payload } = createExecution(
+      "gitleaks.repo_secrets",
+      gitleaksFixtureTarget()
+    );
+    execution.mission.status = "Completed";
+    execution.run.status = "Running";
+    const store = new InMemoryMissionExecutionStore(execution);
+    const processor = createMissionExecutionProcessor(store, {
+      allowFixtureTargets: true
+    });
+
+    const result = await processor.process(payload);
+
+    expect(result.signals.length).toBeGreaterThan(0);
+    expect(store.run.status).toBe("Completed");
+    expect(store.mission.status).toBe("Completed");
+    expect(store.persistedSignals.length).toBeGreaterThan(0);
   });
 
   it("processes a queued job and persists normalized signals", async () => {

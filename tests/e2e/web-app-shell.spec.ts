@@ -151,6 +151,76 @@ test.describe("web app shell navigation", () => {
     expect(overlapArea).toBe(0);
   });
 
+  // Loop 16: Tab paints; :focus (including scripted after mouse) paints
+  // in-flow. WCAG 2.4.1 is Tab + Enter to main. Do not restore 554 overlay.
+  test("skip-link Tab reveals and Enter jumps to main", async ({ page }) => {
+    await page.goto("/dashboard");
+    const skipLink = page.getByRole("link", { name: "Skip to content" });
+    const main = page.locator("#main-content");
+    await expect(main).toHaveAttribute("tabindex", "-1");
+
+    await page.keyboard.press("Tab");
+    await expect(skipLink).toBeFocused();
+    await expect(skipLink).toBeVisible();
+    const paintedOnTab = await skipLink.evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      return rect.width > 1 && rect.height > 20;
+    });
+    expect(paintedOnTab).toBe(true);
+
+    await page.keyboard.press("Enter");
+    await expect(main).toBeFocused();
+  });
+
+  test("programmatic skip-link focus after mouse paints without covering the wordmark", async ({
+    page
+  }) => {
+    await page.goto("/dashboard");
+    const skipLink = page.locator("a.skip-link");
+    const wordmark = page.getByRole("link", {
+      name: "Periscan — Dashboard"
+    });
+    await expect(wordmark).toBeVisible({ timeout: 15_000 });
+    const clickTarget = page.locator("h1, #main-content").first();
+    await clickTarget.click({ force: true });
+    await skipLink.evaluate((element) => {
+      (element as HTMLElement).focus({ preventScroll: true });
+    });
+    await expect(skipLink).toBeFocused();
+    const painted = await skipLink.evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      const style = getComputedStyle(element);
+      return (
+        rect.width > 1 &&
+        rect.height > 1 &&
+        style.clipPath === "none" &&
+        style.position === "static"
+      );
+    });
+    expect(painted).toBe(true);
+    const overlapArea = await page.evaluate(() => {
+      const skip = document
+        .querySelector<HTMLElement>("a.skip-link")
+        ?.getBoundingClientRect();
+      const brand = document
+        .querySelector<HTMLElement>('[aria-label="Periscan — Dashboard"]')
+        ?.getBoundingClientRect();
+      if (!skip || !brand) {
+        return -1;
+      }
+      const overlapX = Math.max(
+        0,
+        Math.min(skip.right, brand.right) - Math.max(skip.left, brand.left)
+      );
+      const overlapY = Math.max(
+        0,
+        Math.min(skip.bottom, brand.bottom) - Math.max(skip.top, brand.top)
+      );
+      return overlapX * overlapY;
+    });
+    expect(overlapArea).toBe(0);
+  });
+
   test("starts a new tenant in a focused setup navigation view with a full-product escape", async ({
     page
   }) => {

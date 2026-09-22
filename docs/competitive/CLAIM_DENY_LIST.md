@@ -1,5 +1,7 @@
 # Claim language deny-list (GTM product contract)
 
+> **BAS/AEV program:** [../BAS_AEV_PROGRAM.md](../BAS_AEV_PROGRAM.md) — qualified open-source simulation, emulation and evidence-backed validation (PERISCAN-583).
+
 **Ticket:** P19-20  
 **Status:** productized shared claim language for GTM / SE / website / Wave  
 **Audience:** sales, SEs, product marketing, founders, support, engineering PRs that add nav items
@@ -47,7 +49,7 @@ Use these **exact denials** in RFP answers and decks when asked for parity:
 
 | Denied phrase | Positive substitute |
 |---|---|
-| “Full BAS platform” / multi-vector BAS peer / scenario-library bake-off parity | AEV/CTEM **proof layer** on authorized scope; refuse BAS library RFPs |
+| Unproven shipped BAS coverage or competitor parity | BAS/AEV development target with scenario-level shipped coverage and evidence; evaluate RFP requirements against actual readiness |
 | “Replace your CNAPP” / “Wiz alternative” | Bring inventory; we prove path + fix |
 | “Replace Tenable / RBVM” | Validation and fix-proof **on top of** RBVM |
 | “Automated pentest” / “autonomous red team” | Governed continuous validation; hard floor that never lifts |

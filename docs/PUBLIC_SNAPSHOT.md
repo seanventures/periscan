@@ -18,10 +18,13 @@ logs. It is **not** a visibility flip of the private product remote.
 ## GitHub About (public repo settings)
 
 GitHub has **no API** for the social preview image. **Maintainer:** after each
-snapshot, if the card is missing or stale, upload
+snapshot, if the card is missing or stale, run
+[`scripts/github-social-preview-wizard.sh`](../scripts/github-social-preview-wizard.sh)
+and upload
 [`docs/images/github-social-preview.png`](./images/github-social-preview.png)
 (1280×640) at
 [Settings → Social preview](https://github.com/seanventures/periscan/settings).
+Do not claim OG closed until GraphQL `usesCustomOpenGraphImage` is `true`.
 
 Other About fields are set on `seanventures/periscan` (do not flip
 `seanheiney/periscan` public):

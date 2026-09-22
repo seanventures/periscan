@@ -534,4 +534,64 @@ describe("SchedulesWorkbench", () => {
       /Denied or stale work is never silently replayed/i
     );
   });
+
+  it("offers ContinuousValidation and Hourly when the API frequency enum includes them", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const route = String(input).split("?")[0] ?? "";
+        if (route === "/api/v1/scopes") {
+          return { json: async () => ({ items: [] }), ok: true, status: 200 };
+        }
+        if (route === "/api/v1/schedules") {
+          return { json: async () => ({ items: [] }), ok: true, status: 200 };
+        }
+        throw new Error(`Unhandled route ${route}`);
+      }) as unknown as typeof fetch
+    );
+
+    render(<SchedulesWorkbench />);
+
+    expect(await screen.findByTestId("schedules-create-form")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("ValidationSnapshot")).toBeInTheDocument();
+    expect(screen.getByText("ContinuousValidation")).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Hourly" })).toBeInTheDocument();
+    expect(screen.queryByTestId("schedules-hourly-honesty")).not.toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/NodeZero/i);
+    expect(document.body.textContent).not.toMatch(/automated pentest/i);
+    expect(
+      (document.body.textContent ?? "").replace(/not always-on BAS/gi, "")
+    ).not.toMatch(/always-on BAS/i);
+    expect(document.body.textContent).not.toMatch(/CTEM\s*%/i);
+  });
+
+  it("shows honest empty when the schedules API returns 404", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const route = String(input).split("?")[0] ?? "";
+        if (route === "/api/v1/scopes") {
+          return { json: async () => ({ items: [] }), ok: true, status: 200 };
+        }
+        if (route === "/api/v1/schedules") {
+          return {
+            json: async () => ({ error: "Not found" }),
+            ok: false,
+            status: 404
+          };
+        }
+        throw new Error(`Unhandled route ${route}`);
+      }) as unknown as typeof fetch
+    );
+
+    render(<SchedulesWorkbench />);
+
+    expect(await screen.findByTestId("schedules-api-empty")).toBeInTheDocument();
+    expect(screen.getByTestId("schedules-api-empty")).toHaveTextContent(
+      /not available from the API|no schedules/i
+    );
+    expect(screen.queryByTestId("schedules-list")).not.toHaveTextContent(
+      /Couldn't load this/i
+    );
+  });
 });

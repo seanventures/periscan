@@ -44,6 +44,11 @@ enum MembershipRole {
   ClientAdmin
 }
 
+enum MembershipStatus {
+  Active
+  Inactive
+}
+
 enum ProductPersona {
   SecurityLeader
   SecurityEngineer
@@ -582,6 +587,7 @@ enum AuditEventAction {
   runner_task_rejected
   threat_advisory_imported
   user_invited
+  user_jit_provisioned
   role_changed
   member_removed
   finding_disposition_changed
@@ -611,6 +617,13 @@ enum AuditEventAction {
   engagement_workspace_created
   engagement_collaborator_updated
   engagement_collaboration_event_added
+  bas_content_registered
+  bas_content_promoted
+  bas_campaign_compiled
+  bas_campaign_started
+  bas_campaign_cancelled
+  bas_pack_qualified
+  bas_pack_authorized
   scenario_compiled
   scenario_approved
   scenario_executed
@@ -700,6 +713,8 @@ enum AuditEventAction {
   async_operations_reconciled
   async_operations_recovery_prepared
   async_operations_terminal_accepted
+  user_scim_provisioned
+  user_scim_deprovisioned
 }
 
 enum ThirdPartyToolCandidateStatus {
@@ -858,6 +873,8 @@ enum ScheduleFrequency {
   Daily
   Weekly
   Monthly
+  Hourly
+  Continuous
 }
 
 enum ScheduleStatus {
@@ -945,6 +962,7 @@ model Tenant {
   complianceControlGovernance            ComplianceControlGovernance[]
   complianceGovernanceChanges            ComplianceGovernanceChange[]
   controlSources                         ControlSource[]
+  observerHealthSamples                  ObserverHealthSample[]
   controlRuleCoverageSnapshots           ControlRuleCoverageSnapshot[]
   validationStimuli                      ValidationStimulus[]
   controlValidationVerdicts              ControlValidationVerdictRecord[]
@@ -977,6 +995,7 @@ model Tenant {
   runnerFleetPolicy                      RunnerFleetPolicy?
   runnerHeartbeatSamples                 RunnerHeartbeatSample[]
   runners                                Runner[]
+  enterpriseSites                        EnterpriseSite[]
   runnerTaskSigningKeys                  RunnerTaskSigningKey[]
   runnerTasks                            RunnerTask[]
   threatAdvisories                       ThreatAdvisory[]
@@ -996,6 +1015,8 @@ model Tenant {
   signalTriggerRoutingSettings           SignalTriggerRoutingSettings?
   analystNotes                           EvidencePackAnalystNote[]
   apiKeys                                TenantApiKey[]
+  scimTokens                             ScimToken[]
+  scimGroups                             ScimGroup[]
   webhooks                               TenantWebhook[]
   modelProviders                         ModelProvider[]
   modelPolicyProfiles                    ModelPolicyProfile[]
@@ -1037,6 +1058,8 @@ model Tenant {
   scenarioBundles                        ScenarioBundle[]
   thirdPartyToolPolicies                 ThirdPartyToolPolicy[]
   thirdPartyToolInstallJobs              ThirdPartyToolInstallJob[]
+  basContentVersions                    BasContentVersion[]
+  basContentVersionReviews               BasContentVersionReview[]
   thirdPartyToolCandidates               ThirdPartyToolCandidate[]
   thirdPartyToolImplementationWorkOrders ThirdPartyToolImplementationWorkOrder[]
   thirdPartyToolPromotionPackages        ThirdPartyToolPromotionPackage[]
@@ -1052,6 +1075,10 @@ model Tenant {
   iacChangeRequests                      InfrastructureChangeRequest[]
   operatorRecommendations                OperatorRecommendation[]
   apiIdempotencyRecords                  ApiIdempotencyRecord[]
+  basCampaignPlans                       BasCampaignPlan[]
+  basCampaignStepCleanups                BasCampaignStepCleanup[]
+  basPackQualifications                  BasPackQualification[]
+  tenantBasPackAuthorizations            TenantBasPackAuthorization[]
 
   @@index([createdAt])
   @@index([parentTenantId])
@@ -1137,6 +1164,38 @@ model TenantApiKey {
 
   @@index([tenantId, createdAt])
   @@map("tenant_api_keys")
+}
+
+model ScimToken {
+  scimTokenId String    @id @default(uuid()) @map("scim_token_id") @db.Uuid
+  tenantId    String    @map("tenant_id") @db.Uuid
+  name        String
+  tokenPrefix String    @map("token_prefix")
+  tokenHash   String    @unique @map("token_hash")
+  createdBy   String?   @map("created_by") @db.Uuid
+  lastUsedAt  DateTime? @map("last_used_at")
+  revokedAt   DateTime? @map("revoked_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  tenant      Tenant    @relation(fields: [tenantId], references: [tenantId], onDelete: Cascade)
+
+  @@index([tenantId, createdAt])
+  @@map("scim_tokens")
+}
+
+model ScimGroup {
+  scimGroupId String   @id @default(uuid()) @map("scim_group_id") @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  displayName String   @map("display_name")
+  externalId  String?  @map("external_id")
+  members     Json     @default("[]")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  tenant      Tenant   @relation(fields: [tenantId], references: [tenantId], onDelete: Cascade)
+
+  @@unique([tenantId, displayName])
+  @@index([tenantId, createdAt])
+  @@map("scim_groups")
 }
 
 enum WebhookDeliveryStatus {
@@ -1278,6 +1337,10 @@ model TenantSsoConfig {
   roleMappings          Json                  @default("[]") @map("role_mappings")
   // Used when roleMappings is non-empty and no claim value matches (null = deny login).
   defaultMappedRole     MembershipRole?       @map("default_mapped_role")
+  // Optional JIT create-on-first-SSO. Off by default; never Owner.
+  jitEnabled            Boolean               @default(false) @map("jit_enabled")
+  jitEmailDomains       String[]              @default([]) @map("jit_email_domains")
+  jitDefaultRole        MembershipRole        @default(Viewer) @map("jit_default_role")
   createdBy             String?               @map("created_by") @db.Uuid
   updatedBy             String?               @map("updated_by") @db.Uuid
   createdAt             DateTime              @default(now()) @map("created_at")
@@ -1345,6 +1408,10 @@ model User {
   analystNotes                          EvidencePackAnalystNote[]
   designPartnerSessionNotes             DesignPartnerSessionNote[]
   createdReportShares                   ReportShare[]
+  basContentVersions                    BasContentVersion[]
+  basContentVersionReviews              BasContentVersionReview[]
+  basPackQualifications                 BasPackQualification[]                 @relation("BasPackQualifiedBy")
+  tenantBasPackAuthorizations           TenantBasPackAuthorization[]           @relation("BasPackAuthorizedBy")
   thirdPartyToolCandidates              ThirdPartyToolCandidate[]
   thirdPartyToolPromotionPackages       ThirdPartyToolPromotionPackage[]
   thirdPartyToolPromotionCertifications ThirdPartyToolPromotionCertification[]
@@ -1396,21 +1463,23 @@ model UserToken {
 }
 
 model Membership {
-  membershipId                 String          @id @default(uuid()) @map("membership_id") @db.Uuid
-  tenantId                     String          @map("tenant_id") @db.Uuid
-  userId                       String          @map("user_id") @db.Uuid
+  membershipId                 String           @id @default(uuid()) @map("membership_id") @db.Uuid
+  tenantId                     String           @map("tenant_id") @db.Uuid
+  userId                       String           @map("user_id") @db.Uuid
   role                         MembershipRole
-  productPersona               ProductPersona? @map("product_persona")
-  primaryOutcome               ProductOutcome? @map("primary_outcome")
-  experienceProfileCompletedAt DateTime?       @map("experience_profile_completed_at")
-  createdAt                    DateTime        @default(now()) @map("created_at")
-  updatedAt                    DateTime        @updatedAt @map("updated_at")
-  tenant                       Tenant          @relation(fields: [tenantId], references: [tenantId], onDelete: Cascade)
-  user                         User            @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  status                       MembershipStatus @default(Active)
+  productPersona               ProductPersona?  @map("product_persona")
+  primaryOutcome               ProductOutcome?  @map("primary_outcome")
+  experienceProfileCompletedAt DateTime?        @map("experience_profile_completed_at")
+  createdAt                    DateTime         @default(now()) @map("created_at")
+  updatedAt                    DateTime         @updatedAt @map("updated_at")
+  tenant                       Tenant           @relation(fields: [tenantId], references: [tenantId], onDelete: Cascade)
+  user                         User             @relation(fields: [userId], references: [userId], onDelete: Cascade)
 
   @@unique([tenantId, userId])
   @@index([tenantId, createdAt])
   @@index([tenantId, role])
+  @@index([tenantId, status])
   @@map("memberships")
 }
 
@@ -1471,7 +1540,9 @@ model Scope {
   veraisonAttestationSessions VeraisonAttestationSession[]
   agentDidTrustProfiles       AgentDidTrustProfile[]
   teeAssuranceRequirements    TeeAssuranceRequirement[]
-  operatorRecommendations     OperatorRecommendation[]
+  operatorRecommendations         OperatorRecommendation[]
+  basCampaignPlans                BasCampaignPlan[]
+  tenantBasPackAuthorizations     TenantBasPackAuthorization[]
 
   @@index([tenantId, createdAt])
   @@index([tenantId, verificationStatus])
@@ -1737,11 +1808,30 @@ model ControlSource {
   integration        Integration                      @relation(fields: [integrationId], references: [integrationId], onDelete: Cascade)
   validationStimuli  ValidationStimulus[]
   validationVerdicts ControlValidationVerdictRecord[]
+  healthSamples      ObserverHealthSample[]
 
   @@index([tenantId, createdAt])
   @@index([tenantId, controlType])
   @@index([integrationId])
   @@map("control_sources")
+}
+
+/// Observer heartbeat samples for Missed gating (PERISCAN-590).
+/// These rows are health coverage only — not detections, markers, or verdicts.
+model ObserverHealthSample {
+  observerHealthSampleId String                  @id @default(uuid()) @map("observer_health_sample_id") @db.Uuid
+  tenantId               String                  @map("tenant_id") @db.Uuid
+  controlSourceId        String                  @map("control_source_id") @db.Uuid
+  observedAt             DateTime                @map("observed_at")
+  receivedAt             DateTime                @default(now()) @map("received_at")
+  healthStatus           IntegrationHealthStatus @map("health_status")
+  telemetryStatus        IntegrationHealthStatus @map("telemetry_status")
+  tenant                 Tenant                  @relation(fields: [tenantId], references: [tenantId], onDelete: Cascade)
+  controlSource          ControlSource           @relation(fields: [controlSourceId], references: [controlSourceId], onDelete: Cascade)
+
+  @@index([tenantId, observedAt])
+  @@index([controlSourceId, observedAt])
+  @@map("observer_health_samples")
 }
 
 model ValidationStimulus {
@@ -1916,6 +2006,7 @@ model ValidationMission {
   runnerTasks       RunnerTask[]
   validationStimuli ValidationStimulus[]
   pathEdgeReceipts  PathEdgeReceipt[]
+  basCampaignPlans  BasCampaignPlan[]
 
   @@index([tenantId, createdAt])
   @@index([tenantId, status])
@@ -2644,6 +2735,7 @@ model Runner {
   tenant                    Tenant                  @relation(fields: [tenantId], references: [tenantId], onDelete: Cascade)
   heartbeatSamples          RunnerHeartbeatSample[]
   tasks                     RunnerTask[]
+  basCampaignPlans          BasCampaignPlan[]
 
   @@index([tenantId, createdAt])
   @@index([tenantId, status])
@@ -2651,6 +2743,23 @@ model Runner {
   @@index([tenantId, siteId])
   @@index([tenantId, networkSegment])
   @@map("runners")
+}
+
+/// Fortune 1000 named sites: CIDR blocks, AD domains, bound inside runners.
+/// Empty catalog is honest empty — never invent HQ/DC/branch maps.
+model EnterpriseSite {
+  siteId     String   @id @default(uuid()) @map("site_id") @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  name       String
+  cidrs      String[] @default([])
+  adDomains  String[] @default([]) @map("ad_domains")
+  runnerIds  String[] @default([]) @map("runner_ids")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  tenant     Tenant   @relation(fields: [tenantId], references: [tenantId], onDelete: Cascade)
+
+  @@index([tenantId, createdAt])
+  @@map("enterprise_sites")
 }
 
 model RunnerFleetPolicy {
@@ -2771,6 +2880,7 @@ model PolicyDecision {
   agentDidTrustProfiles       AgentDidTrustProfile[]
   teeAssuranceRequirements    TeeAssuranceRequirement[]
   pathEdgeReceipts            PathEdgeReceipt[]
+  basCampaignPlans            BasCampaignPlan[]
 
   @@index([tenantId, createdAt])
   @@index([tenantId, outcome])
@@ -4494,4 +4604,139 @@ model OperatorRecommendation {
   @@index([tenantId, status])
   @@index([tenantId, scopeId])
   @@map("operator_recommendations")
+}
+
+// Immutable authoring metadata. Commands are never stored in this registry.
+model BasContentVersion {
+  basContentVersionId String   @id @default(uuid()) @map("bas_content_version_id") @db.Uuid
+  tenantId            String   @map("tenant_id") @db.Uuid
+  provider            String   @db.VarChar(32)
+  sourceRevision      String   @map("source_revision") @db.VarChar(128)
+  sourcePath          String   @map("source_path") @db.VarChar(512)
+  contentSha256       String   @map("content_sha256") @db.VarChar(64)
+  scenarioCount       Int      @map("scenario_count")
+  preview             Json
+  registeredByUserId  String?  @map("registered_by_user_id") @db.Uuid
+  createdAt           DateTime @default(now()) @map("created_at")
+  tenant              Tenant   @relation(fields: [tenantId], references: [tenantId], onDelete: Cascade)
+  registeredBy        User?    @relation(fields: [registeredByUserId], references: [userId], onDelete: SetNull)
+  review              BasContentVersionReview?
+
+  @@unique([tenantId, provider, sourceRevision, sourcePath], map: "bas_content_versions_identity_key")
+  @@index([tenantId, createdAt, basContentVersionId], map: "bas_content_versions_tenant_page_idx")
+  @@index([tenantId, provider, createdAt, basContentVersionId], map: "bas_content_versions_provider_page_idx")
+  @@index([registeredByUserId])
+  @@map("bas_content_versions")
+}
+
+// Additive review record. Content versions stay immutable; Unreviewed is absence.
+model BasContentVersionReview {
+  basContentVersionReviewId String           @id @default(uuid()) @map("bas_content_version_review_id") @db.Uuid
+  tenantId                  String           @map("tenant_id") @db.Uuid
+  basContentVersionId       String           @unique @map("bas_content_version_id") @db.Uuid
+  reviewStatus              String           @map("review_status") @db.VarChar(32)
+  reviewedByUserId          String           @map("reviewed_by_user_id") @db.Uuid
+  reviewedAt                DateTime         @default(now()) @map("reviewed_at")
+  tenant                    Tenant           @relation(fields: [tenantId], references: [tenantId], onDelete: Cascade)
+  version                   BasContentVersion @relation(fields: [basContentVersionId], references: [basContentVersionId], onDelete: Cascade)
+  reviewedBy                User             @relation(fields: [reviewedByUserId], references: [userId], onDelete: Restrict)
+
+  @@unique([tenantId, basContentVersionId], map: "bas_content_version_reviews_identity_key")
+  @@index([tenantId, reviewedAt])
+  @@index([reviewedByUserId])
+  @@map("bas_content_version_reviews")
+}
+
+model BasCampaignPlan {
+  basCampaignPlanId        String                   @id @default(uuid()) @map("bas_campaign_plan_id") @db.Uuid
+  tenantId                 String                   @map("tenant_id") @db.Uuid
+  scopeId                  String                   @map("scope_id") @db.Uuid
+  scopeVersion             String                   @map("scope_version") @db.VarChar(64)
+  scopeVerificationStatus  String                   @map("scope_verification_status") @db.VarChar(32)
+  runnerId                 String?                  @map("runner_id") @db.Uuid
+  contentVersionIds        String[]                 @default([]) @map("content_version_ids") @db.Uuid
+  scenarioPins             Json                     @map("scenario_pins")
+  policyDecisionId         String                   @map("policy_decision_id") @db.Uuid
+  approvalDigest           String                   @map("approval_digest") @db.VarChar(64)
+  compiledDigest           String                   @map("compiled_digest") @db.VarChar(64)
+  cleanupPolicy            Json                     @map("cleanup_policy")
+  startable                Boolean
+  missionId                String?                  @map("mission_id") @db.Uuid
+  dispatchPrevented        Boolean                  @default(false) @map("dispatch_prevented")
+  cancelledAt              DateTime?                @map("cancelled_at")
+  createdAt                DateTime                 @default(now()) @map("created_at")
+  tenant                   Tenant                   @relation(fields: [tenantId], references: [tenantId], onDelete: Cascade)
+  scope                    Scope                    @relation(fields: [scopeId], references: [scopeId], onDelete: Cascade)
+  runner                   Runner?                  @relation(fields: [runnerId], references: [runnerId], onDelete: SetNull)
+  policyDecision           PolicyDecision           @relation(fields: [policyDecisionId], references: [policyDecisionId], onDelete: Restrict)
+  mission                  ValidationMission?       @relation(fields: [missionId], references: [missionId], onDelete: SetNull)
+  stepCleanups             BasCampaignStepCleanup[]
+
+  @@unique([tenantId, compiledDigest], map: "bas_campaign_plans_digest_key")
+  @@unique([missionId], map: "bas_campaign_plans_mission_key")
+  @@index([tenantId, createdAt])
+  @@index([scopeId])
+  @@index([policyDecisionId])
+  @@index([runnerId])
+  @@map("bas_campaign_plans")
+}
+
+model BasCampaignStepCleanup {
+  basCampaignStepCleanupId String          @id @default(uuid()) @map("bas_campaign_step_cleanup_id") @db.Uuid
+  tenantId                 String          @map("tenant_id") @db.Uuid
+  basCampaignPlanId        String          @map("bas_campaign_plan_id") @db.Uuid
+  stepKey                  String          @map("step_key") @db.VarChar(256)
+  status                   String          @db.VarChar(32)
+  detail                   String?
+  receiptSha256            String?         @map("receipt_sha256") @db.VarChar(64)
+  outputHash               String?         @map("output_hash") @db.VarChar(64)
+  verifiedAt               DateTime?       @map("verified_at")
+  createdAt                DateTime        @default(now()) @map("created_at")
+  updatedAt                DateTime        @updatedAt @map("updated_at")
+  tenant                   Tenant          @relation(fields: [tenantId], references: [tenantId], onDelete: Cascade)
+  plan                     BasCampaignPlan @relation(fields: [basCampaignPlanId], references: [basCampaignPlanId], onDelete: Cascade)
+
+  @@unique([basCampaignPlanId, stepKey], map: "bas_campaign_step_cleanups_step_key")
+  @@index([tenantId, createdAt])
+  @@map("bas_campaign_step_cleanups")
+}
+
+// Lab qualification receipt for a live pack. Does not flip module liveSupported.
+model BasPackQualification {
+  basPackQualificationId String   @id @default(uuid()) @map("bas_pack_qualification_id") @db.Uuid
+  tenantId               String   @map("tenant_id") @db.Uuid
+  pack                   String   @db.VarChar(32)
+  pinIds                 String[] @map("pin_ids")
+  labReceiptHash         String   @map("lab_receipt_hash") @db.VarChar(64)
+  qualifiedAt            DateTime @default(now()) @map("qualified_at")
+  qualifiedByUserId      String   @map("qualified_by_user_id") @db.Uuid
+  createdAt              DateTime @default(now()) @map("created_at")
+  tenant                 Tenant   @relation(fields: [tenantId], references: [tenantId], onDelete: Cascade)
+  qualifiedBy            User     @relation("BasPackQualifiedBy", fields: [qualifiedByUserId], references: [userId], onDelete: Restrict)
+
+  @@unique([tenantId, pack, labReceiptHash], map: "bas_pack_qualifications_receipt_key")
+  @@index([tenantId, pack])
+  @@index([qualifiedByUserId])
+  @@map("bas_pack_qualifications")
+}
+
+// Tenant Owner authorization for a qualified live pack against a verified scope.
+model TenantBasPackAuthorization {
+  tenantBasPackAuthorizationId String   @id @default(uuid()) @map("tenant_bas_pack_authorization_id") @db.Uuid
+  tenantId                     String   @map("tenant_id") @db.Uuid
+  pack                         String   @map("pack") @db.VarChar(32)
+  scopeId                      String   @map("scope_id") @db.Uuid
+  approverUserId               String   @map("approver_user_id") @db.Uuid
+  digest                       String   @db.VarChar(64)
+  expiresAt                    DateTime @map("expires_at")
+  createdAt                    DateTime @default(now()) @map("created_at")
+  tenant                       Tenant   @relation(fields: [tenantId], references: [tenantId], onDelete: Cascade)
+  scope                        Scope    @relation(fields: [scopeId], references: [scopeId], onDelete: Cascade)
+  approver                     User     @relation("BasPackAuthorizedBy", fields: [approverUserId], references: [userId], onDelete: Restrict)
+
+  @@unique([tenantId, pack, scopeId, digest], map: "tenant_bas_pack_authorizations_digest_key")
+  @@index([tenantId, pack, scopeId])
+  @@index([approverUserId])
+  @@index([scopeId])
+  @@map("tenant_bas_pack_authorizations")
 }

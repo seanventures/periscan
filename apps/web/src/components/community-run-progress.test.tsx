@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type {
@@ -169,6 +169,9 @@ describe("CommunityRunProgress", () => {
     render(<CommunityRunProgress communityRun={started()} />);
 
     const panel = await screen.findByTestId("community-run-progress");
+    expect(within(panel).getByTestId("community-run-watch")).toHaveTextContent(
+      /^Watch$/
+    );
     expect(
       await within(panel).findByText("Repository secret scan")
     ).toBeInTheDocument();
@@ -195,6 +198,9 @@ describe("CommunityRunProgress", () => {
 
     const panel = await screen.findByTestId("community-run-progress");
     expect(panel).toBeInTheDocument();
+    expect(within(panel).getByTestId("community-run-watch")).toHaveTextContent(
+      /^Watch$/
+    );
     const review = await within(panel).findByRole("link", {
       name: COMMUNITY_RUN_REVIEW_FINDINGS_LABEL
     });
@@ -278,6 +284,48 @@ describe("CommunityRunProgress", () => {
     ).toHaveTextContent(skipReason);
     expect(api.getMission).toHaveBeenCalledTimes(1);
     expect(api.getMission).toHaveBeenCalledWith(missionId);
+  });
+
+  it("stops the 1s Watch poll once evidence exists so it cannot 429 the operator out", async () => {
+    vi.useFakeTimers();
+    try {
+      let ticks = 0;
+      vi.spyOn(api, "getMission").mockImplementation(async () => {
+        ticks += 1;
+        return mission({
+          evidenceIds: ticks >= 2 ? ["evidence-1"] : [],
+          status: ticks >= 2 ? "Completed" : "Running"
+        });
+      });
+      vi.spyOn(api, "listMissionRuns").mockResolvedValue([
+        run({
+          moduleId: "gitleaks.repo_secrets",
+          status: "Running"
+        })
+      ]);
+
+      render(<CommunityRunProgress communityRun={started()} />);
+
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(api.getMission).toHaveBeenCalledTimes(1);
+
+      await act(async () => {
+        vi.advanceTimersByTime(1_000);
+        await Promise.resolve();
+      });
+      expect(api.getMission).toHaveBeenCalledTimes(2);
+
+      await act(async () => {
+        await Promise.resolve();
+        vi.advanceTimersByTime(5_000);
+        await Promise.resolve();
+      });
+      expect(api.getMission).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("shows a loading skeleton until the live mission arrives", () => {

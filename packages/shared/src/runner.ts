@@ -384,7 +384,9 @@ export const RunnerReachabilityTaskRequestSchema = z.object({
 export const RunnerInternalCheckModuleSchema = z.enum([
   "runner.dns_resolution_check",
   "runner.tls_certificate_check",
-  "runner.http_health_check"
+  "runner.http_health_check",
+  "runner.port_connect_check",
+  "runner.ptr_lookup_check"
 ]);
 export type RunnerInternalCheckModule = z.infer<
   typeof RunnerInternalCheckModuleSchema
@@ -406,8 +408,12 @@ export const RunnerCheckTaskRequestSchema = z
   .refine(
     (value) =>
       value.module === "runner.dns_resolution_check" ||
+      value.module === "runner.ptr_lookup_check" ||
       value.port !== undefined,
-    { message: "port is required for TLS and HTTP checks.", path: ["port"] }
+    {
+      message: "port is required for TLS, HTTP, and port-present checks.",
+      path: ["port"]
+    }
   );
 export type RunnerCheckTaskRequest = z.infer<
   typeof RunnerCheckTaskRequestSchema
@@ -468,7 +474,7 @@ export function isRunnerDiscoverModuleId(
 /**
  * Safe OSS engines the runner-agent may exec via executeModuleById.
  * Filesystem/image scanners (Gitleaks, Trivy, Syft, Cosign, OSV, Grype)
- * and ZAP baseline. Never include Atomic, Caldera, SharpHound, sqlmap,
+ * and ZAP baseline. Qualify scenario adapters before adding Atomic, Caldera, SharpHound, sqlmap,
  * Metasploit, or credential-spray IDs here.
  */
 export const RUNNER_OSS_ENGINE_MODULE_IDS = [
@@ -521,6 +527,8 @@ export const RUNNER_OSS_ENGINE_MODULE_IDS = [
   "popeye.cluster_sanitizer",
   "katana.web_crawl",
   "cloudlist.cloud_assets",
+  "assetfinder.passive_enum",
+  "gau.known_urls",
   "trufflehog.repo_secrets",
   "hadolint.dockerfile",
   "sslscan.tls_probe",

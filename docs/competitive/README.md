@@ -14,7 +14,7 @@ code-verified capability in:
 
 | Doc | Owns |
 |---|---|
-| [POSITIONING.md](./POSITIONING.md) | Category home (AEV/CTEM proof), refuse full-BAS bake-offs, co-exist rules, denied phrases, MQ placement |
+| [POSITIONING.md](./POSITIONING.md) | Category direction (BAS/AEV/CTEM), qualified coverage comparisons, co-exist rules, denied phrases, MQ placement |
 | [COMPETITIVE_FEATURE_STRATEGY.md](./COMPETITIVE_FEATURE_STRATEGY.md) | Gap strategy: prove, integrate, or refuse + wave map |
 | [BATTLECARDS.md](./BATTLECARDS.md) | One-pagers: Wiz, Tenable, Pentera/Horizon3, Nuclei, Defender, AttackIQ/stimulus, compliance, integration depth |
 | [CLAIM_DENY_LIST.md](./CLAIM_DENY_LIST.md) | **P19-20** productized prove / integrate / refuse claim language for GTM |
@@ -23,7 +23,7 @@ code-verified capability in:
 
 ## Non-negotiables (one screen)
 
-1. **Home category = AEV / CTEM proof layer** — measure exposure paths and prove Fixed. Not full multi-vector BAS.
+1. **Home category = AEV / CTEM proof layer** — measure exposure paths and prove Fixed. Build full BAS/AEV with measured, qualified scenario coverage.
 2. **Co-exist with Wiz** — bring inventory/issues; never “replace CNAPP.”
 3. **Co-exist with Tenable** — validation and fix-proof on top of RBVM; never “replace vulnerability management.”
 4. **Pentera gap is deliberate** — governed continuous validation with a hard floor that never lifts; **not automated pentest.**
@@ -32,17 +32,17 @@ code-verified capability in:
 
 ## Sales walk (honest)
 
-In-product single playbook for **BAS refuse + Wiz co-exist** (P19-r2 / P19-r3):
+In-product single playbook for **BAS coverage + Wiz co-exist** (P19-r2 / P19-r3):
 
-- Help guide id: `competitive-walk` — title *Competitive walk: BAS refuse + Wiz co-exist*
+- Help guide id: `competitive-walk` — title *Competitive walk: BAS coverage + Wiz co-exist*
 - Continuous hub: **Sales walk (honest)** on `/continuous` (ordered deep-links only)
 - Ordered routes: `/scopes` → `/engines` → `/controls` → `/findings` → `/attack-paths` → `/continuous`
-- Full battlecard product walk: [BATTLECARDS.md § Product walk](./BATTLECARDS.md#product-walk--bas-refuse--wiz-co-exist-honest)
+- Full battlecard product walk: [BATTLECARDS.md § Product walk](./BATTLECARDS.md#product-walk--bas-coverage--wiz-co-exist-honest)
 
-No fake demo data. No inject claims. No CNAPP replacement. No score inflation.
+Use real evidence for demonstration and inject claims. Preserve accurate CNAPP positioning and measured scores.
 
 ## When you change product claims
 
 - Update these docs **before** product UI strings, decks, or RFPs.
 - If the coverage matrix says Partial/Scaffold/Missing, do not upgrade external language to Fully-E2E or “Leading.”
-- Product UI must not claim full BAS, CNAPP replacement, RBVM replacement, or automated pentest.
+- Describe full BAS/AEV as the development objective until measured execution coverage supports a delivery claim. Claims about CNAPP/RBVM replacement or automated pentesting also require evidence.

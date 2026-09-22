@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import type {
   FindingDisposition,
@@ -17,6 +17,7 @@ import {
 } from "@periscan/shared";
 
 import { projectFindingClaimDisplay } from "../lib/claim-safe-display";
+import { findingsHonestyCopy } from "../lib/findings-honesty";
 import {
   browserPeriscanApiClient as api,
   type ListFindingsQuery
@@ -161,9 +162,172 @@ function readMissionIdFromLocation(): string | null {
   if (typeof window === "undefined") {
     return null;
   }
-  const value = new URLSearchParams(window.location.search).get("missionId");
-  const trimmed = value?.trim() ?? "";
-  return trimmed.length > 0 ? trimmed : null;
+  return resolveFindingsMissionId(null, window.location.search);
+}
+
+function resolveFindingsMissionId(
+  missionId: string | null,
+  currentSearch: string
+): string | null {
+  const fromState = missionId?.trim() ?? "";
+  if (fromState) {
+    return fromState;
+  }
+  const fromUrl =
+    new URLSearchParams(currentSearch).get("missionId")?.trim() ?? "";
+  return fromUrl.length > 0 ? fromUrl : null;
+}
+
+/**
+ * P3-MISSIONLAND: rebuild /findings search from filter state without dropping
+ * a Home Review findings `missionId` that is already in the bar.
+ */
+export function findingsWorkbenchHref(input: {
+  pathname: string;
+  currentSearch: string;
+  savedView: string;
+  query: string;
+  severity: string;
+  status: string;
+  disposition: string;
+  missionId: string | null;
+}): string {
+  const params = new URLSearchParams();
+  if (input.savedView !== "active" && input.savedView !== "custom") {
+    params.set("view", input.savedView);
+  }
+  if (input.query.trim()) params.set("q", input.query.trim());
+  if (input.severity !== "all") params.set("severity", input.severity);
+  if (input.status !== "all") params.set("status", input.status);
+  if (input.disposition !== "all") params.set("disposition", input.disposition);
+  const missionId = resolveFindingsMissionId(
+    input.missionId,
+    input.currentSearch
+  );
+  if (missionId) params.set("missionId", missionId);
+  const queryString = params.toString();
+  return `${input.pathname}${queryString ? `?${queryString}` : ""}`;
+}
+
+/**
+ * P3-HYDRATE: the Community-mission chip must not occupy the LiveUpdatePill
+ * SSR slot. Paint it only after mount so /findings?missionId= hydrates.
+ */
+export function findingsCommunityMissionChipReady(
+  mounted: boolean,
+  missionId: string | null
+): boolean {
+  return mounted && Boolean(missionId);
+}
+
+/**
+ * Loop 14: 390 Findings filter chips on a populated first-hour tenant.
+ * Empty-tenant axe (hidden nav) is not this probe. Chips wrap or scroll;
+ * they must not overflow the viewport or cover the VALIDATED path · rule row.
+ */
+export const FINDINGS_FILTER_CHIPS_390_VIEWPORT = 390;
+
+export type FindingsFilterChipsRect = {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+};
+
+export function findingsFilterChips390ClassName(): string {
+  return "findings-filter-chips flex min-w-0 max-w-full flex-col gap-2 overflow-x-auto overscroll-x-contain";
+}
+
+export function findingsFilterChips390RailClassName(): string {
+  return "findings-filter-chips-rail flex min-w-0 max-w-full flex-wrap items-center gap-2 overflow-x-auto overscroll-x-contain";
+}
+
+export function findingsFilterChipsCoverValidatedRow(
+  chips: FindingsFilterChipsRect,
+  row: FindingsFilterChipsRect
+): boolean {
+  return !(
+    chips.right <= row.left ||
+    chips.left >= row.right ||
+    chips.bottom <= row.top ||
+    chips.top >= row.bottom
+  );
+}
+
+export function findingsFilterChips390LayoutOk(input: {
+  viewportWidth: number;
+  documentOverflowX: boolean;
+  chipsCoverValidatedRow: boolean;
+  chipsWrapOrScroll: boolean;
+}): boolean {
+  return (
+    input.viewportWidth === FINDINGS_FILTER_CHIPS_390_VIEWPORT &&
+    !input.documentOverflowX &&
+    !input.chipsCoverValidatedRow &&
+    input.chipsWrapOrScroll
+  );
+}
+
+/** WCAG 2.2 2.5.8 Target Size (Minimum) — 24×24 CSS pixels. */
+export const WCAG_TARGET_SIZE_MINIMUM_PX = 24;
+
+export function targetSizeBelowMinimumPx(
+  widthPx: number,
+  heightPx: number,
+  minimumPx = WCAG_TARGET_SIZE_MINIMUM_PX
+): boolean {
+  return widthPx < minimumPx || heightPx < minimumPx;
+}
+
+/**
+ * Loop 15: Copy view link (and similar copy-link text controls on findings)
+ * must be at least 24×24 CSS px. Loop-15 desktop residual was 92.2×18.
+ * Keep `sm:ml-auto` so 390 wrap is not stretched (loop 14 chips).
+ */
+export function findingsCopyLinkControlClassName(options?: {
+  alignEndOnSm?: boolean;
+}): string {
+  return cn(
+    "inline-flex items-center justify-center min-h-6 min-w-6 px-2 py-1 text-xs font-semibold text-brand hover:text-brand-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+    options?.alignEndOnSm ? "sm:ml-auto" : null
+  );
+}
+
+export function FindingsHeaderMeta({
+  missionId,
+  lastUpdatedAt,
+  refreshing
+}: {
+  missionId: string | null;
+  lastUpdatedAt: string | null;
+  refreshing: boolean;
+}) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  return (
+    <div
+      className="flex flex-wrap items-center gap-2"
+      data-testid="findings-header-meta"
+    >
+      <span data-testid="findings-live-update-slot">
+        <LiveUpdatePill
+          lastUpdatedAt={lastUpdatedAt}
+          refreshing={refreshing}
+        />
+      </span>
+      {findingsCommunityMissionChipReady(mounted, missionId) ? (
+        <span
+          data-testid="findings-community-mission-chip"
+          className="rounded-pill border border-brand/40 bg-brand/15 px-2 py-0.5 text-[11px] font-medium text-brand"
+        >
+          This Community mission
+        </span>
+      ) : null}
+    </div>
+  );
 }
 
 /** Mono-truncated cause fingerprint for the triage queue (UX-W6 / punch 134). */
@@ -202,6 +366,27 @@ function resolveFindingRowIdentity(finding: ValidatedFinding): {
     };
   }
   return { location, rule, title: finding.title };
+}
+
+function findingsFirstHourNext(
+  findings: ValidatedFinding[],
+  missionId: string | null,
+  createdRemediationId: string | null
+): {
+  href: string | null;
+  label: "Create remediations" | "Review remediations";
+} {
+  const remId =
+    createdRemediationId ??
+    findings.flatMap((item) => item.relatedRemediationIds)[0] ??
+    null;
+  if (remId) {
+    return { href: `/remediation/${remId}`, label: "Review remediations" };
+  }
+  if (missionId) {
+    return { href: null, label: "Create remediations" };
+  }
+  return { href: "/remediation", label: "Review remediations" };
 }
 
 /** Compact occurrence window for triage rows (ICP-P2-2). */
@@ -269,7 +454,7 @@ export function FindingsWorkbench() {
   // Default Active excludes FP/Suppressed so shift start is not a noise dump.
   const [savedView, setSavedView] = useState("active");
   const [copiedView, setCopiedView] = useState(false);
-  const urlReady = useRef(false);
+  const [urlReady, setUrlReady] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   /** Server offset (0-based); Next advances by PAGE_SIZE while hasMore. */
@@ -290,6 +475,11 @@ export function FindingsWorkbench() {
   const [bulkStatus, setBulkStatus] = useState<string | null>(null);
   const [sarifBusy, setSarifBusy] = useState(false);
   const [sarifError, setSarifError] = useState<string | null>(null);
+  const [creatingRemediations, setCreatingRemediations] = useState(false);
+  const [createdRemediationId, setCreatedRemediationId] = useState<
+    string | null
+  >(null);
+  const [remediationNote, setRemediationNote] = useState<string | null>(null);
 
   useEffect(() => {
     const handle = window.setTimeout(() => {
@@ -362,8 +552,15 @@ export function FindingsWorkbench() {
     }
   );
 
+  const remediations = useApiResource(() => api.listRemediations(), []);
   const all = findings.data?.items ?? [];
   const hasFindings = all.length > 0;
+  const firstHourNext = findingsFirstHourNext(
+    all,
+    missionId,
+    createdRemediationId
+  );
+  const honestyCopy = findingsHonestyCopy(remediations.data ?? []);
   const pageMeta = findings.data?.page;
   const hasOperatorFilters =
     severity !== "all" ||
@@ -448,28 +645,30 @@ export function FindingsWorkbench() {
     setDisposition((current) => params.get("disposition") ?? current);
     const scopedMissionId = params.get("missionId")?.trim() ?? "";
     setMissionId(scopedMissionId.length > 0 ? scopedMissionId : null);
-    urlReady.current = true;
+    setUrlReady(true);
   }, []);
 
   useEffect(() => {
-    if (!urlReady.current) return;
-    const params = new URLSearchParams();
-    // Active is the default landing — omit view= for a clean /findings URL.
-    if (savedView !== "active" && savedView !== "custom") {
-      params.set("view", savedView);
+    if (!urlReady) return;
+    const next = findingsWorkbenchHref({
+      pathname: window.location.pathname,
+      currentSearch: window.location.search,
+      savedView,
+      query,
+      severity,
+      status,
+      disposition,
+      missionId
+    });
+    const adopted = resolveFindingsMissionId(missionId, window.location.search);
+    if (adopted && adopted !== missionId) {
+      setMissionId(adopted);
     }
-    if (query.trim()) params.set("q", query.trim());
-    if (severity !== "all") params.set("severity", severity);
-    if (status !== "all") params.set("status", status);
-    if (disposition !== "all") params.set("disposition", disposition);
-    if (missionId) params.set("missionId", missionId);
-    const queryString = params.toString();
-    window.history.replaceState(
-      null,
-      "",
-      `${window.location.pathname}${queryString ? `?${queryString}` : ""}`
-    );
-  }, [disposition, missionId, query, savedView, severity, status]);
+    const current = `${window.location.pathname}${window.location.search}`;
+    if (next !== current) {
+      window.history.replaceState(null, "", next);
+    }
+  }, [disposition, missionId, query, savedView, severity, status, urlReady]);
 
   function applySavedView(view: string) {
     setSavedView(view);
@@ -735,6 +934,56 @@ export function FindingsWorkbench() {
     }
   }
 
+  async function createCommunityRemediations() {
+    if (!missionId) return;
+    setCreatingRemediations(true);
+    setRemediationNote(null);
+    try {
+      const result = await api.createCommunityMissionRemediations(missionId);
+      setCreatedRemediationId(result.remediationIds[0] ?? null);
+      if (result.createdCount === 0) {
+        setRemediationNote(
+          "No Community findings with fingerprints yet — remediations stay empty until evidence exists."
+        );
+      } else {
+        const noun = result.createdCount === 1 ? "remediation" : "remediations";
+        setRemediationNote(
+          `Opened ${result.createdCount} ${noun}. Fixed still requires a verification event.`
+        );
+      }
+      await refreshFindingsAndFeedback();
+    } catch (error) {
+      setRemediationNote(
+        error instanceof Error
+          ? error.message
+          : "Unable to create remediations from this Community mission."
+      );
+    } finally {
+      setCreatingRemediations(false);
+    }
+  }
+
+  const firstHourPrimary =
+    firstHourNext.href != null ? (
+      <Link
+        href={firstHourNext.href}
+        data-testid="findings-first-hour-primary"
+        className={buttonClassName({ size: "md", variant: "primary" })}
+      >
+        {firstHourNext.label}
+      </Link>
+    ) : (
+      <button
+        type="button"
+        data-testid="findings-first-hour-primary"
+        disabled={creatingRemediations}
+        onClick={() => void createCommunityRemediations()}
+        className={buttonClassName({ size: "md", variant: "primary" })}
+      >
+        {creatingRemediations ? "Creating remediations…" : firstHourNext.label}
+      </button>
+    );
+
   return (
     <PageShell
       role="region"
@@ -745,71 +994,76 @@ export function FindingsWorkbench() {
         eyebrow="Investigate"
         title="Findings"
         description={
-          showFilterChrome
-            ? "Prioritize validated exposure in one evidence-backed results layer, assign a disposition, and route the work that needs action."
-            : undefined
-        }
-        actions={
-          showFilterChrome ? (
-            <Link
-              href="/missions"
-              data-testid="findings-header-primary-cta"
-              className={buttonClassName({ size: "md", variant: "primary" })}
-            >
-              Run a Validation Snapshot
-            </Link>
-          ) : undefined
+          hasFindings
+            ? "Review the VALIDATED path · rule row, then create remediations or review. Fixed only via verification."
+            : showFilterChrome
+              ? "Prioritize validated exposure in one evidence-backed results layer, assign a disposition, and route the work that needs action."
+              : undefined
         }
         meta={
-          <div className="flex flex-col gap-2">
-            {showFilterChrome ? (
-              <details className="max-w-2xl text-[11px] text-subtle">
-                <summary className="w-fit cursor-pointer text-brand hover:text-brand-2">
-                  How this queue works
-                </summary>
-                <p className="mt-1">
-                  The /api/v1/findings API links validation state, priority
-                  factors, attack paths, remediation, and evidence. Raw scanner
-                  output stays in technical appendices rather than this operator
-                  queue.
-                </p>
-              </details>
-            ) : null}
-            <div className="flex flex-wrap items-center gap-2">
-              {missionId ? (
-                <span
-                  data-testid="findings-community-mission-chip"
-                  className="rounded-pill border border-brand/40 bg-brand/15 px-2 py-0.5 text-[11px] font-medium text-brand"
-                >
-                  This Community mission
-                </span>
-              ) : null}
-              <LiveUpdatePill
-                lastUpdatedAt={findings.lastUpdatedAt}
-                refreshing={findings.refreshing}
-              />
-            </div>
-          </div>
+          <FindingsHeaderMeta
+            missionId={missionId}
+            lastUpdatedAt={findings.lastUpdatedAt}
+            refreshing={findings.refreshing}
+          />
         }
       />
 
       {showFilterChrome ? (
-        <ProofStageStrip
-          stage="Understand"
-          basis={null}
-          showOwner={false}
-          nextCta={
-            hasFindings
-              ? { href: "/attack-paths", label: "Measure path hops" }
-              : null
-          }
-        />
-      ) : null}
+        <details
+          className="order-last rounded-card border border-line bg-surface"
+          data-testid="findings-more-triage"
+        >
+          <summary
+            className="cursor-pointer px-4 py-3 text-sm font-semibold text-ink"
+            data-testid="findings-more-summary"
+          >
+            More
+          </summary>
+          <div className="flex flex-col gap-5 border-t border-line px-4 py-4">
+            <p className="text-[12px] text-muted">
+              Triage tools for the evidence-backed results layer: views, filters,
+              hop measurement, detection-eng feedback, and Run a Validation
+              Snapshot.
+            </p>
+            <details className="max-w-2xl text-[11px] text-subtle">
+              <summary className="w-fit cursor-pointer text-brand hover:text-brand-2">
+                How this queue works
+              </summary>
+              <p className="mt-1">
+                The /api/v1/findings API links validation state, priority
+                factors, attack paths, remediation, and evidence. Raw scanner
+                output stays in technical appendices rather than this operator
+                queue.
+              </p>
+            </details>
+            <Link
+              href="/missions"
+              className={buttonClassName({ size: "sm", variant: "secondary" })}
+            >
+              Run a Validation Snapshot
+            </Link>
+            <ProofStageStrip
+              stage="Understand"
+              basis={null}
+              showOwner={false}
+              nextCta={
+                hasFindings
+                  ? { href: "/attack-paths", label: "Measure path hops" }
+                  : null
+              }
+            />
 
+      {/* Loop 14: 390 filter chips wrap/scroll; stay under More (FINDINGSMALL). */}
+      {all.length > 0 || showFilterChrome ? (
+        <div
+          className={findingsFilterChips390ClassName()}
+          data-testid="findings-filter-chips"
+        >
       {/* Severity distribution — clickable filter chips (ICP-P2-2). */}
       {all.length > 0 ? (
         <div
-          className="flex flex-wrap items-center gap-2"
+          className={findingsFilterChips390RailClassName()}
           aria-label="Severity distribution"
         >
           <span className="font-mono text-xs text-subtle">
@@ -831,7 +1085,7 @@ export function FindingsWorkbench() {
                   setOffset(0);
                 }}
                 className={cn(
-                  "inline-flex items-center gap-1.5 rounded-pill border px-2 py-0.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+                  "inline-flex shrink-0 items-center gap-1.5 rounded-pill border px-2 py-0.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
                   active
                     ? "border-brand bg-brand/15 shadow-[inset_0_0_0_1px_rgba(60,150,255,0.35)]"
                     : "border-transparent hover:border-line"
@@ -860,11 +1114,63 @@ export function FindingsWorkbench() {
                 );
               }}
               data-testid="findings-select-matching-severity"
-              className="text-xs font-semibold text-brand hover:text-brand-2"
+              className={findingsCopyLinkControlClassName()}
             >
               Select matching
             </button>
           ) : null}
+        </div>
+      ) : null}
+      {showFilterChrome ? (
+      <div
+        className={findingsFilterChips390RailClassName()}
+        aria-label="Saved finding views"
+      >
+        <span className="mr-1 font-display text-[10px] font-semibold uppercase tracking-[0.14em] text-subtle">
+          Views
+        </span>
+        {(
+          [
+            ["active", "Active"],
+            ["all", "All"],
+            ["priority-unowned", "Priority · unowned"],
+            ["my-queue", "My queue"],
+            ["new-untriaged", "New · untriaged"],
+            ["reopened", "Reopened"]
+          ] as const
+        ).map(([value, label]) => {
+          const selected = savedView === value;
+          return (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={selected}
+              data-selected={selected ? "true" : "false"}
+              data-testid={
+                value === "active" ? "findings-view-active" : undefined
+              }
+              onClick={() => applySavedView(value)}
+              className={cn(
+                "shrink-0 rounded-pill border px-3 py-1 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+                selected
+                  ? "border-brand bg-brand/25 font-semibold text-brand shadow-[inset_0_0_0_1px_rgba(60,150,255,0.45)]"
+                  : "border-line text-muted hover:border-line-strong hover:text-ink"
+              )}
+            >
+              {label}
+            </button>
+          );
+        })}
+        <button
+          type="button"
+          onClick={copyView}
+          data-testid="findings-copy-view-link"
+          className={findingsCopyLinkControlClassName({ alignEndOnSm: true })}
+        >
+          {copiedView ? "Link copied" : "Copy view link"}
+        </button>
+      </div>
+      ) : null}
         </div>
       ) : null}
 
@@ -926,54 +1232,6 @@ export function FindingsWorkbench() {
 
       {showFilterChrome ? (
         <>
-      {/* Filters — UX-W6 / punch 135: Active is default; exclude FP/Suppressed. */}
-      <div
-        className="flex flex-wrap items-center gap-2"
-        aria-label="Saved finding views"
-      >
-        <span className="mr-1 font-display text-[10px] font-semibold uppercase tracking-[0.14em] text-subtle">
-          Views
-        </span>
-        {(
-          [
-            ["active", "Active"],
-            ["all", "All"],
-            ["priority-unowned", "Priority · unowned"],
-            ["my-queue", "My queue"],
-            ["new-untriaged", "New · untriaged"],
-            ["reopened", "Reopened"]
-          ] as const
-        ).map(([value, label]) => {
-          const selected = savedView === value;
-          return (
-            <button
-              key={value}
-              type="button"
-              aria-pressed={selected}
-              data-selected={selected ? "true" : "false"}
-              data-testid={
-                value === "active" ? "findings-view-active" : undefined
-              }
-              onClick={() => applySavedView(value)}
-              className={cn(
-                "rounded-pill border px-3 py-1 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
-                selected
-                  ? "border-brand bg-brand/25 font-semibold text-brand shadow-[inset_0_0_0_1px_rgba(60,150,255,0.45)]"
-                  : "border-line text-muted hover:border-line-strong hover:text-ink"
-              )}
-            >
-              {label}
-            </button>
-          );
-        })}
-        <button
-          type="button"
-          onClick={copyView}
-          className="ml-auto text-xs font-semibold text-brand hover:text-brand-2"
-        >
-          {copiedView ? "Link copied" : "Copy view link"}
-        </button>
-      </div>
       {savedView === "active" ? (
         <p
           className="text-[11px] text-subtle"
@@ -997,7 +1255,7 @@ export function FindingsWorkbench() {
           Filters
         </summary>
         <div
-          className="findings-filters-body flex flex-wrap items-center gap-2 pb-2 pt-1 md:pb-0 md:pt-0"
+          className="findings-filters-body flex min-w-0 max-w-full flex-wrap items-center gap-2 overflow-x-auto overscroll-x-contain pb-2 pt-1 md:pb-0 md:pt-0"
           data-testid="findings-filters-body"
         >
           <input
@@ -1136,6 +1394,27 @@ export function FindingsWorkbench() {
             </p>
           ) : null}
         </div>
+      ) : null}
+          </div>
+        </details>
+      ) : null}
+
+      <div
+        data-testid={hasFindings ? "findings-first-hour" : undefined}
+        className={hasFindings ? "flex flex-col gap-3" : undefined}
+      >
+      {hasFindings ? (
+        <div className="flex flex-wrap items-center gap-2">
+          {firstHourPrimary}
+          <p className="text-[12px] text-subtle">
+            {honestyCopy}
+          </p>
+        </div>
+      ) : null}
+      {remediationNote ? (
+        <p className="text-sm text-muted" role="status">
+          {remediationNote}
+        </p>
       ) : null}
 
       {bulkStatus ? (
@@ -1518,6 +1797,7 @@ export function FindingsWorkbench() {
 
         return <Panel>{listBody}</Panel>;
       })()}
+      </div>
     </PageShell>
   );
 }
@@ -1545,6 +1825,7 @@ function FindingRow({
   onSelected: (checked: boolean) => void;
 }) {
   const identity = resolveFindingRowIdentity(finding);
+  const claimDisplay = projectFindingClaimDisplay(finding);
   return (
     <li
       data-testid={`finding-row-${finding.findingId}`}
@@ -1715,7 +1996,7 @@ function FindingRow({
               </p>
             ) : null}
           </div>
-          {/* Collapsed row: severity + status only (detail panel holds the rest). */}
+          {/* Collapsed row: severity + claim-safe certainty + workflow status. */}
           <div
             className={cn(
               "shrink-0 items-center gap-2",
@@ -1725,12 +2006,21 @@ function FindingRow({
             <StateBadge tone={severityTone(finding.severity)} dot={false}>
               {finding.severity}
             </StateBadge>
-            <StateBadge
-              tone={STATUS_TONE[finding.status] ?? "neutral"}
-              dot={false}
-            >
-              {finding.status}
-            </StateBadge>
+            <ValidationStateBadge
+              state={claimDisplay.displayValidationState}
+              title={claimDisplay.ariaLabel}
+              aria-label={claimDisplay.ariaLabel}
+              data-testid={`finding-row-claim-safe-${finding.findingId}`}
+            />
+            {finding.status.toLowerCase() !==
+            claimDisplay.displayValidationState.toLowerCase() ? (
+              <StateBadge
+                tone={STATUS_TONE[finding.status] ?? "neutral"}
+                dot={false}
+              >
+                {finding.status}
+              </StateBadge>
+            ) : null}
           </div>
         </button>
       </div>
@@ -1818,9 +2108,15 @@ function FindingDetail({
             claim-safe remap
           </StateBadge>
         ) : null}
-        <StateBadge tone={STATUS_TONE[finding.status] ?? "neutral"} dot={false}>
-          {finding.status}
-        </StateBadge>
+        {finding.status.toLowerCase() !==
+        claimDisplay.displayValidationState.toLowerCase() ? (
+          <StateBadge
+            tone={STATUS_TONE[finding.status] ?? "neutral"}
+            dot={false}
+          >
+            {finding.status}
+          </StateBadge>
+        ) : null}
         {finding.disposition ? (
           <StateBadge
             tone={
@@ -2773,7 +3069,7 @@ function FilterSelect({
   options: Array<string | { label: string; value: string }>;
 }) {
   return (
-    <label className="flex items-center gap-1.5 rounded-control border border-line bg-surface pl-3 pr-1.5 text-sm">
+    <label className="flex min-w-0 items-center gap-1.5 rounded-control border border-line bg-surface pl-3 pr-1.5 text-sm">
       <span className="font-display text-[10px] font-semibold uppercase tracking-[0.08em] text-subtle">
         {label}
       </span>

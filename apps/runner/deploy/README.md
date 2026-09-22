@@ -61,7 +61,7 @@ The runner is stateless and never connects to Postgres, Redis, object storage, o
 
 1. Confirm the runner appears `Active` through `GET /api/v1/runners`.
 2. Create or select verified internal scope for the customer target.
-3. Request a policy-approved internal runner task for that exact scope: `runner.reachability_check`, `runner.dns_resolution_check`, `runner.tls_certificate_check`, or `runner.http_health_check`.
+3. Request a policy-approved internal runner task for that exact scope: `runner.reachability_check`, `runner.dns_resolution_check`, `runner.tls_certificate_check`, `runner.http_health_check`, `runner.port_connect_check`, or `runner.ptr_lookup_check`.
 4. Confirm in-scope tasks complete with normalized evidence and uploaded artifacts where present.
 5. Confirm out-of-scope targets reject locally and create audit evidence.
 

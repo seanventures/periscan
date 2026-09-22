@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import { Box, Text, useApp, useInput } from "ink";
 
 import { PeriscanApi } from "./lib/api.js";
+import { BasScreen } from "./screens/bas.js";
 import { EnginesScreen } from "./screens/engines.js";
 import { EvidenceScreen } from "./screens/evidence.js";
 import { FindingsScreen } from "./screens/findings.js";
@@ -45,6 +46,9 @@ export function TuiApp(props: { apiUrl: string }) {
     }
     if (input === "e") {
       setScreen("evidence");
+    }
+    if (input === "b") {
+      setScreen("bas");
     }
     const idx = Number.parseInt(input, 10);
     if (idx >= 1 && idx <= 9) {
@@ -110,6 +114,9 @@ export function TuiApp(props: { apiUrl: string }) {
         ) : null}
         {screen === "evidence" ? (
           <EvidenceScreen api={api} onStatus={setStatus} />
+        ) : null}
+        {screen === "bas" ? (
+          <BasScreen api={api} onStatus={setStatus} />
         ) : null}
         {screen === "health" ? (
           <HealthScreen api={api} onStatus={setStatus} />

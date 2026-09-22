@@ -69,8 +69,12 @@ export function StateBadge({
   dot = true,
   className,
   children,
+  role,
   ...rest
 }: StateBadgeProps) {
+  // aria-label on a generic span is axe incomplete aria-prohibited-attr
+  // (populated Home VALIDATED chips). Named badges use role=status.
+  const labelled = typeof rest["aria-label"] === "string";
   return (
     <span
       className={cn(
@@ -79,6 +83,7 @@ export function StateBadge({
         variant === "outline" ? TONE_OUTLINE[tone] : TONE_SOLID[tone],
         className
       )}
+      role={role ?? (labelled ? "status" : undefined)}
       {...rest}
     >
       {dot ? (
@@ -325,7 +330,7 @@ export function SafetyLevelBadge({
       title={
         title ??
         (level === "BASLite"
-          ? "limited safe stimulus (wire safetyLevel BASLite) — not full BAS inject parity"
+          ? "limited safe stimulus (wire safetyLevel BASLite) — measured marker coverage"
           : undefined)
       }
       aria-label={

@@ -1,0 +1,29 @@
+{
+  "summary": { "errors": 99 },
+  "results": [
+    {
+      "AuditResultName": "PrivilegedTrue",
+      "ResourceName": "fixture-web",
+      "ResourceNamespace": "default",
+      "ResourceKind": "Deployment",
+      "level": "error",
+      "msg": "Privileged container",
+      "Snippet": "AKIAIOSFODNN7EXAMPLE"
+    },
+    {
+      "AuditResultName": "ReadOnlyRootFilesystemFalse",
+      "ResourceName": "fixture-web",
+      "ResourceNamespace": "default",
+      "ResourceKind": "Deployment",
+      "level": "warning",
+      "msg": "Root filesystem is not read-only",
+      "Command": "-----BEGIN RSA PRIVATE KEY-----\nfixture\n-----END RSA PRIVATE KEY-----"
+    },
+    {
+      "AuditResultName": "AutomountServiceAccountTokenTrueAndDefaultName",
+      "ResourceName": "ok",
+      "level": "info",
+      "msg": "hashed_secret=fixture-info"
+    }
+  ]
+}

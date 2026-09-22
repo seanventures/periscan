@@ -315,16 +315,14 @@ describe("evaluatePolicy", () => {
 
     // Tier ON but no per-mission approval → not auto-allowed.
     expect(
-      evaluatePolicy(
-        destructiveInput({ explicitMissionApproval: false })
-      ).outcome
+      evaluatePolicy(destructiveInput({ explicitMissionApproval: false }))
+        .outcome
     ).toBe("RequiresApproval");
 
     // Tier ON but unverified scope → still requires a verified authorized scope.
     expect(
-      evaluatePolicy(
-        destructiveInput({ scopeVerificationStatus: "Pending" })
-      ).outcome
+      evaluatePolicy(destructiveInput({ scopeVerificationStatus: "Pending" }))
+        .outcome
     ).toBe("RequiresVerifiedScope");
   });
 
@@ -351,6 +349,109 @@ describe("evaluatePolicy", () => {
         userRole: "Owner"
       }).outcome
     ).toBe("Denied");
+  });
+
+  it("denies live Atomic, Caldera, and Metasploit even when the action looks safe", () => {
+    const verifiedSafe = {
+      adminApproval: true,
+      executionEnvironment: "ControlPlane" as const,
+      explicitMissionApproval: true,
+      missionType: "ControlValidation" as const,
+      requestedAction: safeAction,
+      safetyLevel: "BASLite" as const,
+      scopeVerificationStatus: "Verified" as const,
+      userRole: "Owner" as const
+    };
+
+    const atomic = evaluatePolicy({
+      ...verifiedSafe,
+      target: {
+        dryRun: false,
+        livePack: "atomic",
+        moduleId: "atomic.control_validation_safe",
+        scenarioId: "atomic.live"
+      }
+    });
+    expect(atomic.outcome).toBe("Denied");
+    expect(atomic.approvalState).toBe("Rejected");
+    expect(atomic.rationale.toLowerCase()).toMatch(/atomic adapter qualification/);
+    expect(atomic.rationale.toLowerCase()).toMatch(/never queued/);
+
+    expect(
+      evaluatePolicy({
+        ...verifiedSafe,
+        safetyLevel: "AdvancedAdversarial",
+        target: { livePack: "caldera", scenarioId: "caldera.live" }
+      }).outcome
+    ).toBe("Denied");
+    expect(
+      evaluatePolicy({
+        ...verifiedSafe,
+        safetyLevel: "AdvancedAdversarial",
+        target: { livePack: "metasploit", scenarioId: "metasploit.live" }
+      }).outcome
+    ).toBe("Denied");
+
+    process.env.PERISCAN_LIVE_OFFENSIVE = "1";
+    try {
+      expect(
+        evaluatePolicy({
+          ...verifiedSafe,
+          target: {
+            dryRun: false,
+            livePack: "atomic",
+            moduleId: "atomic.control_validation_safe",
+            scenarioId: "atomic.live",
+            sowId: "env-is-not-authorization"
+          }
+        }).outcome
+      ).toBe("Denied");
+    } finally {
+      delete process.env.PERISCAN_LIVE_OFFENSIVE;
+    }
+  });
+
+  it("does not auto-deny a qualified tenant-authorized live pack", () => {
+    const atomic = evaluatePolicy({
+      adminApproval: true,
+      executionEnvironment: "ControlPlane",
+      explicitMissionApproval: true,
+      missionType: "ControlValidation",
+      requestedAction: safeAction,
+      safetyLevel: "BASLite",
+      scopeVerificationStatus: "Verified",
+      target: {
+        dryRun: false,
+        forbidden: false,
+        livePack: "atomic",
+        livePackQualified: true,
+        moduleId: "atomic.control_validation_safe",
+        scenarioId: "atomic.live",
+        tenantAuthorized: true
+      },
+      userRole: "Owner"
+    });
+    expect(atomic.outcome).toBe("Allowed");
+  });
+
+  it("still allows benign_marker_only ControlValidation", () => {
+    expect(
+      evaluatePolicy({
+        executionEnvironment: "ControlPlane",
+        missionType: "ControlValidation",
+        requestedAction: safeAction,
+        safetyLevel: "ActiveNonInvasive",
+        scopeVerificationStatus: "Verified",
+        target: {
+          claimClass: "benign_marker_only",
+          dryRun: true,
+          livePack: "none",
+          moduleId: "periscan.detection_marker_emit_observe",
+          scenarioId: "control.detection.benign-marker"
+        },
+        userRole: "SecurityEngineer"
+      }).outcome
+    ).toBe("Allowed");
   });
 });
 

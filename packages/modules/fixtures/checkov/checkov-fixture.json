@@ -1,0 +1,51 @@
+{
+  "check_type": "terraform",
+  "results": {
+    "failed_checks": [
+      {
+        "check_id": "CKV_AWS_20",
+        "bc_check_id": "BC_AWS_S3_1",
+        "check_name": "Ensure the S3 bucket does not allow READ permissions to everyone",
+        "check_result": { "result": "FAILED" },
+        "code_block": [
+          [1, "resource \"aws_s3_bucket\" \"fixture\" {"],
+          [2, "  bucket = \"lab\""],
+          [3, "  acl    = \"public-read\""],
+          [4, "  tags   = { secret = \"AKIAIOSFODNN7EXAMPLE\" }"],
+          [5, "}"]
+        ],
+        "file_path": "/src/s3.tf",
+        "file_line_range": [1, 5],
+        "resource": "aws_s3_bucket.fixture",
+        "severity": "HIGH",
+        "guideline": "https://docs.bridgecrew.io/docs/s3_1-acl-read-permissions-everyone"
+      },
+      {
+        "check_id": "CKV_AWS_21",
+        "bc_check_id": "BC_AWS_LOGGING_18",
+        "check_name": "Ensure the S3 bucket has versioning enabled",
+        "check_result": { "result": "FAILED" },
+        "code_block": [
+          [1, "resource \"aws_s3_bucket\" \"fixture\" {"],
+          [2, "  hashed_secret = \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\""],
+          [3, "}"]
+        ],
+        "file_path": "/src/s3.tf",
+        "file_line_range": [1, 5],
+        "resource": "aws_s3_bucket.fixture",
+        "severity": "MEDIUM"
+      }
+    ],
+    "passed_checks": [],
+    "skipped_checks": [],
+    "parsing_errors": []
+  },
+  "summary": {
+    "passed": 0,
+    "failed": 2,
+    "skipped": 0,
+    "parsing_errors": 0,
+    "resource_count": 1,
+    "checkov_version": "3.2.0"
+  }
+}

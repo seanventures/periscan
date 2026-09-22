@@ -1,3 +1,6 @@
+import { createBasContentServices } from "./services/bas-content.js";
+import { assertEnterpriseSiteDiscoverAllowed } from "./services/enterprise-sites.js";
+import { runAtomicTestStart } from "./services/bas-atomic-testing.js";
 import { createHash, randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 
@@ -77,6 +80,7 @@ import {
   SUPPORTED_LOCALES,
   WEBHOOK_EVENT_TYPES,
   isEngineLabTheaterToolId,
+  listAtomicTestCatalog,
   type ApplyPathEdgeReceiptInput,
   type LaunchPathEdgeValidationInput,
   type PathEdgeReceipt
@@ -119,6 +123,7 @@ import type {
   DesignPartnerWorkspace,
   EngagementResult,
   EngagementStepResult,
+  EnterpriseSite,
   ScenarioBundle,
   Integration,
   InfrastructureChangeRequest,
@@ -305,6 +310,12 @@ import {
   generateTotpSecret,
   verifyTotp
 } from "./totp.js";
+import { runBasScenarioStart } from "./services/bas-control-plane.js";
+import {
+  evaluateSsoJitProvisioning,
+  normalizeSsoJitConfig,
+  SSO_JIT_DEFAULT_ROLE
+} from "./services/sso-jit.js";
 import {
   API_KEY_TOKEN_PREFIX,
   AppServiceError,
@@ -1543,6 +1554,8 @@ function calculateNextRunAt(
     next.setUTCDate(next.getUTCDate() + 1);
   } else if (frequency === "Weekly") {
     next.setUTCDate(next.getUTCDate() + 7);
+  } else if (frequency === "Hourly" || frequency === "Continuous") {
+    next.setUTCHours(next.getUTCHours() + 1);
   } else {
     next.setUTCMonth(next.getUTCMonth() + 1);
   }
@@ -1699,6 +1712,7 @@ function createInMemoryServices(): {
     remediations: Map<string, RemediationTask>;
     remediationActions: Map<string, RemediationAction>;
     runners: Map<string, RunnerRecord & { authToken: string }>;
+    enterpriseSites: Map<string, EnterpriseSite & { tenantId: string }>;
     runnerTasks: Map<string, RunnerTaskRecord>;
     runnerTokens: Map<
       string,
@@ -2017,6 +2031,7 @@ function createInMemoryServices(): {
     return true;
   }
   const runners = new Map<string, RunnerRecord & { authToken: string }>();
+  const enterpriseSites = new Map<string, EnterpriseSite & { tenantId: string }>();
   const runnerTasks = new Map<string, RunnerTaskRecord>();
   const runnerTokens = new Map<
     string,
@@ -8667,6 +8682,61 @@ function createInMemoryServices(): {
       };
     },
 
+    ...createBasContentServices(),
+    registerBasContent: async () => { throw new Error("Registry requires persistence"); },
+    getBasContentVersion: async () => { throw new Error("Registry requires persistence"); },
+    listBasContentVersions: async () => ({ items: [], nextCursor: null }),
+    promoteBasContent: async () => { throw new Error("Registry requires persistence"); },
+    compileBasCampaign: async () => { throw new Error("Campaign compiler requires persistence"); },
+    startBasCampaign: async () => { throw new Error("Campaign compiler requires persistence"); },
+    compileExternalAssessment: async () => { throw new Error("External assessment requires persistence"); },
+    startExternalAssessment: async () => { throw new Error("External assessment requires persistence"); },
+    ingestExternalAssessmentResults: async () => { throw new Error("External assessment requires persistence"); },
+    attachExternalAssessmentToSchedule: async () => { throw new Error("External assessment requires persistence"); },
+    cancelBasCampaign: async () => { throw new Error("Campaign compiler requires persistence"); },
+    getBasCampaign: async () => { throw new Error("Campaign compiler requires persistence"); },
+    listBasCampaigns: async () => ({ items: [] }),
+    qualifyBasPack: async () => { throw new Error("BAS pack qualification requires persistence"); },
+    authorizeBasPack: async () => { throw new Error("BAS pack authorization requires persistence"); },
+    getBasDangerOperatorGate: async () => ({
+      available: true,
+      items: [],
+      qualified: false,
+      tenantAuthorized: false
+    }),
+    listAtomicTests: async () => listAtomicTestCatalog(),
+    async startAtomicTest(this: AppServices, context, input) {
+      requireScopeEditor(context);
+      return runAtomicTestStart({
+        context,
+        createMission: this.createMission.bind(this),
+        loadAsset: async (assetId) => {
+          const asset = assets.get(assetId);
+          if (!asset || asset.tenantId !== context.tenant.tenantId) {
+            return null;
+          }
+          return { assetId: asset.assetId };
+        },
+        loadRunner: async (runnerId) => {
+          const runner = runners.get(runnerId);
+          if (!runner || runner.tenantId !== context.tenant.tenantId) {
+            return null;
+          }
+          return { runnerId: runner.runnerId, status: runner.status };
+        },
+        loadScope: async (scopeId) => {
+          const scope = scopes.get(scopeId);
+          if (!scope || scope.tenantId !== context.tenant.tenantId) {
+            return null;
+          }
+          return scope;
+        },
+        previewPolicyDecision: this.previewPolicyDecision.bind(this),
+        request: input,
+        startMission: this.startMission.bind(this)
+      });
+    },
+
     async validateThirdPartyToolIntake(
       context,
       input
@@ -11495,6 +11565,76 @@ function createInMemoryServices(): {
           return runner;
         }
       );
+    },
+
+    async listEnterpriseSites(context) {
+      return [...enterpriseSites.values()]
+        .filter((site) => site.tenantId === context.tenant.tenantId)
+        .map(({ tenantId: _tenantId, ...site }) => {
+          void _tenantId;
+          return site;
+        });
+    },
+
+    async createEnterpriseSite(context, input) {
+      requireScopeEditor(context);
+      for (const runnerId of input.runnerIds) {
+        const runner = runners.get(runnerId);
+        if (!runner || runner.tenantId !== context.tenant.tenantId) {
+          throw new AppServiceError(
+            "One or more runnerIds are not in this tenant.",
+            400,
+            "runner_not_found"
+          );
+        }
+      }
+      const stored: EnterpriseSite & { tenantId: string } = {
+        adDomains: input.adDomains,
+        cidrs: input.cidrs,
+        name: input.name,
+        runnerIds: input.runnerIds,
+        siteId: randomUUID(),
+        tenantId: context.tenant.tenantId
+      };
+      enterpriseSites.set(stored.siteId, stored);
+      const { tenantId: _tenantId, ...site } = stored;
+      void _tenantId;
+      return site;
+    },
+
+    async updateEnterpriseSite(context, siteId, input) {
+      requireScopeEditor(context);
+      const current = enterpriseSites.get(siteId);
+      if (!current || current.tenantId !== context.tenant.tenantId) {
+        throw new AppServiceError(
+          "Enterprise site not found.",
+          404,
+          "enterprise_site_not_found"
+        );
+      }
+      if (input.runnerIds) {
+        for (const runnerId of input.runnerIds) {
+          const runner = runners.get(runnerId);
+          if (!runner || runner.tenantId !== context.tenant.tenantId) {
+            throw new AppServiceError(
+              "One or more runnerIds are not in this tenant.",
+              400,
+              "runner_not_found"
+            );
+          }
+        }
+      }
+      const stored: EnterpriseSite & { tenantId: string } = {
+        ...current,
+        ...(input.adDomains !== undefined ? { adDomains: input.adDomains } : {}),
+        ...(input.cidrs !== undefined ? { cidrs: input.cidrs } : {}),
+        ...(input.name !== undefined ? { name: input.name } : {}),
+        ...(input.runnerIds !== undefined ? { runnerIds: input.runnerIds } : {})
+      };
+      enterpriseSites.set(siteId, stored);
+      const { tenantId: _tenantId, ...site } = stored;
+      void _tenantId;
+      return site;
     },
 
     async getRunnerFleetWorkspace() {
@@ -14765,12 +14905,14 @@ function createInMemoryServices(): {
       input: RunnerCheckTaskRequest
     ): Promise<RunnerTaskCreationResult> {
       const ports = input.port === undefined ? [] : [input.port];
-      const taskType =
-        input.module === "runner.dns_resolution_check"
-          ? "dns_resolution"
-          : input.module === "runner.tls_certificate_check"
-            ? "tls_certificate"
-            : "http_health";
+      const taskTypeByModule: Record<string, string> = {
+        "runner.dns_resolution_check": "dns_resolution",
+        "runner.http_health_check": "http_health",
+        "runner.tls_certificate_check": "tls_certificate",
+        "runner.port_connect_check": "port_connect",
+        "runner.ptr_lookup_check": "ptr_lookup"
+      };
+      const taskType = taskTypeByModule[input.module] ?? "http_health";
 
       return createInMemoryRunnerTask({
         context,
@@ -14872,6 +15014,23 @@ function createInMemoryServices(): {
           "module_not_found"
         );
       }
+
+      assertEnterpriseSiteDiscoverAllowed({
+        sites: [...enterpriseSites.values()]
+          .filter((site) => site.tenantId === context.tenant.tenantId)
+          .map(({ tenantId: _tenantId, ...site }) => {
+            void _tenantId;
+            return site;
+          }),
+        target: input.target,
+        verifiedScopes: [...scopes.values()]
+          .filter((scope) => scope.tenantId === context.tenant.tenantId)
+          .map((scope) => ({
+            scopeType: scope.scopeType,
+            value: scope.value,
+            verificationStatus: scope.verificationStatus
+          }))
+      });
 
       const targetByModule: Record<string, Record<string, unknown>> = {
         "recon.dns_probe": { host: input.target },
@@ -17750,6 +17909,29 @@ function createInMemoryServices(): {
       const samlInput = input.providerType === "SAML" ? input : null;
       const roleMappings =
         input.roleMappings ?? existing?.roleMappings ?? [];
+      const jitNormalized = normalizeSsoJitConfig({
+        jitDefaultRole:
+          input.jitDefaultRole !== undefined
+            ? input.jitDefaultRole
+            : (existing?.jitDefaultRole ?? SSO_JIT_DEFAULT_ROLE),
+        jitEmailDomains:
+          input.jitEmailDomains !== undefined
+            ? input.jitEmailDomains
+            : (existing?.jitEmailDomains ?? []),
+        jitEnabled:
+          input.jitEnabled !== undefined
+            ? input.jitEnabled
+            : (existing?.jitEnabled ?? false)
+      });
+      if (!jitNormalized.ok) {
+        throw new AppServiceError(
+          jitNormalized.code === "sso_jit_owner_forbidden"
+            ? "JIT default role cannot be Owner."
+            : "JIT provisioning requires a non-empty email domain allowlist.",
+          400,
+          jitNormalized.code
+        );
+      }
       const config: TenantSsoConfig = {
         authorizationEndpoint: input.authorizationEndpoint,
         clientId: input.clientId,
@@ -17770,6 +17952,9 @@ function createInMemoryServices(): {
         ],
         enforced: input.enforced,
         issuerUrl: input.issuerUrl,
+        jitDefaultRole: jitNormalized.jitDefaultRole,
+        jitEmailDomains: jitNormalized.jitEmailDomains,
+        jitEnabled: jitNormalized.jitEnabled,
         jwksUri: oidcInput?.jwksUri ?? null,
         providerType: input.providerType,
         redirectUri: input.redirectUri ?? null,
@@ -18010,17 +18195,71 @@ function createInMemoryServices(): {
               (membership) => membership.tenantId === request.tenantId
             )
           );
-      const membership = user
+      let membership = user
         ? membershipsForUser(user.userId).find(
             (candidate) => candidate.tenantId === request.tenantId
           )
         : null;
       if (!user || user.status !== "Active" || !membership) {
-        throw new AppServiceError(
-          "No active provisioned user exists for this tenant SSO login.",
-          403,
-          "sso_user_not_provisioned"
-        );
+        const ssoConfig = tenantSsoConfigs.get(request.tenantId);
+        const jit = evaluateSsoJitProvisioning({
+          email: request.email ?? "",
+          existingUserStatus: user?.status ?? null,
+          jitDefaultRole: ssoConfig?.jitDefaultRole,
+          jitEmailDomains: ssoConfig?.jitEmailDomains ?? [],
+          jitEnabled: Boolean(ssoConfig?.jitEnabled),
+          ssoVerified: true
+        });
+        if (!jit.ok || !request.email) {
+          throw new AppServiceError(
+            "No active provisioned user exists for this tenant SSO login.",
+            403,
+            "sso_user_not_provisioned"
+          );
+        }
+        const timestamp = now();
+        const provisionedUser: InMemoryUser =
+          user && user.status === "Active"
+            ? user
+            : {
+                createdAt: timestamp,
+                email: request.email,
+                emailVerifiedAt: timestamp,
+                mfaEnabledAt: null,
+                mfaSecret: null,
+                name: request.email.split("@")[0] || request.email,
+                password: null,
+                status: "Active",
+                updatedAt: timestamp,
+                userId: randomUUID()
+              };
+        if (!users.has(provisionedUser.userId)) {
+          users.set(provisionedUser.userId, provisionedUser);
+          usersByEmail.set(provisionedUser.email, provisionedUser.userId);
+        }
+        membership = {
+          createdAt: timestamp,
+          membershipId: randomUUID(),
+          role: jit.role,
+          tenantId: request.tenantId,
+          updatedAt: timestamp,
+          userId: provisionedUser.userId
+        };
+        memberships.set(membership.membershipId, membership);
+        insertAuditEvent({
+          action: "user.jit_provisioned",
+          actorType: "System",
+          entityId: provisionedUser.userId,
+          entityType: "Tenant",
+          metadata: {
+            email: provisionedUser.email,
+            role: membership.role,
+            source: "sso_jit"
+          },
+          tenantId: request.tenantId,
+          userId: provisionedUser.userId
+        });
+        user = provisionedUser;
       }
       const tenant = tenants.get(request.tenantId)!;
       insertAuditEvent({
@@ -18661,6 +18900,24 @@ function createInMemoryServices(): {
         records: [],
         skipped: 0,
         usageHour: now()
+      };
+    },
+
+    async getComplianceCoverage(_context, input) {
+      return {
+        catalogVersion: "periscan-2026.07",
+        configured: false,
+        controls: [],
+        coverageRatio: 0,
+        disclaimer:
+          "Customer evidence support only (partial catalog). This pack is not a certification and not an audit opinion.",
+        displayName: input.framework,
+        framework: input.framework,
+        metCount: 0,
+        notCertification: true as const,
+        partialCount: 0,
+        snapshotId: null,
+        unmetCount: 0
       };
     },
 
@@ -20104,6 +20361,7 @@ function createInMemoryServices(): {
         safetyLevel: input.safetyLevel,
         scopeContext: scope,
         scopeVerificationStatus: scope.verificationStatus,
+        target: input.target,
         timeWindowApproved: input.timeWindowApproved ?? false,
         userRole: context.membership.role
       });
@@ -20449,7 +20707,7 @@ function createInMemoryServices(): {
 
       if (input.executionMode === "LiveRunner" || input.dryRun === false) {
         throw new AppServiceError(
-          "Inject loop not available: closed inject→measure control execution is disabled on the control-plane API (control_live_execution_disabled). Wave D lab inject requires a signed SOW and dual gates (tenant inject flag + operator approval); neither is an enablement path in product today. Dry-run remains telemetry-only observation against connected SIEM/EDR — it does not claim a closed inject-measure loop. Atomic remains dry-run scenario import only (not live inject BAS). Use executionMode DryRun, or an explicitly approved internal-runner mission when a limited safe stimulus is authorized. Next step: connect a SIEM/EDR control source and run Observe telemetry (DryRun), or dispatch an approved endpoint benign-marker mission — do not treat this as live Atomic/BAS inject.",
+          "Inject loop not available on this endpoint (control_live_execution_disabled). Use Observe telemetry (DryRun) for connected SIEM/EDR observation, or an approved endpoint benign-marker mission for bounded emit-and-observe. Additional BAS scenarios require qualified adapters, verified scope, policy approval, cleanup and measured receipts.",
           400,
           "control_live_execution_disabled"
         );
@@ -21349,6 +21607,24 @@ function createInMemoryServices(): {
       };
     },
 
+    async startBasScenario(this: AppServices, context, input) {
+      requireScopeEditor(context);
+      return runBasScenarioStart({
+        context,
+        createMission: this.createMission.bind(this),
+        loadScope: async (scopeId) => {
+          const scope = scopes.get(scopeId);
+          if (!scope || scope.tenantId !== context.tenant.tenantId) {
+            return null;
+          }
+          return scope;
+        },
+        previewPolicyDecision: this.previewPolicyDecision.bind(this),
+        request: input,
+        startMission: this.startMission.bind(this)
+      });
+    },
+
     async syncIntegration(
       context,
       integrationId
@@ -21643,6 +21919,7 @@ function createInMemoryServices(): {
       remediations,
       remediationActions,
       runners,
+      enterpriseSites,
       runnerTasks,
       runnerTokens,
       missionRuns,
@@ -29496,17 +29773,11 @@ describe("buildApp", () => {
       method: "GET",
       url: "/api/v1/scim/v2/ServiceProviderConfig"
     });
-    expect(scimDiscovery.statusCode).toBe(501);
+    expect(scimDiscovery.statusCode).toBe(401);
     expect(scimDiscovery.json()).toMatchObject({
-      status: "501",
-      statusName: "NotConfigured",
-      orderFormDoc: "docs/ENTERPRISE_IDENTITY_LIFECYCLE.md",
-      residualDoc: "docs/ops/ENTERPRISE_TRUST_RESIDUAL_2026-07-31.md"
+      schemas: ["urn:ietf:params:scim:api:messages:2.0:Error"],
+      status: "401"
     });
-    expect(JSON.stringify(scimDiscovery.json())).toMatch(/not shipped/i);
-    expect(JSON.stringify(scimDiscovery.json())).toMatch(
-      /order form|sales-assisted/i
-    );
     // PERISCAN-30: Partial plane vs NotConfigured SCIM (never Production).
     expect(
       (trustSafetyPayload.identityProvisioning as { planeStatus?: string })
@@ -36768,6 +37039,20 @@ describe("buildApp", () => {
     });
     expect(verifyIpRangeScopeResponse.statusCode).toBe(200);
 
+    const enterpriseSiteResponse = await app.inject({
+      method: "POST",
+      url: "/api/v1/enterprise-sites",
+      cookies: {
+        [SESSION_COOKIE_NAME]: cookie
+      },
+      payload: {
+        cidrs: ["10.24.0.0/24"],
+        name: "Lab CIDR site",
+        runnerIds: [runnerId]
+      }
+    });
+    expect(enterpriseSiteResponse.statusCode).toBe(201);
+
     const readyNmapRunnerEligibilityResponse = await app.inject({
       method: "GET",
       url: "/api/v1/third-party-tools/nmap/runner-eligibility",
@@ -38934,6 +39219,108 @@ describe("buildApp", () => {
     expect(calderaStartResponse.statusCode).toBe(200);
     expect(calderaStartResponse.json().jobsQueued).toBe(0);
     expect(calderaStartResponse.json().mission.status).toBe("DeniedByPolicy");
+
+    await app.close();
+  });
+
+  it("policy-gates BAS scenario start: live Atomic is not queued; benign_marker_only is queued", async () => {
+    const { services, state } = createInMemoryServices();
+    const app = await buildApp({
+      services,
+      sessionSecret: SESSION_SECRET
+    });
+
+    const signupResponse = await app.inject({
+      method: "POST",
+      url: "/api/v1/auth/signup",
+      payload: {
+        email: "bas-control-plane@periscan.local",
+        name: "BAS Control Plane Owner",
+        password: "bas-control-plane-password",
+        tenantName: "BAS Control Plane Tenant"
+      }
+    });
+    const cookie = signupResponse.cookies[0]!.value;
+
+    const scopeResponse = await app.inject({
+      method: "POST",
+      url: "/api/v1/scopes",
+      cookies: { [SESSION_COOKIE_NAME]: cookie },
+      payload: {
+        scopeType: "ControlSource",
+        value: "bas-control-plane-source"
+      }
+    });
+    expect(scopeResponse.statusCode).toBe(201);
+    const scopeId = scopeResponse.json().scopeId as string;
+
+    await app.inject({
+      method: "POST",
+      url: `/api/v1/scopes/${scopeId}/verify`,
+      cookies: { [SESSION_COOKIE_NAME]: cookie },
+      payload: { devModeManual: true }
+    });
+
+    const catalog = await app.inject({
+      method: "GET",
+      url: "/api/v1/control-sources/bas-scenarios",
+      cookies: { [SESSION_COOKIE_NAME]: cookie }
+    });
+    expect(catalog.statusCode).toBe(200);
+    expect(
+      (catalog.json().items as Array<{ scenarioId: string }>).map(
+        (item) => item.scenarioId
+      )
+    ).toContain("atomic.live");
+
+    const jobsBeforeAtomic = state.jobs.size;
+    const atomicStart = await app.inject({
+      method: "POST",
+      url: "/api/v1/control-sources/bas-scenarios/start",
+      cookies: { [SESSION_COOKIE_NAME]: cookie },
+      payload: {
+        scenarioId: "atomic.live",
+        scopeId
+      }
+    });
+
+    expect(atomicStart.statusCode).toBe(200);
+    expect(atomicStart.json()).toMatchObject({
+      claimClass: "qualification_required",
+      jobsQueued: 0,
+      queued: false,
+      outcome: "Denied"
+    });
+    expect(atomicStart.json().policyDecisionId).toMatch(
+      /^[0-9a-f-]{36}$/iu
+    );
+    expect(String(atomicStart.json().denyReason)).toMatch(/Atomic adapter qualification/i);
+    expect(String(atomicStart.json().denyReason)).toMatch(/never queued/i);
+    expect(state.jobs.size).toBe(jobsBeforeAtomic);
+
+    const jobsBeforeBenign = state.jobs.size;
+    const benignStart = await app.inject({
+      method: "POST",
+      url: "/api/v1/control-sources/bas-scenarios/start",
+      cookies: { [SESSION_COOKIE_NAME]: cookie },
+      payload: {
+        scenarioId: "control.detection.benign-marker",
+        scopeId
+      }
+    });
+
+    expect(benignStart.statusCode).toBe(200);
+    expect(benignStart.json()).toMatchObject({
+      claimClass: "benign_marker_only",
+      jobsQueued: 1,
+      queued: true,
+      outcome: "Allowed"
+    });
+    expect(benignStart.json().policyDecisionId).toMatch(
+      /^[0-9a-f-]{36}$/iu
+    );
+    expect(benignStart.json().denyReason).toBeNull();
+    expect(state.jobs.size).toBe(jobsBeforeBenign + 1);
 
     await app.close();
   });
@@ -43766,9 +44153,8 @@ describe("buildApp", () => {
     expect(liveControlResponse.json().error).toContain(
       "control_live_execution_disabled"
     );
-    expect(liveControlResponse.json().error).toContain("not live inject BAS");
-    // PERISCAN-460: refuse without SOW dual gates; no enablement path today
-    expect(liveControlResponse.json().error).toMatch(/signed SOW|dual gates/i);
+    expect(liveControlResponse.json().error).toContain("qualified adapters");
+    expect(liveControlResponse.json().error).toMatch(/verified scope, policy approval, cleanup and measured receipts/i);
     expect(liveControlResponse.json().code).toBe(
       "control_live_execution_disabled"
     );
@@ -43799,6 +44185,15 @@ describe("buildApp", () => {
 
     expect(listTechniquesResponse.statusCode).toBe(200);
     expect(listTechniquesResponse.json().items.length).toBeGreaterThan(0);
+    expect(listTechniquesResponse.json().items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          coverageLabel: "Live disabled",
+          executionNote: "not executed (live disabled)",
+          techniqueId: "T1595"
+        })
+      ])
+    );
 
     const getTechniqueResponse = await app.inject({
       method: "GET",
@@ -43810,6 +44205,8 @@ describe("buildApp", () => {
 
     expect(getTechniqueResponse.statusCode).toBe(200);
     expect(getTechniqueResponse.json()).toMatchObject({
+      coverageLabel: "Live disabled",
+      executionNote: "not executed (live disabled)",
       tacticName: "Reconnaissance",
       techniqueId: "T1595",
       techniqueName: "Active Scanning"
@@ -43863,6 +44260,208 @@ describe("buildApp", () => {
     expect(items.find((item) => item.channel === "ReverseSsh")?.status).toBe(
       "Disallowed"
     );
+
+    await app.close();
+  });
+
+  it("lists managed security-feed pins without auto-executing or flipping liveSupported", async () => {
+    const app = await buildApp({
+      services: createInMemoryServices().services,
+      sessionSecret: SESSION_SECRET
+    });
+
+    const signupResponse = await app.inject({
+      method: "POST",
+      url: "/api/v1/auth/signup",
+      payload: {
+        email: "feeds@periscan.local",
+        name: "Feed Operator",
+        password: "periscan-feeds-password",
+        tenantName: "Feed Tenant"
+      }
+    });
+    expect(signupResponse.statusCode).toBe(201);
+    const cookie = signupResponse.cookies[0]!.value;
+
+    const feedsResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/security-feeds",
+      cookies: { [SESSION_COOKIE_NAME]: cookie }
+    });
+
+    expect(feedsResponse.statusCode).toBe(200);
+    const items = feedsResponse.json().items as Array<{
+      autoExecute: boolean;
+      contentVersionStatus: string;
+      executablePinFlipped: boolean;
+      id: string;
+      lastDigest: string | null;
+      liveSupported: boolean;
+      pin: { kind: string; value: string | null };
+      spdxLicenseId: string;
+    }>;
+    expect(items.map((item) => item.id)).toEqual([
+      "nuclei-templates",
+      "sigma",
+      "attack-stix",
+      "atomic-yaml",
+      "caldera-abilities",
+      "yara",
+      "rustinel-rules",
+      "nvd",
+      "cisa-kev",
+      "gitleaks"
+    ]);
+    expect(items.every((item) => item.autoExecute === false)).toBe(true);
+    expect(items.every((item) => item.liveSupported === false)).toBe(true);
+    expect(items.every((item) => item.executablePinFlipped === false)).toBe(
+      true
+    );
+    expect(
+      items.every((item) =>
+        ["Current", "PendingReview", "Rejected"].includes(
+          item.contentVersionStatus
+        )
+      )
+    ).toBe(true);
+    expect(items.find((item) => item.id === "gitleaks")).toMatchObject({
+      lastDigest: null,
+      pin: { kind: "version", value: "v8.30.0" },
+      spdxLicenseId: "MIT"
+    });
+    expect(items.find((item) => item.id === "rustinel-rules")).toMatchObject({
+      pin: { kind: "unpinned", value: null },
+      spdxLicenseId: "LicenseRef-DRL-1.1"
+    });
+
+    const sitesResponse = await app.inject({
+      method: "GET",
+      url: "/api/v1/enterprise-sites",
+      cookies: { [SESSION_COOKIE_NAME]: cookie }
+    });
+    expect(sitesResponse.statusCode).toBe(200);
+    expect(sitesResponse.json()).toEqual({ items: [] });
+
+    await app.close();
+  });
+
+  it("persists tenant-scoped Fortune 1000 enterprise sites and 404s across tenants", async () => {
+    const app = await buildApp({
+      services: createInMemoryServices().services,
+      sessionSecret: SESSION_SECRET
+    });
+    const signupA = await app.inject({
+      method: "POST",
+      url: "/api/v1/auth/signup",
+      payload: {
+        email: "sites-a@periscan.local",
+        name: "Site Operator A",
+        password: "periscan-sites-password",
+        tenantName: "Site Tenant A"
+      }
+    });
+    expect(signupA.statusCode).toBe(201);
+    const cookieA = signupA.cookies[0]!.value;
+
+    const empty = await app.inject({
+      method: "GET",
+      url: "/api/v1/enterprise-sites",
+      cookies: { [SESSION_COOKIE_NAME]: cookieA }
+    });
+    expect(empty.statusCode).toBe(200);
+    expect(empty.json()).toEqual({ items: [] });
+    expect(JSON.stringify(empty.json())).not.toMatch(/Headquarters|US-East/i);
+
+    const createResponse = await app.inject({
+      method: "POST",
+      url: "/api/v1/enterprise-sites",
+      cookies: { [SESSION_COOKIE_NAME]: cookieA },
+      payload: {
+        adDomains: ["corp.contoso.local"],
+        cidrs: ["10.8.0.0/16"],
+        name: "Chicago DC",
+        runnerIds: []
+      }
+    });
+    expect(createResponse.statusCode).toBe(201);
+    const created = createResponse.json() as {
+      adDomains: string[];
+      cidrs: string[];
+      name: string;
+      runnerIds: string[];
+      siteId: string;
+    };
+    expect(created.name).toBe("Chicago DC");
+    expect(created.cidrs).toEqual(["10.8.0.0/16"]);
+    expect(created.adDomains).toEqual(["corp.contoso.local"]);
+    expect(created.siteId).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu
+    );
+
+    const listed = await app.inject({
+      method: "GET",
+      url: "/api/v1/enterprise-sites",
+      cookies: { [SESSION_COOKIE_NAME]: cookieA }
+    });
+    expect(listed.statusCode).toBe(200);
+    expect(listed.json().items).toEqual([created]);
+
+    const patched = await app.inject({
+      method: "PATCH",
+      url: `/api/v1/enterprise-sites/${created.siteId}`,
+      cookies: { [SESSION_COOKIE_NAME]: cookieA },
+      payload: {
+        cidrs: ["10.8.0.0/16", "10.9.0.0/24"],
+        name: "Chicago DC + campus"
+      }
+    });
+    expect(patched.statusCode).toBe(200);
+    expect(patched.json()).toMatchObject({
+      cidrs: ["10.8.0.0/16", "10.9.0.0/24"],
+      name: "Chicago DC + campus",
+      siteId: created.siteId
+    });
+
+    const signupB = await app.inject({
+      method: "POST",
+      url: "/api/v1/auth/signup",
+      payload: {
+        email: "sites-b@periscan.local",
+        name: "Site Operator B",
+        password: "periscan-sites-password",
+        tenantName: "Site Tenant B"
+      }
+    });
+    expect(signupB.statusCode).toBe(201);
+    const cookieB = signupB.cookies[0]!.value;
+
+    const emptyB = await app.inject({
+      method: "GET",
+      url: "/api/v1/enterprise-sites",
+      cookies: { [SESSION_COOKIE_NAME]: cookieB }
+    });
+    expect(emptyB.statusCode).toBe(200);
+    expect(emptyB.json()).toEqual({ items: [] });
+
+    const stolen = await app.inject({
+      method: "PATCH",
+      url: `/api/v1/enterprise-sites/${created.siteId}`,
+      cookies: { [SESSION_COOKIE_NAME]: cookieB },
+      payload: { name: "Stolen HQ" }
+    });
+    expect(stolen.statusCode).toBe(404);
+    expect(stolen.json().code).toBe("enterprise_site_not_found");
+
+    const invalid = await app.inject({
+      method: "POST",
+      url: "/api/v1/enterprise-sites",
+      cookies: { [SESSION_COOKIE_NAME]: cookieA },
+      payload: {
+        cidrs: ["10.8.0.0"],
+        name: "Bad CIDR"
+      }
+    });
+    expect(invalid.statusCode).toBe(400);
 
     await app.close();
   });

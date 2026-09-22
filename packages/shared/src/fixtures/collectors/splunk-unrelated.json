@@ -1,0 +1,15 @@
+{
+  "preview": false,
+  "init_offset": 0,
+  "results": [
+    {
+      "_time": "2026-09-17T14:01:00.000Z",
+      "src_ip": "10.0.0.99",
+      "signature": "Unrelated malware notable",
+      "rule_name": "sigma.other",
+      "event_type": "alert",
+      "severity": "high",
+      "_raw": "notable=1 rule=sigma.other host=other-box"
+    }
+  ]
+}

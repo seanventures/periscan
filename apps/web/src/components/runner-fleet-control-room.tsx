@@ -2,14 +2,16 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
-import type {
-  RunnerFleetHealthState,
-  RunnerFleetPolicy,
-  RunnerFleetRunner,
-  RunnerFleetWorkspace,
-  RunnerRecord,
-  RunnerTransportDecision,
-  RunnerTaskRecord
+import {
+  siteForRunner,
+  type EnterpriseSite,
+  type RunnerFleetHealthState,
+  type RunnerFleetPolicy,
+  type RunnerFleetRunner,
+  type RunnerFleetWorkspace,
+  type RunnerRecord,
+  type RunnerTransportDecision,
+  type RunnerTaskRecord
 } from "@periscan/shared";
 
 import { useApiResource, type ApiResource } from "../hooks/use-api-resource";
@@ -86,11 +88,44 @@ function percent(value: number | null): string {
   return value === null ? "—" : `${Math.round(value * 100)}%`;
 }
 
+function fleetSiteLabel(
+  runner: RunnerRecord,
+  sites: readonly EnterpriseSite[]
+): string {
+  if (sites.length > 0) {
+    const bound = siteForRunner(sites, runner.runnerId);
+    if (bound) return bound.name;
+    if (runner.siteId) {
+      const byId = sites.find((site) => site.siteId === runner.siteId);
+      if (byId) return byId.name;
+    }
+  }
+  const siteId = runner.siteId?.trim();
+  return siteId && siteId.length > 0 ? siteId : "Unassigned";
+}
+
+function fleetLabelText(labels: readonly string[]): string {
+  const visible = labels.map((label) => label.trim()).filter(Boolean);
+  return visible.length > 0 ? visible.join(", ") : "—";
+}
+
+function honestBoundCampaignCount(runner: RunnerFleetRunner): number {
+  const value = (runner as RunnerFleetRunner & { boundCampaigns?: unknown })
+    .boundCampaigns;
+  return typeof value === "number" && Number.isInteger(value) && value >= 0
+    ? value
+    : 0;
+}
+
 export function RunnerFleetControlRoom() {
   const fleet = useApiResource(() => api.getRunnerFleetWorkspace(), [], {
     refetchIntervalMs: 15_000
   });
   const registeredRunners = useApiResource(() => api.listRunners(), []);
+  const sites = useApiResource(
+    () => api.listEnterpriseSites().catch(() => [] as EnterpriseSite[]),
+    []
+  );
   const transport = useApiResource(
     () => api.listRunnerTransportDecisions(),
     []
@@ -166,11 +201,16 @@ export function RunnerFleetControlRoom() {
             <div className="mt-4 grid min-h-[640px] overflow-hidden rounded-card border border-[#22396c] bg-[#080f20] shadow-[0_28px_80px_rgba(0,0,0,0.35)] lg:grid-cols-[390px_minmax(0,1fr)]">
               <RunnerRail
                 workspace={fleet.data}
+                sites={sites.data ?? []}
                 selectedRunnerId={selected?.runner.runnerId ?? null}
                 onSelect={setSelectedRunnerId}
               />
               {selected ? (
-                <RunnerInspector runner={selected} onChanged={fleet.refetch} />
+                <RunnerInspector
+                  runner={selected}
+                  sites={sites.data ?? []}
+                  onChanged={fleet.refetch}
+                />
               ) : null}
             </div>
           ) : (
@@ -269,10 +309,12 @@ function FleetSummary({ workspace }: { workspace: RunnerFleetWorkspace }) {
 
 function RunnerRail({
   workspace,
+  sites,
   selectedRunnerId,
   onSelect
 }: {
   workspace: RunnerFleetWorkspace;
+  sites: readonly EnterpriseSite[];
   selectedRunnerId: string | null;
   onSelect: (runnerId: string) => void;
 }) {
@@ -344,11 +386,14 @@ function RunnerRail({
                     <span className="truncate font-display text-[13px] font-semibold text-ink">
                       {item.runner.name}
                     </span>
-                    {item.runner.labels.includes("demo") ? (
-                      <span className="rounded-control border border-brand/40 px-1.5 font-mono text-[8px] font-semibold uppercase tracking-[0.08em] text-brand">
-                        Demo
+                    {item.runner.labels.map((label) => (
+                      <span
+                        key={label}
+                        className="rounded-control border border-brand/40 px-1.5 font-mono text-[8px] font-semibold uppercase tracking-[0.08em] text-brand"
+                      >
+                        {label}
                       </span>
-                    ) : null}
+                    ))}
                   </div>
                   <p className="mt-1 truncate font-mono text-[10px] text-subtle">
                     {item.runner.hostname} · {item.runner.os}/{item.runner.arch}
@@ -367,6 +412,18 @@ function RunnerRail({
                 <MiniFact
                   label="Work"
                   value={String(item.taskSummary.active)}
+                />
+                <MiniFact
+                  label="Site"
+                  value={fleetSiteLabel(item.runner, sites)}
+                />
+                <MiniFact
+                  label="Labels"
+                  value={fleetLabelText(item.runner.labels)}
+                />
+                <MiniFact
+                  label="Bound campaigns"
+                  value={String(honestBoundCampaignCount(item))}
                 />
               </div>
               {item.alerts.length ? (
@@ -402,9 +459,11 @@ function MiniFact({ label, value }: { label: string; value: string }) {
 
 function RunnerInspector({
   runner,
+  sites,
   onChanged
 }: {
   runner: RunnerFleetRunner;
+  sites: readonly EnterpriseSite[];
   onChanged: () => Promise<void>;
 }) {
   const [confirm, setConfirm] = useState<"halt" | "release" | "revoke" | null>(
@@ -482,16 +541,21 @@ function RunnerInspector({
             <StateBadge tone={HEALTH_TONE[runner.healthState]}>
               {runner.healthState}
             </StateBadge>
-            {record.labels.includes("demo") ? (
-              <StateBadge tone="brand" variant="outline">
-                Demonstration data
+            {record.labels.map((label) => (
+              <StateBadge key={label} tone="brand" variant="outline">
+                {label}
               </StateBadge>
-            ) : null}
+            ))}
           </div>
           <p className="mt-1 font-mono text-[11px] text-subtle">
             {record.hostname} · {record.deploymentMode} · {record.os}/
             {record.arch}
             {" · "}agent {record.version}
+          </p>
+          <p className="mt-1 font-mono text-[11px] text-subtle">
+            Site {fleetSiteLabel(record, sites)} · Labels{" "}
+            {fleetLabelText(record.labels)} · Bound campaigns{" "}
+            {honestBoundCampaignCount(runner)}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">

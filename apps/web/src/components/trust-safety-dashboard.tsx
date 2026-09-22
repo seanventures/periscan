@@ -570,16 +570,17 @@ function MarketPresenceReadinessPanel({
         title="Market presence readiness"
         actions={
           <StateBadge
-            tone={
-              marketPresence.marketPresenceEligible ? "fixed" : "missed"
-            }
+            tone={marketPresence.marketPresenceEligible ? "fixed" : "missed"}
             dot={false}
           >
             {marketPresence.marketPresenceEligible ? "Eligible" : "Not met"}
           </StateBadge>
         }
       />
-      <div className="flex flex-col gap-3 p-4" data-testid="market-presence-readiness-panel">
+      <div
+        className="flex flex-col gap-3 p-4"
+        data-testid="market-presence-readiness-panel"
+      >
         <p className="text-[13px] text-muted">{marketPresence.disclaimer}</p>
         <p className="rounded-control border border-line bg-surface px-3 py-2 text-[12px] text-muted">
           <strong className="text-ink">Named customer references:</strong>{" "}
@@ -712,10 +713,11 @@ function MarketPresenceReadinessPanel({
             Path to first design partner
           </p>
           <p className="mt-1 text-[12px] text-muted">
-            Market presence stays Fail until real production partners give written
-            reference rights. Do not invent logos or case studies. Run the factory:
-            ICP recruit → measured proof loop → internal session note → production
-            deploy → NDA reference-call consent → pack fill → only then Wave/MQ.
+            Market presence stays Fail until real production partners give
+            written reference rights. Do not invent logos or case studies. Run
+            the factory: ICP recruit → measured proof loop → internal session
+            note → production deploy → NDA reference-call consent → pack fill →
+            only then Wave/MQ.
           </p>
           <ol className="mt-2 list-inside list-decimal text-[12px] text-muted">
             <li>
@@ -859,8 +861,8 @@ function EnterpriseCommercialHonestyPanel({
 
 /**
  * Trust-settings honesty for enterprise IdP lifecycle (P04-4 / P17-1 / PERISCAN-30).
- * Force-MFA and IdP group→role mapping ship; inbound SCIM / JIT remain NotConfigured.
- * Plane badge = Partial; SCIM/JIT rows = NotConfigured (never conflate).
+ * Force-MFA, IdP group→role mapping, and optional JIT ship; inbound SCIM remains NotConfigured.
+ * Plane badge = Partial; SCIM row = NotConfigured; JIT row = Optional (never conflate).
  * Status strings come from the API honesty contract — not marketing copy.
  */
 function IdentityLifecycleTrustPanel({
@@ -871,7 +873,7 @@ function IdentityLifecycleTrustPanel({
   const policy = useApiResource(() => api.getTenantRequireMfa(), []);
   const effective = policy.data?.effectiveRequireMfa ?? false;
   const scimShipped = identity.scimInbound.status !== "NotConfigured";
-  const jitShipped = identity.jitProvisioning.status !== "NotConfigured";
+  const jitShipped = identity.jitProvisioning.status === "Optional";
   const planeStatus = identity.planeStatus ?? "Partial";
   const orderFormDoc =
     identity.orderFormDoc ?? "docs/ENTERPRISE_IDENTITY_LIFECYCLE.md";
@@ -903,8 +905,8 @@ function IdentityLifecycleTrustPanel({
           <span className="font-mono text-ink">{planeStatus}</span> describes
           the overall control plane (SSO + force-MFA + IdP group→role map ship).{" "}
           <span className="font-mono text-ink">NotConfigured</span> is reserved
-          for inbound SCIM and JIT — never relabel those rows as Partial or
-          Production.{" "}
+          for inbound SCIM — never relabel that row as Partial or Production.
+          Optional JIT is tenant opt-in (domain allowlist + default Viewer).{" "}
           {identity.planeStatusDetail ??
             "Do not claim full IdP lifecycle until membership SCIM ships."}
         </p>
@@ -925,10 +927,7 @@ function IdentityLifecycleTrustPanel({
             <Flag ok label="IdP group → role mapping (SSO config)" />
           </li>
           <li className="flex items-start gap-2 text-[13px]">
-            <Flag
-              ok={false}
-              label="Automated deprovision SLA (product SCIM)"
-            />
+            <Flag ok={false} label="Automated deprovision SLA (product SCIM)" />
           </li>
         </ul>
         <ul className="flex flex-col gap-2">
@@ -1006,7 +1005,9 @@ function IdentityLifecycleTrustPanel({
           data-testid="identity-order-form-cta"
         >
           <p>
-            <strong className="text-ink">Enterprise order-form next steps</strong>{" "}
+            <strong className="text-ink">
+              Enterprise order-form next steps
+            </strong>{" "}
             (≤3). Until inbound SCIM/JIT ship, do not invent SCIM Production.
           </p>
           <ol
@@ -1015,8 +1016,7 @@ function IdentityLifecycleTrustPanel({
           >
             <li>
               Paste sales-assisted provisioning SLA into every order form / DPA
-              annex —{" "}
-              <span className="font-mono text-ink">{orderFormDoc}</span>
+              annex — <span className="font-mono text-ink">{orderFormDoc}</span>
             </li>
             <li>
               Keep SCIM / vendor Type II / pen-test residual honest
@@ -1113,8 +1113,7 @@ function EnterpriseTrustPackPanel({
       id: "dpa",
       label: "DPA (data processing agreement)",
       status: dataGovernance.dpaStatus,
-      tone:
-        dataGovernance.dpaStatus === "Available" ? "fixed" : "inconclusive",
+      tone: dataGovernance.dpaStatus === "Available" ? "fixed" : "inconclusive",
       detail:
         dataGovernance.dpaStatus === "Available"
           ? "Versioned DPA reference is configured for this deployment."
@@ -1126,8 +1125,7 @@ function EnterpriseTrustPackPanel({
       id: "baa",
       label: "BAA (business associate agreement)",
       status: dataGovernance.baaStatus,
-      tone:
-        dataGovernance.baaStatus === "Available" ? "fixed" : "inconclusive",
+      tone: dataGovernance.baaStatus === "Available" ? "fixed" : "inconclusive",
       detail:
         dataGovernance.baaStatus === "Available"
           ? "BAA reference is configured. Do not infer HIPAA eligibility from product alone."
@@ -1205,8 +1203,9 @@ function EnterpriseTrustPackPanel({
             Procurement fill checklist
           </h3>
           <p className="mt-1 text-[12px] text-muted">
-            Honest empty / NotConfigured until operators publish artifacts. Never
-            invent Type II, pen-test letters, or empty-list-as-zero processors.
+            Honest empty / NotConfigured until operators publish artifacts.
+            Never invent Type II, pen-test letters, or empty-list-as-zero
+            processors.
           </p>
           <ul className="mt-2 flex flex-col gap-2">
             {packChecklist.map((row) => (
@@ -1223,8 +1222,7 @@ function EnterpriseTrustPackPanel({
                 </div>
                 <p className="mt-1 text-[12px] text-muted">{row.detail}</p>
                 <p className="mt-1 text-[11px] text-subtle">
-                  Doc:{" "}
-                  <span className="font-mono text-ink">{row.doc}</span>
+                  Doc: <span className="font-mono text-ink">{row.doc}</span>
                   {row.href ? (
                     <>
                       {" · "}
@@ -1264,11 +1262,13 @@ function EnterpriseTrustPackPanel({
           <p className="font-medium text-ink">Artifact set</p>
           <ul className="mt-1 list-inside list-disc text-[11px] text-subtle">
             <li>
-              <span className="font-mono text-ink">docs/trust/README.md</span>{" "}
-              — CAIQ/SIG answer bank + claim refuse list
+              <span className="font-mono text-ink">docs/trust/README.md</span> —
+              CAIQ/SIG answer bank + claim refuse list
             </li>
             <li>
-              <span className="font-mono text-ink">docs/trust/LEGAL_PACK.md</span>{" "}
+              <span className="font-mono text-ink">
+                docs/trust/LEGAL_PACK.md
+              </span>{" "}
               — DPA / BAA / subprocessors honesty
             </li>
             <li>
@@ -1297,10 +1297,7 @@ function EnterpriseTrustPackPanel({
             </li>
             <li>
               In-product isolation proof:{" "}
-              <Link
-                href="/reports"
-                className="text-brand hover:text-brand-2"
-              >
+              <Link href="/reports" className="text-brand hover:text-brand-2">
                 Reports
               </Link>{" "}
               (tenant-scoped, not vendor SOC 2)
@@ -1328,8 +1325,8 @@ function GtmClaimLanguagePanel() {
       />
       <div className="flex flex-col gap-3 p-4">
         <p className="text-[13px] text-muted">
-          Code-exported prove / integrate / refuse language so sales decks cannot
-          drift from product truth. Source:{" "}
+          Code-exported prove / integrate / refuse language so sales decks
+          cannot drift from product truth. Source:{" "}
           <span className="font-mono text-ink">
             packages/shared/src/gtm-claim-language.ts
           </span>

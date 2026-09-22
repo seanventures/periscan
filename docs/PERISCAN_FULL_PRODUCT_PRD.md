@@ -1,5 +1,7 @@
 # Periscan Full Product PRD + Technical Specification
 
+> **BAS/AEV program:** [BAS_AEV_PROGRAM.md](BAS_AEV_PROGRAM.md) — qualified open-source simulation, emulation and evidence-backed validation (PERISCAN-583).
+
 > **Not shipped product claims. Not GitHub GTM.** This is an internal vision /
 > backlog document. Community edition and public copy follow
 > [`docs/SETTLED.md`](SETTLED.md), [`docs/competitive/POSITIONING.md`](competitive/POSITIONING.md),
@@ -45,7 +47,7 @@ They still struggle to answer:
 
 Periscan answers those questions by continuously validating exposure, controls, attack paths, AI applications, and remediation outcomes.
 
-The product is not a scanner dashboard. It is not a traditional pentest. It is not a generic BAS tool. It is an evidence-backed validation system.
+The product combines BAS, adversary emulation, exposure validation and fix verification in one evidence-backed system. The full BAS/AEV development scope and adapter release gates are defined in [BAS_AEV_PROGRAM.md](BAS_AEV_PROGRAM.md).
 
 Third-party validation tools must also move through evidence-backed proof. A newly proposed OSS/security tool is not usable until Periscan can certify reviewed catalog metadata, module/capability implementation, required evidence, tenant governance, runtime readiness, runner prerequisites, policy gates, and safety boundaries through API-visible reports.
 

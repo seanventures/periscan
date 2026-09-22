@@ -48,7 +48,9 @@ describe("open-source workstream docs", () => {
     expect(validationEngines).not.toContain(
       "currently performs only TCP reachability checks"
     );
-    expect(internalRunner).toContain("runner.http_health_check` implemented");
+    expect(internalRunner).toContain("runner.http_health_check");
+    expect(internalRunner).toContain("runner.port_connect_check");
+    expect(internalRunner).toContain("runner.ptr_lookup_check");
 
     for (const content of [
       index,
@@ -93,16 +95,16 @@ describe("open-source workstream docs", () => {
     expect(sharedDomain).not.toContain("scoped reverse tunnel");
   });
 
-  it("keeps the historical self-contained runner PRD from reviving reverse-tunnel transport", async () => {
+  it("supports qualified BAS adapters on the existing signed outbound transport", async () => {
     const selfContainedRunnerPrd = await readRepoFile(
       "docs/PRD_SELF_CONTAINED_RUNNER.md"
     );
 
     expect(selfContainedRunnerPrd).toContain(
-      "Historical / superseded safety proposal"
+      "BAS_AEV_PROGRAM.md"
     );
     expect(selfContainedRunnerPrd).toContain(
-      "Future restricted logical channel"
+      "customer runner polls outbound HTTPS for signed"
     );
     expect(selfContainedRunnerPrd).not.toContain("agent's reverse tunnel");
     expect(selfContainedRunnerPrd).not.toContain("Reverse tunnel:");

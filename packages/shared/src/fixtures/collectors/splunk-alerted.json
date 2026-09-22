@@ -1,0 +1,18 @@
+{
+  "preview": false,
+  "init_offset": 0,
+  "results": [
+    {
+      "_time": "2026-09-17T14:01:00.000Z",
+      "src_ip": "10.0.0.21",
+      "dst_ip": "10.0.0.8",
+      "host": "lab-siem-01",
+      "url_path": "/inject/periscan-r-aaaa-s-bbbb-nonce1",
+      "signature": "Periscan benign marker notable",
+      "rule_name": "sigma.proc_canary",
+      "event_type": "alert",
+      "severity": "medium",
+      "_raw": "notable=1 rule=sigma.proc_canary marker=periscan-r-aaaa-s-bbbb-nonce1 host=lab-siem-01"
+    }
+  ]
+}

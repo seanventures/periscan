@@ -447,11 +447,8 @@ describe("PRD section 18 Build Phases coverage", () => {
       identityHonesty,
       "/api/v1/scim/v2/ServiceProviderConfig"
     );
-    expectTextContains(
-      identityHonesty,
-      "Inbound SCIM 2.0 provisioning of Periscan users"
-    );
-    // PERISCAN-30: Partial plane + order-form residual (never SCIM Production).
+    expectTextContains(identityHonesty, "Inbound SCIM 2.0");
+    // PERISCAN-30: Partial plane + order-form residual (never SCIM certified).
     expectTextContains(identityHonesty, 'planeStatus: "Partial"');
     expectTextContains(identityHonesty, "docs/ENTERPRISE_IDENTITY_LIFECYCLE.md");
     expectTextContains(
@@ -460,9 +457,8 @@ describe("PRD section 18 Build Phases coverage", () => {
     );
     // customRolesSupported must be literally false in the honesty contract.
     expectTextContains(identityHonesty, "customRolesSupported: false");
-    // Must not claim a live SCIM server via successful Users resource handling.
-    expect(apiSource.includes("registerScimNotConfiguredRoute")).toBe(true);
-    expect(apiSource.includes('status: "501"')).toBe(true);
+    expect(apiSource.includes("registerScimRoutes")).toBe(true);
+    expect(apiSource.includes("issueScimToken")).toBe(true);
   });
 
   it("keeps Build Phases completion tied to source-derived ledgers", async () => {

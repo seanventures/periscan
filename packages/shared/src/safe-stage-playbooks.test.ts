@@ -4,6 +4,7 @@ import {
   SAFE_STAGE_PLAYBOOKS,
   buildSafeStageHandoffSummary,
   getSafeStagePlaybook,
+  listDangerSafeStages,
   listExecutableSafeStages,
   listForbiddenSafeStages
 } from "./safe-stage-playbooks";
@@ -11,9 +12,13 @@ import {
 describe("safe-stage playbooks (P05-17)", () => {
   it("maps every playbook to a measurement class and never assigns modules to Forbidden", () => {
     for (const playbook of SAFE_STAGE_PLAYBOOKS) {
-      expect(["Exposure", "Detection", "Config", "Forbidden"]).toContain(
-        playbook.measurementClass
-      );
+      expect([
+        "Exposure",
+        "Detection",
+        "Config",
+        "Danger",
+        "Forbidden"
+      ]).toContain(playbook.measurementClass);
       if (playbook.measurementClass === "Forbidden") {
         expect(playbook.defaultModuleId).toBeNull();
         expect(playbook.successCriteria).toContain("NotAttempted");
@@ -21,10 +26,13 @@ describe("safe-stage playbooks (P05-17)", () => {
     }
   });
 
-  it("keeps ransomware impact Forbidden with no module", () => {
+  it("places ransomware impact in High danger with a catalog module", () => {
     const ransomware = getSafeStagePlaybook("T1486");
-    expect(ransomware?.measurementClass).toBe("Forbidden");
-    expect(ransomware?.defaultModuleId).toBeNull();
+    expect(ransomware?.measurementClass).toBe("Danger");
+    expect(ransomware?.defaultModuleId).toBe("exploitation.impact_t1486");
+    expect(listDangerSafeStages().some((p) => p.techniqueId === "T1486")).toBe(
+      true
+    );
   });
 
   it("maps credential access to Exposure via secrets scan, not spray", () => {
@@ -53,7 +61,7 @@ describe("safe-stage playbooks (P05-17)", () => {
     expect(handoff.notAttempted.some((p) => p.techniqueId === "T1486")).toBe(
       true
     );
-    expect(handoff.summary).toMatch(/schedule human RT/i);
+    expect(handoff.summary).toMatch(/High-danger/i);
     expect(handoff.summary).toMatch(/lab\.example/);
   });
 });

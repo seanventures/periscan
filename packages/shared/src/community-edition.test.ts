@@ -7,6 +7,8 @@ import {
   COMMUNITY_GITLEAKS_REPO_SECRETS_MODULE_ID,
   COMMUNITY_PROWLER_AWS_CONNECT_REASON,
   COMMUNITY_REPOSITORY_AUTH_FILENAME,
+  communityRepositoryAuthDownloadFilename,
+  communityRepositoryAuthDownloadRequiresExtension,
   COMMUNITY_VALIDATION_SUITE,
   COMMUNITY_VALIDATION_TOOL_IDS,
   COPYLEFT_OPT_IN_SUITE,
@@ -18,8 +20,14 @@ import {
   classifyEngineLabHonesty,
   communityEditionExcludesOffensivePacks,
   communityFirstHourStartModuleIds,
+  COMMUNITY_FIRST_RUN_ASSESS_AWS_LABEL,
+  COMMUNITY_OPTIONAL_AWS_FIRST_HOUR_REASON,
+  COMMUNITY_PROWLER_AWS_POSTURE_MODULE_ID,
   communityPolicyCoversStartSet,
   communityPolicyPreviewRequest,
+  isExplicitProwlerFirstHourStart,
+  resolveOptionalAwsFirstHourCta,
+  shouldOfferOptionalAwsFirstHourCta,
   communityScopeAuthorizationHint,
   communityScopeVerificationKind,
   communitySuiteUsesRunnerOssAllowlist,
@@ -82,7 +90,10 @@ describe("Community edition validation suite", () => {
       expect.arrayContaining([
         "gitleaks.repo_secrets",
         "trivy.repo_dependency_scan",
-        "grype.repo_vulnerability_scan"
+        "grype.repo_vulnerability_scan",
+        "kingfisher.repo_secrets",
+        "kyverno.repo_policy",
+        "inspec.repo_profile"
       ])
     );
     expect(
@@ -95,7 +106,9 @@ describe("Community edition validation suite", () => {
         "periscan.dns_resolution_check",
         "periscan.tls_protocol_audit",
         "web.zap_baseline",
-        "nuclei.external_exposure_safe"
+        "nuclei.external_exposure_safe",
+        "assetfinder.passive_enum",
+        "gau.known_urls"
       ])
     );
   });
@@ -363,19 +376,69 @@ describe("Community edition validation suite", () => {
     );
   });
 
-  it("infers hosted git org/repo pastes as Repository, not Domain", () => {
-    expect(inferCommunityScopeType("https://github.com/acme/payments-api")).toBe(
-      "Repository"
+  it("suggests .periscan-authorization for download, or .periscan-authorization.txt when the OS requires an extension", () => {
+    expect(COMMUNITY_REPOSITORY_AUTH_FILENAME).toBe(".periscan-authorization");
+    expect(communityRepositoryAuthDownloadFilename()).toBe(
+      ".periscan-authorization"
     );
+    expect(
+      communityRepositoryAuthDownloadFilename({ requireExtension: false })
+    ).toBe(".periscan-authorization");
+    expect(
+      communityRepositoryAuthDownloadFilename({ requireExtension: true })
+    ).toBe(".periscan-authorization.txt");
+
+    for (const name of [
+      communityRepositoryAuthDownloadFilename(),
+      communityRepositoryAuthDownloadFilename({ requireExtension: true })
+    ]) {
+      expect(name.startsWith(".")).toBe(true);
+      expect(name).not.toBe("periscan-authorization.txt");
+    }
+
+    expect(
+      communityRepositoryAuthDownloadRequiresExtension({
+        platform: "MacIntel",
+        userAgent:
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
+      })
+    ).toBe(false);
+    expect(
+      communityRepositoryAuthDownloadRequiresExtension({
+        platform: "MacIntel",
+        userAgent:
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:132.0) Gecko/20100101 Firefox/132.0"
+      })
+    ).toBe(false);
+    expect(
+      communityRepositoryAuthDownloadRequiresExtension({
+        platform: "MacIntel",
+        userAgent:
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+      })
+    ).toBe(true);
+    expect(
+      communityRepositoryAuthDownloadRequiresExtension({
+        platform: "Win32",
+        userAgent:
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+      })
+    ).toBe(true);
+  });
+
+  it("infers hosted git org/repo pastes as Repository, not Domain", () => {
+    expect(
+      inferCommunityScopeType("https://github.com/acme/payments-api")
+    ).toBe("Repository");
     expect(inferCommunityScopeType("https://github.com/org/repo")).toBe(
       "Repository"
     );
     expect(inferCommunityScopeType("github.com/acme/payments-api")).toBe(
       "Repository"
     );
-    expect(inferCommunityScopeType("https://gitlab.com/acme/payments-api")).toBe(
-      "Repository"
-    );
+    expect(
+      inferCommunityScopeType("https://gitlab.com/acme/payments-api")
+    ).toBe("Repository");
     expect(
       inferCommunityScopeType("https://bitbucket.org/acme/payments-api")
     ).toBe("Repository");
@@ -396,16 +459,16 @@ describe("Community edition validation suite", () => {
   it("treats hosted GitHub org/repo URLs as unverifiable repository identifiers", () => {
     expect(looksLikeHostedGitHubUrl("https://github.com/org/repo")).toBe(true);
     expect(looksLikeHostedGitHubUrl("github.com/acme/payments-api")).toBe(true);
-    expect(looksLikeHostedGitHubUrl("https://gist.github.com/acme/snippet")).toBe(
-      true
-    );
+    expect(
+      looksLikeHostedGitHubUrl("https://gist.github.com/acme/snippet")
+    ).toBe(true);
     expect(looksLikeHostedGitHubUrl("/opt/customer/repo")).toBe(false);
     expect(looksLikeHostedGitHubUrl("https://app.example.com/login")).toBe(
       false
     );
-    expect(looksLikeHostedGitHubUrl("https://gitlab.com/acme/payments-api")).toBe(
-      false
-    );
+    expect(
+      looksLikeHostedGitHubUrl("https://gitlab.com/acme/payments-api")
+    ).toBe(false);
   });
 
   it("previews ControlPlane for worker-only start sets and InternalRunner when a runner lane will start", () => {
@@ -544,12 +607,18 @@ describe("Community edition validation suite", () => {
     expect(isCommunityValidationToolId("atomic-red-team")).toBe(false);
     expect(isCommunityValidationToolId("caldera")).toBe(false);
     expect(isCommunityValidationToolId("sharphound")).toBe(false);
+    expect(isCommunityValidationToolId("infection-monkey")).toBe(false);
     expect(isCommunityValidationToolId("sqlmap")).toBe(false);
     expect(isCommunityValidationToolId("metasploit")).toBe(false);
     expect(isCommunityValidationToolId("semgrep")).toBe(false);
     expect(isCommunityValidationToolId("checkov")).toBe(true);
     expect(isCommunityValidationToolId("cfn-lint")).toBe(true);
     expect(isCommunityValidationToolId("parliament")).toBe(true);
+    expect(isCommunityValidationToolId("kingfisher")).toBe(true);
+    expect(isCommunityValidationToolId("kyverno")).toBe(true);
+    expect(isCommunityValidationToolId("inspec")).toBe(true);
+    expect(isCommunityValidationToolId("assetfinder")).toBe(true);
+    expect(isCommunityValidationToolId("gau")).toBe(true);
     expect(isCommunityValidationToolId("gosec")).toBe(true);
     expect(isCommunityValidationToolId("yara")).toBe(true);
     expect(isCommunityValidationToolId("amass")).toBe(true);
@@ -568,7 +637,7 @@ describe("Community edition validation suite", () => {
     ).toBe(false);
   });
 
-  it("classifies Engine Lab rows as Community, legal-review, or catalog theater", () => {
+  it("classifies Engine Lab rows as Community, legal-review, or qualification-pending catalog", () => {
     expect(
       classifyEngineLabHonesty({
         toolId: "gitleaks",
@@ -666,6 +735,9 @@ describe("Community edition validation suite", () => {
         "kics.iac_posture",
         "cfn_lint.cloudformation",
         "parliament.iam_policy",
+        "kingfisher.repo_secrets",
+        "kyverno.repo_policy",
+        "inspec.repo_profile",
         "kube_linter.manifest_posture",
         "yara.repo_rules",
         "falco.rules_validate",
@@ -688,7 +760,9 @@ describe("Community edition validation suite", () => {
       expect.arrayContaining([
         "sslyze.tls_posture",
         "tlsx.tls_probe",
-        "amass.passive_enum"
+        "amass.passive_enum",
+        "assetfinder.passive_enum",
+        "gau.known_urls"
       ])
     );
     expect(
@@ -736,7 +810,8 @@ describe("Community first-hour pack (PERISCAN-567)", () => {
     "gitleaks.repo_secrets",
     "trivy.repo_dependency_scan",
     "dependency_check.sca",
-    "detect_secrets.repo_secrets"
+    "detect_secrets.repo_secrets",
+    "kingfisher.repo_secrets"
   ];
 
   it("is Gitleaks-class secrets only, not the 38-engine pack", () => {
@@ -755,6 +830,9 @@ describe("Community first-hour pack (PERISCAN-567)", () => {
     expect(communityFirstHourStartModuleIds(startableRepo)).not.toContain(
       "dependency_check.sca"
     );
+    expect(communityFirstHourStartModuleIds(startableRepo)).not.toContain(
+      "kingfisher.repo_secrets"
+    );
   });
 
   it("is empty when Gitleaks is not startable (Domain / CloudAccount)", () => {
@@ -767,9 +845,70 @@ describe("Community first-hour pack (PERISCAN-567)", () => {
   });
 });
 
+describe("optional first-hour AWS Prowler path", () => {
+  it("hides the AWS CTA on an empty tenant so first hour stays Gitleaks-only", () => {
+    expect(resolveOptionalAwsFirstHourCta({ cloudAwsAvailable: false })).toBeNull();
+    expect(resolveOptionalAwsFirstHourCta({})).toBeNull();
+    expect(
+      shouldOfferOptionalAwsFirstHourCta({ cloudAwsAvailable: false })
+    ).toBe(false);
+    expect(
+      shouldOfferOptionalAwsFirstHourCta({
+        cloudAwsAvailable: true,
+        startableModuleIds: ["prowler.aws_posture"]
+      })
+    ).toBe(false);
+  });
+
+  it("offers Assess connected AWS (Prowler) next to Gitleaks when AWS is Connected", () => {
+    const cta = resolveOptionalAwsFirstHourCta({
+      cloudAwsAvailable: true,
+      startableModuleIds: [
+        "gitleaks.repo_secrets",
+        "prowler.aws_posture"
+      ]
+    });
+    expect(cta).toMatchObject({
+      label: COMMUNITY_FIRST_RUN_ASSESS_AWS_LABEL,
+      moduleIds: [COMMUNITY_PROWLER_AWS_POSTURE_MODULE_ID]
+    });
+    expect(cta?.label).toBe("Assess connected AWS (Prowler)");
+    expect(cta?.label).not.toMatch(/full cloud BAS/i);
+    expect(COMMUNITY_OPTIONAL_AWS_FIRST_HOUR_REASON).not.toMatch(
+      /full cloud BAS/i
+    );
+    expect(`${cta?.label}${cta?.reason ?? ""}`).not.toMatch(/\b4\.0\b/);
+    expect(COMMUNITY_OPTIONAL_AWS_FIRST_HOUR_REASON).toMatch(
+      /Prowler\/ScoutSuite-class/i
+    );
+    expect(shouldOfferOptionalAwsFirstHourCta({ cloudAwsAvailable: true })).toBe(
+      true
+    );
+  });
+
+  it("does not put Prowler in the Gitleaks first-hour pack", () => {
+    expect([...COMMUNITY_FIRST_HOUR_MODULE_IDS]).toEqual([
+      "gitleaks.repo_secrets"
+    ]);
+    expect(
+      communityFirstHourStartModuleIds([
+        "gitleaks.repo_secrets",
+        "prowler.aws_posture"
+      ])
+    ).toEqual(["gitleaks.repo_secrets"]);
+    expect(isExplicitProwlerFirstHourStart(["prowler.aws_posture"])).toBe(true);
+    expect(isExplicitProwlerFirstHourStart(["gitleaks.repo_secrets"])).toBe(
+      false
+    );
+    expect(isExplicitProwlerFirstHourStart([])).toBe(false);
+  });
+});
+
 describe("Community edition valueLine (PERISCAN-570)", () => {
   it("does not name Nuclei, Prowler, kube CIS, or recon as what a repo Run does", () => {
     expect(COMMUNITY_EDITION_VALUE_LINE).toMatch(/Gitleaks/i);
+    expect(COMMUNITY_EDITION_VALUE_LINE).toMatch(/default start/i);
+    expect(COMMUNITY_EDITION_VALUE_LINE).not.toMatch(/first[- ]hour/i);
     expect(COMMUNITY_EDITION_VALUE_LINE).not.toMatch(/Nuclei/i);
     expect(COMMUNITY_EDITION_VALUE_LINE).not.toMatch(/Prowler/i);
     expect(COMMUNITY_EDITION_VALUE_LINE).not.toMatch(/kube CIS/i);

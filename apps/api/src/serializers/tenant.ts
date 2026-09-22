@@ -154,6 +154,9 @@ export function serializeTenantSsoConfig(record: {
   defaultMappedRole?: MembershipRole | null;
   emailDomainAllowlist: string[];
   enforced: boolean;
+  jitDefaultRole?: MembershipRole | null;
+  jitEmailDomains?: string[];
+  jitEnabled?: boolean;
   issuerUrl: string;
   jwksUri: string | null;
   providerType: TenantSsoConfig["providerType"];
@@ -178,6 +181,12 @@ export function serializeTenantSsoConfig(record: {
     defaultMappedRole: record.defaultMappedRole ?? null,
     emailDomainAllowlist: record.emailDomainAllowlist,
     enforced: record.enforced,
+    jitDefaultRole:
+      record.jitDefaultRole === "Owner"
+        ? "Viewer"
+        : (record.jitDefaultRole ?? "Viewer"),
+    jitEmailDomains: record.jitEmailDomains ?? [],
+    jitEnabled: Boolean(record.jitEnabled),
     issuerUrl: record.issuerUrl,
     jwksUri: record.jwksUri,
     providerType: record.providerType,

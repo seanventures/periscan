@@ -1,12 +1,14 @@
 # Operator TUI
 
+> **BAS/AEV program:** [BAS_AEV_PROGRAM.md](BAS_AEV_PROGRAM.md) — qualified open-source simulation, emulation and evidence-backed validation (PERISCAN-583).
+
 Drive the Community **proof loop** from a terminal: authorize a scope, take a
 policy decision, run the permissive OSS pack, read evidence-backed findings,
 open remediations, and only mark **Fixed** after a re-measurement.
 
 The TUI (`apps/tui`) is an Ink client of the Fastify API. It is **not** a
 second product. Same routes as the web app. Apache-2.0 source
-([`LICENSE`](../LICENSE)). Not full BAS, not automated pentest, not a GitHub
+([`LICENSE`](../LICENSE)). Qualified BAS/AEV coverage evolves independently of the first-hour pack; not a GitHub
 Actions requirement.
 
 Offering: [`COMMUNITY.md`](../COMMUNITY.md). Contract:
@@ -229,7 +231,7 @@ Do **not** put Nuclei in primary `moduleIds`. Second mission id is
 curl -fsS "${auth[@]}" "$API/api/v1/community/validation-runs?missionId=$MISSION_ID"
 ```
 
-Theater engines (Atomic, Caldera, SharpHound, sqlmap, Metasploit) never start
+Unqualified adapters (currently Atomic, Caldera, SharpHound, sqlmap, Metasploit) do not start
 from this screen. Copyleft engines stay Engine Lab + license accept.
 
 ### 6. Missions (`5`)
@@ -296,7 +298,7 @@ Then re-start the worker (`pnpm lab:dev` already includes it) and start a
 
 | Say | Do not say |
 | --- | --- |
-| AEV / CTEM proof layer on authorized scope | Full BAS / automated pentest |
+| BAS/AEV direction with measured scenario coverage | Unsupported parity or execution claims |
 | `jobsQueued` after policy allow | “HTTP 200 means it ran” |
 | Empty findings = no intersecting evidence | Clean bill of health from a deny |
 | Fixed after re-validation | Mark Fixed from the TUI without verify |

@@ -1,0 +1,22 @@
+{
+  "total": 99,
+  "items": [
+    {
+      "public": true,
+      "provider": "aws",
+      "service": "ec2",
+      "id": "i-fixture1",
+      "public_ipv4": "203.0.113.10",
+      "dns_name": "web.lab.example.com",
+      "token": "AKIAIOSFODNN7EXAMPLE"
+    },
+    {
+      "public": true,
+      "provider": "aws",
+      "service": "s3",
+      "id": "fixture-bucket",
+      "dns_name": "files.lab.example.com",
+      "secret": "-----BEGIN RSA PRIVATE KEY-----\nfixture\n-----END RSA PRIVATE KEY-----"
+    }
+  ]
+}

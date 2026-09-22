@@ -1,12 +1,14 @@
 # Periscan — Competitive Feature Strategy (the better-feature answer)
 
+> **BAS/AEV program:** [BAS_AEV_PROGRAM.md](BAS_AEV_PROGRAM.md) — qualified open-source simulation, emulation and evidence-backed validation (PERISCAN-583).
+
 Companion to [COMPETITIVE_COVERAGE_MATRIX.md](COMPETITIVE_COVERAGE_MATRIX.md)
 (the honest what-we-have audit). This doc is the **what-we-offer answer**: for
 every capability the sector leaders (Picus, Pentera, XM Cyber, Cymulate,
 RidgeBot, Tenable, Horizon3, SafeBreach) headline, Periscan's differentiated
 response — grounded in one wedge.
 
-**GTM category home (do not skip):** AEV/CTEM proof layer — not full BAS.
+**Product direction:** integrated BAS/AEV/CTEM validation and proof; full BAS development is authorized and shipped coverage must remain evidence-backed.
 Durable positioning, battlecards, and SE rules:
 [competitive/README.md](competitive/README.md),
 [competitive/POSITIONING.md](competitive/POSITIONING.md).

@@ -309,6 +309,19 @@ describe("ScopesScreen", () => {
     const frame = instance.lastFrame() ?? "";
     expect(frame).toContain("tok-repo-file");
     expect(frame).toContain(".periscan-authorization");
+    expect(frame).not.toContain("Verify via DNS TXT.");
+    instance.unmount();
+  });
+
+  it("headlines authorize-then-verify, not DNS TXT, on empty first-hour scopes", async () => {
+    const api = fakeApi();
+    const instance = render(<ScopesScreen api={api} onStatus={vi.fn()} />);
+
+    await frameContains(instance, "No authorized scopes yet");
+    const frame = instance.lastFrame() ?? "";
+    expect(frame).toMatch(/authorize/i);
+    expect(frame).toMatch(/\bn new\b/i);
+    expect(frame).not.toContain("Verify via DNS TXT.");
     instance.unmount();
   });
 
@@ -337,14 +350,23 @@ describe("ScopesScreen", () => {
     instance.unmount();
   });
 
-  it("production copy mentions DNS TXT and does not tell operators to skip DNS", async () => {
+  it("production copy mentions DNS TXT for Domain and does not tell operators to skip DNS", async () => {
     delete process.env.PERISCAN_LAB_MODE;
-    const api = fakeApi();
+    const pending = scope({
+      scopeId: "33333333-3333-4333-8333-333333333333",
+      scopeType: "Domain",
+      value: "app.example.com",
+      verificationToken: "tok-dns"
+    });
+    const api = fakeApi({
+      listScopes: vi.fn().mockResolvedValue([pending])
+    });
     const instance = render(<ScopesScreen api={api} onStatus={vi.fn()} />);
     await frameContains(instance, "DNS TXT");
     const frame = (instance.lastFrame() ?? "").toLowerCase();
     expect(frame).not.toContain("skip dns");
     expect(frame).not.toContain("devmodemanual");
+    expect(frame).not.toContain("verify via dns txt.");
     instance.unmount();
   });
 });

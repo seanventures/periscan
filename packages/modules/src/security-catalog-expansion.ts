@@ -96,8 +96,9 @@ const EXPANSION_TOOLS: ExpansionTool[] = [
     docsUrl: "https://github.com/mongodb/kingfisher",
     gitRepo: "https://github.com/mongodb/kingfisher.git",
     license: "Apache-2.0",
-    moduleIds: [],
-    notes: "MongoDB Kingfisher secrets scanner. Apache-2.0.",
+    moduleIds: ["kingfisher.repo_secrets"],
+    notes:
+      "MongoDB Kingfisher secrets scanner. Live Community engine; Apache-2.0. Local filesystem scan with --no-validate.",
     policyStatus: "Enabled",
     runtimePreference: ["binary", "git"],
     toolId: "kingfisher"
@@ -142,7 +143,8 @@ const EXPANSION_TOOLS: ExpansionTool[] = [
     gitRepo: "https://github.com/wagoodman/dive.git",
     license: "MIT",
     moduleIds: [],
-    notes: "Image layer explorer. Installable; MIT. Needs an image ref to scan.",
+    notes:
+      "Image layer explorer. Installable; MIT. Needs an image ref to scan.",
     policyStatus: "Enabled",
     runtimePreference: ["binary", "docker"],
     toolId: "dive"
@@ -157,7 +159,8 @@ const EXPANSION_TOOLS: ExpansionTool[] = [
     gitRepo: "https://github.com/quay/clair.git",
     license: "Apache-2.0",
     moduleIds: [],
-    notes: "Quay image CVE index. Apache-2.0. Service-style; install the CLI/image.",
+    notes:
+      "Quay image CVE index. Apache-2.0. Service-style; install the CLI/image.",
     policyStatus: "Enabled",
     runtimePreference: ["docker"],
     toolId: "clair"
@@ -172,7 +175,8 @@ const EXPANSION_TOOLS: ExpansionTool[] = [
     gitRepo: "https://github.com/projectdiscovery/cloudlist.git",
     license: "MIT",
     moduleIds: ["cloudlist.cloud_assets"],
-    notes: "ProjectDiscovery cloud asset enum. MIT. Runner when credentials exist.",
+    notes:
+      "ProjectDiscovery cloud asset enum. MIT. Runner when credentials exist.",
     policyStatus: "Enabled",
     runtimePreference: ["binary", "docker"],
     toolId: "cloudlist"
@@ -218,8 +222,8 @@ const EXPANSION_TOOLS: ExpansionTool[] = [
     docsUrl: "https://github.com/tomnomnom/assetfinder",
     gitRepo: "https://github.com/tomnomnom/assetfinder.git",
     license: "MIT",
-    moduleIds: [],
-    notes: "Passive related-domain finder. MIT.",
+    moduleIds: ["assetfinder.passive_enum"],
+    notes: "Passive related-domain finder. Live Community engine; MIT.",
     policyStatus: "Enabled",
     runtimePreference: ["binary", "git"],
     toolId: "assetfinder"
@@ -233,8 +237,9 @@ const EXPANSION_TOOLS: ExpansionTool[] = [
     docsUrl: "https://github.com/lc/gau",
     gitRepo: "https://github.com/lc/gau.git",
     license: "MIT",
-    moduleIds: [],
-    notes: "Known-URL harvest from public sources. MIT. Authorized domains only.",
+    moduleIds: ["gau.known_urls"],
+    notes:
+      "Known-URL harvest from public sources. Live Community engine; MIT. Authorized domains only.",
     policyStatus: "Enabled",
     runtimePreference: ["binary", "docker"],
     toolId: "gau"
@@ -264,7 +269,8 @@ const EXPANSION_TOOLS: ExpansionTool[] = [
     gitRepo: "https://github.com/zeek/zeek.git",
     license: "BSD-3-Clause",
     moduleIds: [],
-    notes: "Network telemetry. BSD-3-Clause. Install the sensor; not live exploit.",
+    notes:
+      "Network telemetry. BSD-3-Clause. Install the sensor; not live exploit.",
     policyStatus: "Enabled",
     runtimePreference: ["docker", "binary"],
     toolId: "zeek"
@@ -339,8 +345,8 @@ const EXPANSION_TOOLS: ExpansionTool[] = [
     docsUrl: "https://kyverno.io/",
     gitRepo: "https://github.com/kyverno/kyverno.git",
     license: "Apache-2.0",
-    moduleIds: [],
-    notes: "Kubernetes policy CLI. Apache-2.0.",
+    moduleIds: ["kyverno.repo_policy"],
+    notes: "Kubernetes policy CLI. Live Community engine; Apache-2.0.",
     policyStatus: "Enabled",
     runtimePreference: ["binary", "docker"],
     toolId: "kyverno"
@@ -385,7 +391,8 @@ const EXPANSION_TOOLS: ExpansionTool[] = [
     docsUrl: "https://github.com/rubysec/bundler-audit",
     gitRepo: "https://github.com/rubysec/bundler-audit.git",
     license: "GPL-3.0",
-    licenseUrl: "https://github.com/rubysec/bundler-audit/blob/master/LICENSE.txt",
+    licenseUrl:
+      "https://github.com/rubysec/bundler-audit/blob/master/LICENSE.txt",
     moduleIds: [],
     notes: "RubySec lockfile audit. GPL-3.0 — Engine Lab license accept.",
     policyStatus: "RequiresLegalReview",
@@ -476,8 +483,9 @@ const EXPANSION_TOOLS: ExpansionTool[] = [
     docsUrl: "https://docs.chef.io/inspec/",
     gitRepo: "https://github.com/inspec/inspec.git",
     license: "Apache-2.0",
-    moduleIds: [],
-    notes: "Compliance-as-code. Apache-2.0.",
+    moduleIds: ["inspec.repo_profile"],
+    notes:
+      "Compliance-as-code. Live Community engine; Apache-2.0. Executes an authorized InSpec profile in-repo.",
     policyStatus: "Enabled",
     runtimePreference: ["docker", "binary"],
     toolId: "inspec"
@@ -523,7 +531,8 @@ const EXPANSION_TOOLS: ExpansionTool[] = [
     gitRepo: "https://github.com/mitmproxy/mitmproxy.git",
     license: "MIT",
     moduleIds: [],
-    notes: "Intercepting proxy. MIT. Operator-installed; not a default Community engine.",
+    notes:
+      "Intercepting proxy. MIT. Operator-installed; not a default Community engine.",
     pipPackage: "mitmproxy",
     policyStatus: "Enabled",
     runtimePreference: ["pip", "docker"],
@@ -539,7 +548,8 @@ const EXPANSION_TOOLS: ExpansionTool[] = [
     gitRepo: "https://github.com/zmap/zmap.git",
     license: "Apache-2.0",
     moduleIds: [],
-    notes: "Internet-wide scanner. Apache-2.0. Catalog only — too aggressive for Community start.",
+    notes:
+      "Internet-wide scanner. Apache-2.0. Catalog only — too aggressive for Community start.",
     policyStatus: "Enabled",
     runtimePreference: ["binary", "git"],
     toolId: "zmap"
@@ -554,7 +564,8 @@ const EXPANSION_TOOLS: ExpansionTool[] = [
     gitRepo: "https://github.com/zmap/zgrab2.git",
     license: "Apache-2.0",
     moduleIds: [],
-    notes: "Application-layer banner grab. Apache-2.0. Catalog; not Community start.",
+    notes:
+      "Application-layer banner grab. Apache-2.0. Catalog; not Community start.",
     policyStatus: "Enabled",
     runtimePreference: ["binary", "git"],
     toolId: "zgrab"
@@ -815,7 +826,8 @@ const EXPANSION_TOOLS: ExpansionTool[] = [
     gitRepo: "https://github.com/aquasecurity/kube-hunter.git",
     license: "Apache-2.0",
     moduleIds: [],
-    notes: "K8s attack-surface hunter. Apache-2.0. Catalog; not Community start.",
+    notes:
+      "K8s attack-surface hunter. Apache-2.0. Catalog; not Community start.",
     policyStatus: "Enabled",
     runtimePreference: ["docker", "binary"],
     toolId: "kube-hunter"
@@ -829,9 +841,11 @@ const EXPANSION_TOOLS: ExpansionTool[] = [
     docsUrl: "https://github.com/trufflesecurity/trufflehog",
     gitRepo: "https://github.com/trufflesecurity/trufflehog.git",
     license: "AGPL-3.0",
-    licenseUrl: "https://github.com/trufflesecurity/trufflehog/blob/main/LICENSE",
+    licenseUrl:
+      "https://github.com/trufflesecurity/trufflehog/blob/main/LICENSE",
     moduleIds: ["trufflehog.repo_secrets"],
-    notes: "AGPL secrets scanner. Tenant accepts SPDX then we pull official pin.",
+    notes:
+      "AGPL secrets scanner. Tenant accepts SPDX then we pull official pin.",
     policyStatus: "RequiresLegalReview",
     runtimePreference: ["docker", "binary"],
     toolId: "trufflehog"
@@ -911,7 +925,8 @@ const EXPANSION_TOOLS: ExpansionTool[] = [
     license: "GPL-3.0",
     licenseUrl: "https://github.com/RustScan/RustScan/blob/master/LICENSE",
     moduleIds: ["rustscan.port_inventory"],
-    notes: "Fast port inventory. GPL-3.0 — license accept. Not Community default.",
+    notes:
+      "Fast port inventory. GPL-3.0 — license accept. Not Community default.",
     policyStatus: "RequiresLegalReview",
     runtimePreference: ["docker", "binary"],
     toolId: "rustscan"
@@ -974,9 +989,11 @@ const EXPANSION_TOOLS: ExpansionTool[] = [
     docsUrl: "https://www.openvas.org/",
     gitRepo: "https://github.com/greenbone/openvas-scanner.git",
     license: "GPL-2.0",
-    licenseUrl: "https://github.com/greenbone/openvas-scanner/blob/main/LICENSE",
+    licenseUrl:
+      "https://github.com/greenbone/openvas-scanner/blob/main/LICENSE",
     moduleIds: [],
-    notes: "Vulnerability scanner. GPL-2.0 — license accept. Not Community start.",
+    notes:
+      "Vulnerability scanner. GPL-2.0 — license accept. Not Community start.",
     policyStatus: "RequiresLegalReview",
     runtimePreference: ["docker", "git"],
     toolId: "openvas"
@@ -1150,7 +1167,8 @@ const EXPANSION_TOOLS: ExpansionTool[] = [
     docsUrl: "https://volatility3.readthedocs.io/",
     gitRepo: "https://github.com/volatilityfoundation/volatility3.git",
     license: "custom-volatility / GPL-compatible",
-    licenseUrl: "https://github.com/volatilityfoundation/volatility3/blob/develop/LICENSE.txt",
+    licenseUrl:
+      "https://github.com/volatilityfoundation/volatility3/blob/develop/LICENSE.txt",
     moduleIds: [],
     notes: "Memory forensics. License accept before install.",
     pipPackage: "volatility3",
@@ -1183,7 +1201,8 @@ const EXPANSION_TOOLS: ExpansionTool[] = [
     docsUrl: "https://github.com/laramies/theHarvester",
     gitRepo: "https://github.com/laramies/theHarvester.git",
     license: "GPL-2.0",
-    licenseUrl: "https://github.com/laramies/theHarvester/blob/master/README.md",
+    licenseUrl:
+      "https://github.com/laramies/theHarvester/blob/master/README.md",
     moduleIds: [],
     notes: "OSINT harvester. GPL-2.0 — license accept.",
     policyStatus: "RequiresLegalReview",
@@ -1209,8 +1228,8 @@ const EXPANSION_TOOLS: ExpansionTool[] = [
   }
 ];
 
-export const SECURITY_CATALOG_EXPANSION_TOOL_DEFINITIONS =
-  EXPANSION_TOOLS.map((tool) => ({
+export const SECURITY_CATALOG_EXPANSION_TOOL_DEFINITIONS = EXPANSION_TOOLS.map(
+  (tool) => ({
     binaryName: tool.binaryName,
     category: tool.category,
     defaultVersion: tool.defaultVersion,
@@ -1230,7 +1249,8 @@ export const SECURITY_CATALOG_EXPANSION_TOOL_DEFINITIONS =
     toolId: tool.toolId,
     upstreamLicenseUrl: tool.licenseUrl,
     userLicenseAcceptanceRequired: tool.policyStatus === "RequiresLegalReview"
-  })) satisfies OpenSourceToolDefinition[];
+  })
+) satisfies OpenSourceToolDefinition[];
 
 export const SECURITY_CATALOG_EXPANSION_CAPABILITIES: OpenSourceCapability[] =
   EXPANSION_TOOLS.map((tool) => ({
@@ -1245,8 +1265,7 @@ export const SECURITY_CATALOG_EXPANSION_CAPABILITIES: OpenSourceCapability[] =
     executionMode: "ControlPlane",
     featureTags: ["catalog", tool.category.toLowerCase()],
     inputSchemaRef: "CatalogTargetSchema",
-    interfaceKind:
-      tool.moduleIds.length > 0 ? "ValidationModule" : "Collector",
+    interfaceKind: tool.moduleIds.length > 0 ? "ValidationModule" : "Collector",
     missionTypes: ["ValidationSnapshot", "ExposureValidation"],
     moduleId: tool.moduleIds[0] ?? null,
     name: tool.displayName,

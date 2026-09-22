@@ -407,7 +407,8 @@ const TOOLS: CatalogTool[] = [
     gitRepo: "https://github.com/falcosecurity/falco.git",
     license: "Apache-2.0",
     moduleIds: ["falco.rules_validate"],
-    notes: "Validates Falco rules in-repo. Does not attach to a live kernel.",
+    notes:
+      "Validates Falco rules in-repo. Exported JSON alert observe is a qualified helper (falco.observe); does not attach to a live kernel.",
     npmPackage: null,
     pipPackage: null,
     runtimePreference: ["binary", "docker"],

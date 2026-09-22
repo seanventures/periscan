@@ -112,7 +112,13 @@ export function hopKeyForPathEdge(
 export function receiptMarksMeasured(receipt: Pick<
   PathEdgeReceipt,
   "evidenceIds" | "validationState"
->): boolean {
+> & { moduleId?: string }): boolean {
+  if (
+    receipt.moduleId === "bloodhound.identity_pathing" ||
+    receipt.moduleId === "sharphound"
+  ) {
+    return false;
+  }
   if (!receipt.evidenceIds || receipt.evidenceIds.length === 0) {
     return false;
   }

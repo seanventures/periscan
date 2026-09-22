@@ -965,9 +965,9 @@ describe("runner-safe OSS engine allowlist", () => {
         ["PassiveReadOnly", "ActiveNonInvasive"].includes(manifest.safetyLevel)
       ).toBe(true);
     }
-    expect(getModuleById("exploit.metasploit_check")?.manifest.liveSupported).not.toBe(
-      undefined
-    );
+    expect(
+      getModuleById("exploit.metasploit_check")?.manifest.liveSupported
+    ).not.toBe(undefined);
     expect(
       (RUNNER_OSS_ENGINE_MODULE_IDS as readonly string[]).includes(
         "exploit.metasploit_check"
@@ -1077,13 +1077,19 @@ describe("module registry", () => {
       "katana.web_crawl",
       "cloudlist.cloud_assets",
       "parliament.iam_policy",
+      "kingfisher.repo_secrets",
+      "kyverno.repo_policy",
+      "inspec.repo_profile",
+      "assetfinder.passive_enum",
+      "gau.known_urls",
       "semgrep.repo_sast",
       "trufflehog.repo_secrets",
       "hadolint.dockerfile",
       "sslscan.tls_probe",
       "lynis.host_audit",
       "rustscan.port_inventory",
-      "cve_bin_tool.binary_cves"
+      "cve_bin_tool.binary_cves",
+      "infection-monkey.discover"
     ]);
   });
 
@@ -1279,7 +1285,9 @@ describe("module registry", () => {
     expect(trufflehog, "trufflehog.repo_secrets").toBeTruthy();
     expect(trufflehog!.manifest.license).toBe("AGPL-3.0");
     expect(trufflehog!.manifest.licenseRisk).toBe("RequiresLegalReview");
-    expect(isCommunityValidationModuleId("trufflehog.repo_secrets")).toBe(false);
+    expect(isCommunityValidationModuleId("trufflehog.repo_secrets")).toBe(
+      false
+    );
 
     // Permissive first-party modules stay Allowed.
     expect(
@@ -2274,10 +2282,10 @@ describe("module registry", () => {
       /not live inject bas/i
     );
     expect(atomic!.manifest.customerVisibleDescription).toMatch(/dry-run/i);
-    // Never market Atomic as competitive closed-loop inject BAS.
-    expect(atomic!.manifest.customerVisibleDescription.toLowerCase()).not.toMatch(
-      /executes attack techniques against endpoints/
-    );
+    // Imported Atomic content cannot substantiate executed or detected outcomes.
+    expect(
+      atomic!.manifest.customerVisibleDescription.toLowerCase()
+    ).not.toMatch(/executes attack techniques against endpoints/);
   });
 
   it("labels detection marker probe as correlation-only, not closed inject-and-observe (P13-4)", () => {
@@ -2287,9 +2295,9 @@ describe("module registry", () => {
     expect(probe!.manifest.customerVisibleDescription.toLowerCase()).toContain(
       "does not emit"
     );
-    expect(probe!.manifest.customerVisibleDescription.toLowerCase()).not.toMatch(
-      /emits a benign/
-    );
+    expect(
+      probe!.manifest.customerVisibleDescription.toLowerCase()
+    ).not.toMatch(/emits a benign/);
   });
 
   it("registers signed Wave B emit→observe module as benign-marker class only", () => {
@@ -2441,7 +2449,7 @@ describe("module registry", () => {
       })
     ).toMatchObject({
       allowed: false,
-      code: "advanced_adversarial_live_permanently_disabled"
+      code: "caldera_live_disabled"
     });
   });
 
@@ -3184,11 +3192,13 @@ describe("offensive kit modules (netexec/scoutsuite/metasploit)", () => {
         }
       })
     );
-    expect(output.outcome).toBe("exploitable_confirmed");
+    expect(output.outcome).toBe("fixture_check_supported");
     expect(output.validationState).toBe("Inconclusive");
-    expect(output.signals[0]?.signalSubcategory).toBe("ConfirmedExploitable");
+    expect(output.signals).toHaveLength(0);
     expect(output.evidence[0]?.attributes.measured).toBe(false);
     expect(output.evidence[0]?.attributes.fixture).toBe(true);
+    expect(output.evidence[0]?.attributes.measuredExploitability).toBe(false);
+    expect(output.evidence[0]?.attributes.claimKind).toBe("check_supported");
   });
 
   it("blocks direct credential and Metasploit live execution in the module layer", async () => {
@@ -3239,40 +3249,70 @@ describe("offensive kit modules (netexec/scoutsuite/metasploit)", () => {
       authorizedOffensive: true,
       scopeVerified: true
     };
-    for (const moduleId of [
-      "identity.cred_spray",
-      "exploit.metasploit_check"
-    ]) {
-      const mod = getModuleById(moduleId);
-      expect(
-        evaluateModuleStartConstraints({
-          executionEnvironment: "InternalRunner",
-          moduleManifests: [mod!.manifest],
-          runnerId: randomUUID(),
-          target: {}
-        })
-      ).toMatchObject({ allowed: false });
-      expect(
-        evaluateModuleStartConstraints({
-          executionEnvironment: "InternalRunner",
-          moduleManifests: [mod!.manifest],
-          runnerId: randomUUID(),
-          target: { ...authorized }
-        })
-      ).toMatchObject({ allowed: true });
-      expect(
-        evaluateModuleStartConstraints({
-          executionEnvironment: "InternalRunner",
-          moduleManifests: [mod!.manifest],
-          runnerId: randomUUID(),
-          target: { ...authorized, dryRun: false }
-        })
-      ).toMatchObject({
-        allowed: false,
-        // P05-10: live permanently disabled (not unlocked by destructive tier).
-        code: `${moduleId.replaceAll(".", "_")}_live_permanently_disabled`
-      });
-    }
+    const metasploit = getModuleById("exploit.metasploit_check");
+    expect(
+      evaluateModuleStartConstraints({
+        executionEnvironment: "InternalRunner",
+        moduleManifests: [metasploit!.manifest],
+        runnerId: randomUUID(),
+        target: {}
+      })
+    ).toMatchObject({ allowed: false });
+    expect(
+      evaluateModuleStartConstraints({
+        executionEnvironment: "InternalRunner",
+        moduleManifests: [metasploit!.manifest],
+        runnerId: randomUUID(),
+        target: { ...authorized }
+      })
+    ).toMatchObject({ allowed: true });
+    expect(
+      evaluateModuleStartConstraints({
+        executionEnvironment: "InternalRunner",
+        moduleManifests: [metasploit!.manifest],
+        runnerId: randomUUID(),
+        target: { ...authorized, dryRun: false }
+      })
+    ).toMatchObject({
+      allowed: false,
+      code: "exploit_metasploit_check_live_permanently_disabled"
+    });
+
+    const spray = getModuleById("identity.cred_spray");
+    expect(
+      evaluateModuleStartConstraints({
+        executionEnvironment: "InternalRunner",
+        moduleManifests: [spray!.manifest],
+        runnerId: randomUUID(),
+        target: {}
+      })
+    ).toMatchObject({ allowed: false });
+    expect(
+      evaluateModuleStartConstraints({
+        executionEnvironment: "InternalRunner",
+        moduleManifests: [spray!.manifest],
+        runnerId: randomUUID(),
+        target: { ...authorized }
+      })
+    ).toMatchObject({
+      allowed: false,
+      code: "identity_cred_spray_owned_identities_required"
+    });
+    expect(
+      evaluateModuleStartConstraints({
+        executionEnvironment: "InternalRunner",
+        moduleManifests: [spray!.manifest],
+        runnerId: randomUUID(),
+        target: {
+          ...authorized,
+          dryRun: false,
+          targetHost: "login.microsoftonline.com"
+        }
+      })
+    ).toMatchObject({
+      allowed: false,
+      code: "identity_cred_spray_internet_forbidden"
+    });
   });
 });
 
@@ -3377,7 +3417,6 @@ describe("kerbrute kerberos userenum (governed AD)", () => {
     // not dual-gate theater (prior residual unlocked start while execute stayed dead).
     for (const moduleId of [
       "identity.kerberos_userenum",
-      "identity.cred_spray",
       "exploit.metasploit_check"
     ]) {
       const mod = getModuleById(moduleId);
@@ -3414,6 +3453,27 @@ describe("kerbrute kerberos userenum (governed AD)", () => {
         }
       })
     ).toMatchObject({ allowed: true });
+
+    const spray = getModuleById("identity.cred_spray");
+    expect(
+      evaluateModuleStartConstraints({
+        executionEnvironment: "InternalRunner",
+        moduleManifests: [spray!.manifest],
+        runnerId: randomUUID(),
+        target: {
+          approvalId: randomUUID(),
+          authorizedDestructive: true,
+          authorizedOffensive: true,
+          dryRun: false,
+          scopeVerified: true,
+          sowId: "test-sow",
+          targetHost: "8.8.8.8"
+        }
+      })
+    ).toMatchObject({
+      allowed: false,
+      code: "identity_cred_spray_internet_forbidden"
+    });
 
     // Destructive tier still does not bypass earlier gates without approval.
     expect(
@@ -3575,9 +3635,7 @@ describe("Wave B detection marker emit→observe loop", () => {
           expectedRule: "process_canary_rule",
           liveTelemetry: true,
           markerId,
-          observedEvents: [
-            `mock SIEM: detection rule fired for ${markerId}`
-          ],
+          observedEvents: [`mock SIEM: detection rule fired for ${markerId}`],
           performEmit: true,
           platform,
           techniqueId: "T1059"
@@ -4248,7 +4306,9 @@ describe("P05-1 fixture/sim never stamps Validated + measured:true", () => {
     // Control observation + discovery states pass through.
     expect(validationStateForFixtureOrSimulation("Detected")).toBe("Detected");
     expect(validationStateForFixtureOrSimulation("Blocked")).toBe("Blocked");
-    expect(validationStateForFixtureOrSimulation("Reachable")).toBe("Reachable");
+    expect(validationStateForFixtureOrSimulation("Reachable")).toBe(
+      "Reachable"
+    );
     expect(validationStateForFixtureOrSimulation("Inconclusive")).toBe(
       "Inconclusive"
     );
@@ -4315,7 +4375,8 @@ describe("P05-1 fixture/sim never stamps Validated + measured:true", () => {
     // Residual module bodies (if ever re-wired) must not ship banned marketing
     // in customer-visible descriptions of the executable registry.
     for (const manifest of listModuleManifests()) {
-      const blob = `${manifest.moduleId} ${manifest.name} ${manifest.customerVisibleDescription}`.toLowerCase();
+      const blob =
+        `${manifest.moduleId} ${manifest.name} ${manifest.customerVisibleDescription}`.toLowerCase();
       expect(blob).not.toMatch(/50k\+|50k\s*\+|hyperattack/);
     }
   });

@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import type { AttackPath, AttackPathAssessment, ValidatedFinding } from "@periscan/shared";
+import type {
+  AttackPath,
+  AttackPathAssessment,
+  ValidatedFinding
+} from "@periscan/shared";
 
 import {
   buildAttackPathClaimAriaLabel,
@@ -220,6 +224,46 @@ describe("projectFindingClaimDisplay", () => {
     expect(display.displayValidationState).toBe("Discovered");
     expect(display.remapped).toBe(true);
   });
+
+  it("does not treat Critical severity as hop evidence for Validated", () => {
+    const finding = baseFinding({
+      relatedPathIds: [pathId],
+      severity: "Critical",
+      sourceEntityType: "AttackPath",
+      validationState: "Validated",
+      pathProof: null
+    });
+    const display = projectFindingClaimDisplay(finding);
+    expect(display.displayValidationState).toBe("Discovered");
+    expect(display.remapped).toBe(true);
+    expect(display.claimDisplayLabel).toBe("Heuristic hypothesis");
+    expect(display.ariaLabel).not.toMatch(/validated high-impact/i);
+  });
+
+  it("keeps Discovered for path-linked Critical findings (no silent upgrade)", () => {
+    const finding = baseFinding({
+      relatedPathIds: [pathId],
+      severity: "Critical",
+      sourceEntityType: "AttackPath",
+      validationState: "Discovered",
+      pathProof: {
+        blastRadiusSummary: "assets",
+        chokePoints: [],
+        claimDisplayLabel: "Heuristic hypothesis",
+        entryPoint: "A",
+        fullyMeasured: false,
+        intermediateSteps: [],
+        measuredEdgeCount: 0,
+        objective: "B",
+        objectiveState: "Unknown",
+        totalEdgeCount: 2
+      }
+    });
+    const display = projectFindingClaimDisplay(finding);
+    expect(display.displayValidationState).toBe("Discovered");
+    expect(display.remapped).toBe(false);
+    expect(display.fullyMeasured).toBe(false);
+  });
 });
 
 describe("buildAttackPathClaimAriaLabel", () => {
@@ -263,6 +307,8 @@ describe("formatPathClaimSnippet / formatSnapshotPathClaimPreview", () => {
   });
 
   it("empty snapshot preview stays honest", () => {
-    expect(formatSnapshotPathClaimPreview([])).toMatch(/claim-safe empty state/i);
+    expect(formatSnapshotPathClaimPreview([])).toMatch(
+      /claim-safe empty state/i
+    );
   });
 });

@@ -53,10 +53,10 @@ describe("HelpScreen", () => {
     const frame = renderHelp();
 
     expect(frame).toMatch(/SETTLED/u);
-    expect(frame).toMatch(/live Atomic/iu);
-    expect(frame).toMatch(/Caldera/u);
-    expect(frame).toMatch(/SharpHound/u);
-    expect(frame).toMatch(/stay off/iu);
+    expect(frame).toMatch(/BAS adapters/u);
+    expect(frame).toMatch(/policy approval/u);
+    expect(frame).toMatch(/verified cleanup/u);
+    expect(frame).toMatch(/qualified scenarios/iu);
     expect(frame).toMatch(/authorized scope/iu);
     expect(frame).toMatch(/Fixed/u);
     expect(frame).toMatch(/verif/iu);
@@ -77,5 +77,31 @@ describe("HelpScreen", () => {
 
     expect(frame).toContain("PERISCAN_API_URL");
     expect(frame).toContain("http://127.0.0.1:3001");
+  });
+
+  it("documents g pin and keeps nav at 1–9 + ? + q", () => {
+    const frame = renderHelp();
+
+    expect(frame).toContain("gitleaks.repo_secrets");
+    expect(frame).toMatch(/\bg\b.*pin/iu);
+    expect(frame).toMatch(/run --scope/i);
+    expect(frame).toMatch(/1\s+home/iu);
+    expect(frame).toMatch(/9\s+health/iu);
+    expect(frame).toMatch(/q\s+quit/iu);
+    expect(frame).toMatch(/\?\s+this help/iu);
+    expect(frame).not.toMatch(/CTEM/u);
+    expect(frame).not.toMatch(/Mark Fixed/iu);
+  });
+
+  it("documents b BAS without replacing 1–9, ?, q, or g pin", () => {
+    const frame = renderHelp();
+
+    expect(frame).toMatch(/\bb\s+bas\b/iu);
+    expect(frame).toMatch(/1\s+home/iu);
+    expect(frame).toMatch(/9\s+health/iu);
+    expect(frame).toMatch(/q\s+quit/iu);
+    expect(frame).toMatch(/\?\s+this help/iu);
+    expect(frame).toContain("gitleaks.repo_secrets");
+    expect(frame).toMatch(/\bg\b.*pin/iu);
   });
 });

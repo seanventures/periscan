@@ -1,0 +1,31 @@
+{
+  "match_count": 99,
+  "matches": [
+    {
+      "rule": "FakeAwsKey",
+      "file": "config/demo.env",
+      "namespace": "default",
+      "tags": ["secret"],
+      "meta": {
+        "description": "lab fixture"
+      },
+      "strings": [
+        {
+          "name": "$a",
+          "data": "AKIAIOSFODNN7EXAMPLE"
+        }
+      ]
+    },
+    {
+      "rule": "FakePrivateKey",
+      "file": "config/id_rsa",
+      "namespace": "default",
+      "strings": [
+        {
+          "name": "$pem",
+          "data": "-----BEGIN RSA PRIVATE KEY-----\nfixture\n-----END RSA PRIVATE KEY-----"
+        }
+      ]
+    }
+  ]
+}

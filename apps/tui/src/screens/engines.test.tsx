@@ -143,14 +143,14 @@ describe("EnginesScreen", () => {
     instance.unmount();
   });
 
-  it("lists theater tools as catalog-only and never install", async () => {
+  it("lists unqualified adapters without offering installation or execution", async () => {
     const { frame } = await loadedFrame();
-    const theaterAt = frame.toLowerCase().indexOf("theater");
+    const theaterAt = frame.toLowerCase().indexOf("qualification pending");
     expect(theaterAt).toBeGreaterThanOrEqual(0);
     const theater = frame.slice(theaterAt);
 
-    expect(theater).toMatch(/catalog only/i);
-    expect(theater).toMatch(/never install/i);
+    expect(theater).toMatch(/not runnable/i);
+    expect(theater).toMatch(/adapter qualification required/i);
     expect(theater).toContain("sqlmap");
     expect(theater).toContain("SharpHound");
     expect(theater).toContain("Atomic Red Team");
@@ -159,5 +159,15 @@ describe("EnginesScreen", () => {
     expect(theater).not.toMatch(/Accept license & install/i);
     expect(theater).not.toMatch(/Install from upstream/i);
     expect(theater).not.toMatch(/startable/);
+  });
+
+  it("renders duplicate catalog moduleIds without collapsing the list", async () => {
+    const gitleaks = suiteEntry("gitleaks");
+    const { frame } = await loadedFrame(
+      suiteFixture({
+        modules: [gitleaks, { ...gitleaks }, suiteEntry("trivy")]
+      })
+    );
+    expect(frame.split("gitleaks").length - 1).toBeGreaterThanOrEqual(2);
   });
 });

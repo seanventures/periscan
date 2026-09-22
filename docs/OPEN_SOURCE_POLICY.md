@@ -1,5 +1,7 @@
 # Open Source Policy
 
+> **BAS/AEV program:** [BAS_AEV_PROGRAM.md](BAS_AEV_PROGRAM.md) — qualified open-source simulation, emulation and evidence-backed validation (PERISCAN-583).
+
 Periscan uses open-source software as internal validation engines, not as the customer-facing product identity.
 
 > Detailed specs: [OPEN_SOURCE_VALIDATION_ENGINES.md](OPEN_SOURCE_VALIDATION_ENGINES.md) (index),

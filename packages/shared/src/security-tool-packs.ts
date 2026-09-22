@@ -1,4 +1,4 @@
-import type { OpenSourceToolId } from "./open-source.js";
+import type { OpenSourceToolId } from "./open-source";
 
 export type SecurityCatalogPackId =
   | "secrets"

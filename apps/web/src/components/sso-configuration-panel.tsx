@@ -24,7 +24,14 @@ const defaultScopes = {
 } as const;
 
 function csv(value: string) {
-  return [...new Set(value.split(",").map((item) => item.trim()).filter(Boolean))];
+  return [
+    ...new Set(
+      value
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean)
+    )
+  ];
 }
 
 export function SsoConfigurationPanel() {
@@ -50,6 +57,9 @@ export function SsoConfigurationPanel() {
   const [roleClaimName, setRoleClaimName] = useState("groups");
   const [roleMappingsText, setRoleMappingsText] = useState("");
   const [defaultMappedRole, setDefaultMappedRole] = useState("");
+  const [jitEnabled, setJitEnabled] = useState(false);
+  const [jitEmailDomains, setJitEmailDomains] = useState("");
+  const [jitDefaultRole, setJitDefaultRole] = useState("Viewer");
   const [busy, setBusy] = useState<"disable" | "save" | "test" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
@@ -84,6 +94,9 @@ export function SsoConfigurationPanel() {
         .join("\n")
     );
     setDefaultMappedRole(config.defaultMappedRole ?? "");
+    setJitEnabled(Boolean(config.jitEnabled));
+    setJitEmailDomains((config.jitEmailDomains ?? []).join(", "));
+    setJitDefaultRole(config.jitDefaultRole ?? "Viewer");
   }, [sso.data, redirectUri]);
 
   function switchProvider(next: "OIDC" | "SAML") {
@@ -117,7 +130,11 @@ export function SsoConfigurationPanel() {
       const nameIdFormat = document
         .getElementsByTagNameNS("*", "NameIDFormat")[0]
         ?.textContent?.trim();
-      if (!entityId || !signOnService?.getAttribute("Location") || !certificate) {
+      if (
+        !entityId ||
+        !signOnService?.getAttribute("Location") ||
+        !certificate
+      ) {
         throw new Error(
           "Metadata must include an entity ID, SSO service URL, and signing certificate."
         );
@@ -130,7 +147,9 @@ export function SsoConfigurationPanel() {
       if (nameIdFormat) setSamlNameIdFormat(nameIdFormat);
       setStatus("IdP metadata imported. Review the values before saving.");
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Couldn't import metadata.");
+      setError(
+        caught instanceof Error ? caught.message : "Couldn't import metadata."
+      );
     }
   }
 
@@ -203,11 +222,23 @@ export function SsoConfigurationPanel() {
           | "MSSPOwner"
           | "ClientAdmin"
           | null,
-        emailDomainAllowlist: csv(domains).map((domain) => domain.toLowerCase()),
+        emailDomainAllowlist: csv(domains).map((domain) =>
+          domain.toLowerCase()
+        ),
         enabled,
         enforced,
         issuerUrl: issuerUrl.trim(),
         redirectUri: redirectUri.trim() || null,
+        jitDefaultRole: (jitDefaultRole.trim() || "Viewer") as
+          | "Admin"
+          | "SecurityEngineer"
+          | "Viewer"
+          | "MSSPOwner"
+          | "ClientAdmin",
+        jitEmailDomains: csv(jitEmailDomains).map((domain) =>
+          domain.toLowerCase()
+        ),
+        jitEnabled,
         roleClaimName: roleClaimName.trim() || null,
         roleMappings,
         scopes: csv(scopes)
@@ -248,9 +279,13 @@ export function SsoConfigurationPanel() {
       await api.disableSso();
       await sso.refetch();
       setEnabled(false);
-      setStatus("Single sign-on is disabled. Password sign-in remains available.");
+      setStatus(
+        "Single sign-on is disabled. Password sign-in remains available."
+      );
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Couldn't disable SSO.");
+      setError(
+        caught instanceof Error ? caught.message : "Couldn't disable SSO."
+      );
     } finally {
       setBusy(null);
     }
@@ -268,7 +303,9 @@ export function SsoConfigurationPanel() {
       });
       window.location.assign(result.authorizationUrl);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Couldn't start test login.");
+      setError(
+        caught instanceof Error ? caught.message : "Couldn't start test login."
+      );
       setBusy(null);
     }
   }
@@ -306,7 +343,8 @@ export function SsoConfigurationPanel() {
                   onClick={() => switchProvider(provider)}
                   className={cn(
                     buttonClassName({ size: "sm", variant: "secondary" }),
-                    providerType === provider && "border-brand/60 bg-brand/10 text-ink"
+                    providerType === provider &&
+                      "border-brand/60 bg-brand/10 text-ink"
                   )}
                 >
                   {provider}
@@ -315,51 +353,155 @@ export function SsoConfigurationPanel() {
             </div>
           </div>
 
-          <SsoField label={providerType === "OIDC" ? "Issuer URL" : "IdP entity ID URL"}>
-            <input required type="url" value={issuerUrl} onChange={(event) => setIssuerUrl(event.target.value)} className={inputClass} />
+          <SsoField
+            label={providerType === "OIDC" ? "Issuer URL" : "IdP entity ID URL"}
+          >
+            <input
+              required
+              type="url"
+              value={issuerUrl}
+              onChange={(event) => setIssuerUrl(event.target.value)}
+              className={inputClass}
+            />
           </SsoField>
-          <SsoField label={providerType === "OIDC" ? "Authorization endpoint" : "IdP SSO URL"}>
-            <input required type="url" value={authorizationEndpoint} onChange={(event) => setAuthorizationEndpoint(event.target.value)} className={inputClass} />
+          <SsoField
+            label={
+              providerType === "OIDC" ? "Authorization endpoint" : "IdP SSO URL"
+            }
+          >
+            <input
+              required
+              type="url"
+              value={authorizationEndpoint}
+              onChange={(event) => setAuthorizationEndpoint(event.target.value)}
+              className={inputClass}
+            />
           </SsoField>
-          <SsoField label={providerType === "OIDC" ? "Client ID" : "SP entity ID"}>
-            <input required value={clientId} onChange={(event) => setClientId(event.target.value)} className={inputClass} />
+          <SsoField
+            label={providerType === "OIDC" ? "Client ID" : "SP entity ID"}
+          >
+            <input
+              required
+              value={clientId}
+              onChange={(event) => setClientId(event.target.value)}
+              className={inputClass}
+            />
           </SsoField>
-          <SsoField label={providerType === "OIDC" ? "Callback URL" : "Assertion consumer service (ACS) URL"}>
-            <input required type="url" value={redirectUri} onChange={(event) => setRedirectUri(event.target.value)} className={inputClass} />
+          <SsoField
+            label={
+              providerType === "OIDC"
+                ? "Callback URL"
+                : "Assertion consumer service (ACS) URL"
+            }
+          >
+            <input
+              required
+              type="url"
+              value={redirectUri}
+              onChange={(event) => setRedirectUri(event.target.value)}
+              className={inputClass}
+            />
           </SsoField>
 
           {providerType === "OIDC" ? (
             <>
-              <SsoField label={config?.clientSecretSet ? "Client secret (leave blank to keep)" : "Client secret"}>
-                <input required={!config?.clientSecretSet} type="password" value={clientSecret} onChange={(event) => setClientSecret(event.target.value)} autoComplete="new-password" className={inputClass} />
+              <SsoField
+                label={
+                  config?.clientSecretSet
+                    ? "Client secret (leave blank to keep)"
+                    : "Client secret"
+                }
+              >
+                <input
+                  required={!config?.clientSecretSet}
+                  type="password"
+                  value={clientSecret}
+                  onChange={(event) => setClientSecret(event.target.value)}
+                  autoComplete="new-password"
+                  className={inputClass}
+                />
               </SsoField>
               <SsoField label="Token endpoint">
-                <input type="url" value={tokenEndpoint} onChange={(event) => setTokenEndpoint(event.target.value)} className={inputClass} />
+                <input
+                  type="url"
+                  value={tokenEndpoint}
+                  onChange={(event) => setTokenEndpoint(event.target.value)}
+                  className={inputClass}
+                />
               </SsoField>
               <SsoField label="JWKS URL">
-                <input type="url" value={jwksUri} onChange={(event) => setJwksUri(event.target.value)} className={inputClass} />
+                <input
+                  type="url"
+                  value={jwksUri}
+                  onChange={(event) => setJwksUri(event.target.value)}
+                  className={inputClass}
+                />
               </SsoField>
               <SsoField label="Scopes (comma-separated)">
-                <input required value={scopes} onChange={(event) => setScopes(event.target.value)} className={inputClass} />
+                <input
+                  required
+                  value={scopes}
+                  onChange={(event) => setScopes(event.target.value)}
+                  className={inputClass}
+                />
               </SsoField>
             </>
           ) : (
             <>
               <SsoField label="IdP metadata XML (optional import)" wide>
-                <textarea value={samlMetadata} onChange={(event) => setSamlMetadata(event.target.value)} rows={4} placeholder="Paste EntityDescriptor XML from your identity provider" className={inputClass + " font-mono text-xs"} />
-                <button type="button" onClick={importSamlMetadata} disabled={!samlMetadata.trim()} className={buttonClassName({ size: "sm", variant: "secondary" }) + " self-start"}>Import metadata</button>
+                <textarea
+                  value={samlMetadata}
+                  onChange={(event) => setSamlMetadata(event.target.value)}
+                  rows={4}
+                  placeholder="Paste EntityDescriptor XML from your identity provider"
+                  className={inputClass + " font-mono text-xs"}
+                />
+                <button
+                  type="button"
+                  onClick={importSamlMetadata}
+                  disabled={!samlMetadata.trim()}
+                  className={
+                    buttonClassName({ size: "sm", variant: "secondary" }) +
+                    " self-start"
+                  }
+                >
+                  Import metadata
+                </button>
               </SsoField>
-              <SsoField label={config?.samlIdpCertificateSet ? "IdP certificate (leave blank to keep)" : "IdP X.509 certificate"} wide>
-                <textarea required={!config?.samlIdpCertificateSet} value={samlCertificate} onChange={(event) => setSamlCertificate(event.target.value)} rows={5} className={inputClass + " font-mono text-xs"} />
+              <SsoField
+                label={
+                  config?.samlIdpCertificateSet
+                    ? "IdP certificate (leave blank to keep)"
+                    : "IdP X.509 certificate"
+                }
+                wide
+              >
+                <textarea
+                  required={!config?.samlIdpCertificateSet}
+                  value={samlCertificate}
+                  onChange={(event) => setSamlCertificate(event.target.value)}
+                  rows={5}
+                  className={inputClass + " font-mono text-xs"}
+                />
               </SsoField>
               <SsoField label="NameID format" wide>
-                <input required value={samlNameIdFormat} onChange={(event) => setSamlNameIdFormat(event.target.value)} className={inputClass} />
+                <input
+                  required
+                  value={samlNameIdFormat}
+                  onChange={(event) => setSamlNameIdFormat(event.target.value)}
+                  className={inputClass}
+                />
               </SsoField>
             </>
           )}
 
           <SsoField label="Allowed email domains (comma-separated)">
-            <input value={domains} onChange={(event) => setDomains(event.target.value)} placeholder="example.com" className={inputClass} />
+            <input
+              value={domains}
+              onChange={(event) => setDomains(event.target.value)}
+              placeholder="example.com"
+              className={inputClass}
+            />
           </SsoField>
           <SsoField label="Role claim / attribute name">
             <input
@@ -379,9 +521,9 @@ export function SsoConfigurationPanel() {
               className={inputClass + " font-mono text-xs"}
             />
             <span className="text-[11px] text-subtle">
-              One claimValue=Role per line. Leave empty to keep invite-time roles.
-              When set, unmatched users are denied unless a default role is
-              configured. Multiple matching groups pick the highest-privilege
+              One claimValue=Role per line. Leave empty to keep invite-time
+              roles. When set, unmatched users are denied unless a default role
+              is configured. Multiple matching groups pick the highest-privilege
               role.
             </span>
           </SsoField>
@@ -402,23 +544,78 @@ export function SsoConfigurationPanel() {
           </SsoField>
           <div className="flex flex-col gap-2 rounded-control border border-line bg-surface p-3 text-sm text-muted">
             <label className="flex items-center gap-2">
-              <input type="checkbox" checked={enabled} onChange={(event) => setEnabled(event.target.checked)} />
+              <input
+                type="checkbox"
+                checked={enabled}
+                onChange={(event) => setEnabled(event.target.checked)}
+              />
               Enable this configuration
             </label>
             <label className="flex items-start gap-2">
-              <input className="mt-0.5" type="checkbox" checked={enforced} onChange={(event) => setEnforced(event.target.checked)} />
-              <span>Require SSO for tenant sessions after testing succeeds.</span>
+              <input
+                className="mt-0.5"
+                type="checkbox"
+                checked={enforced}
+                onChange={(event) => setEnforced(event.target.checked)}
+              />
+              <span>
+                Require SSO for tenant sessions after testing succeeds.
+              </span>
+            </label>
+            <label className="flex items-start gap-2">
+              <input
+                className="mt-0.5"
+                type="checkbox"
+                checked={jitEnabled}
+                onChange={(event) => setJitEnabled(event.target.checked)}
+              />
+              <span>
+                Create Active Viewer memberships on first verified SSO (JIT).
+              </span>
             </label>
           </div>
+          <SsoField label="JIT email domains (required when JIT is on)">
+            <input
+              value={jitEmailDomains}
+              onChange={(event) => setJitEmailDomains(event.target.value)}
+              placeholder="example.com"
+              aria-label="JIT email domains"
+              className={inputClass}
+            />
+          </SsoField>
+          <SsoField label="JIT default role">
+            <select
+              value={jitDefaultRole}
+              onChange={(event) => setJitDefaultRole(event.target.value)}
+              aria-label="JIT default role"
+              className={inputClass}
+            >
+              <option value="Viewer">Viewer</option>
+              <option value="SecurityEngineer">SecurityEngineer</option>
+              <option value="Admin">Admin</option>
+              <option value="ClientAdmin">ClientAdmin</option>
+              <option value="MSSPOwner">MSSPOwner</option>
+            </select>
+          </SsoField>
 
           {enforced ? (
             <p className="sm:col-span-2 rounded-control border border-approval/30 bg-approval/5 p-3 text-xs text-muted">
-              Enforcement signs out password-authenticated tenant sessions. Save without enforcement first, then use Test login before turning this on.
+              Enforcement signs out password-authenticated tenant sessions. Save
+              without enforcement first, then use Test login before turning this
+              on.
             </p>
           ) : null}
-          {error ? <p role="alert" className="sm:col-span-2 text-sm text-missed">{error}</p> : null}
+          {error ? (
+            <p role="alert" className="sm:col-span-2 text-sm text-missed">
+              {error}
+            </p>
+          ) : null}
           <div className="sm:col-span-2">
-            <button type="submit" disabled={busy !== null} className={buttonClassName({ variant: "primary" })}>
+            <button
+              type="submit"
+              disabled={busy !== null}
+              className={buttonClassName({ variant: "primary" })}
+            >
               {busy === "save" ? "Saving…" : "Save SSO setup"}
             </button>
           </div>
@@ -426,15 +623,51 @@ export function SsoConfigurationPanel() {
       ) : config ? (
         <div className="p-4">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="font-mono text-[11px] text-subtle">{config.providerType}</span>
-            <StateBadge tone={config.status === "Enabled" ? "fixed" : "inconclusive"} dot={false}>{config.status}</StateBadge>
-            {config.enforced ? <StateBadge tone="approval" dot={false}>Enforced</StateBadge> : null}
+            <span className="font-mono text-[11px] text-subtle">
+              {config.providerType}
+            </span>
+            <StateBadge
+              tone={config.status === "Enabled" ? "fixed" : "inconclusive"}
+              dot={false}
+            >
+              {config.status}
+            </StateBadge>
+            {config.enforced ? (
+              <StateBadge tone="approval" dot={false}>
+                Enforced
+              </StateBadge>
+            ) : null}
           </div>
           <dl className="mt-3 grid gap-3 text-xs sm:grid-cols-2">
-            <div><dt className="text-subtle">Identity provider</dt><dd className="mt-0.5 break-all text-ink">{config.issuerUrl}</dd></div>
-            <div><dt className="text-subtle">Client / entity ID</dt><dd className="mt-0.5 break-all text-ink">{config.clientId}</dd></div>
-            <div><dt className="text-subtle">Callback</dt><dd className="mt-0.5 break-all text-ink">{config.redirectUri ?? "Not set"}</dd></div>
-            <div><dt className="text-subtle">Allowed domains</dt><dd className="mt-0.5 text-ink">{config.emailDomainAllowlist.join(", ") || "Provisioned users only"}</dd></div>
+            <div>
+              <dt className="text-subtle">Identity provider</dt>
+              <dd className="mt-0.5 break-all text-ink">{config.issuerUrl}</dd>
+            </div>
+            <div>
+              <dt className="text-subtle">Client / entity ID</dt>
+              <dd className="mt-0.5 break-all text-ink">{config.clientId}</dd>
+            </div>
+            <div>
+              <dt className="text-subtle">Callback</dt>
+              <dd className="mt-0.5 break-all text-ink">
+                {config.redirectUri ?? "Not set"}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-subtle">Allowed domains</dt>
+              <dd className="mt-0.5 text-ink">
+                {config.emailDomainAllowlist.join(", ") ||
+                  "Provisioned users only"}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-subtle">JIT on first SSO</dt>
+              <dd className="mt-0.5 text-ink">
+                {config.jitEnabled
+                  ? `Enabled · ${(config.jitEmailDomains ?? []).join(", ") || "no domains"} · ${config.jitDefaultRole ?? "Viewer"}`
+                  : "Off (unknown emails stay unprovisioned)"}
+              </dd>
+            </div>
             <div>
               <dt className="text-subtle">Role claim mapping</dt>
               <dd className="mt-0.5 text-ink">
@@ -449,33 +682,85 @@ export function SsoConfigurationPanel() {
             </div>
           </dl>
           <div className="mt-4 flex flex-wrap gap-2">
-            <button type="button" onClick={testLogin} disabled={busy !== null || config.status !== "Enabled"} className={buttonClassName({ size: "sm", variant: "primary" })}>
+            <button
+              type="button"
+              onClick={testLogin}
+              disabled={busy !== null || config.status !== "Enabled"}
+              className={buttonClassName({ size: "sm", variant: "primary" })}
+            >
               {busy === "test" ? "Redirecting…" : "Test login"}
             </button>
             {config.providerType === "SAML" ? (
-              <a href="/api/v1/tenants/current/sso/metadata" target="_blank" rel="noreferrer" className={buttonClassName({ size: "sm", variant: "secondary" })}>SP metadata</a>
+              <a
+                href="/api/v1/tenants/current/sso/metadata"
+                target="_blank"
+                rel="noreferrer"
+                className={buttonClassName({
+                  size: "sm",
+                  variant: "secondary"
+                })}
+              >
+                SP metadata
+              </a>
             ) : null}
-            <button type="button" onClick={disable} disabled={busy !== null || config.status === "Disabled"} className={cn(buttonClassName({ size: "sm", variant: "secondary" }), "text-missed")}>
+            <button
+              type="button"
+              onClick={disable}
+              disabled={busy !== null || config.status === "Disabled"}
+              className={cn(
+                buttonClassName({ size: "sm", variant: "secondary" }),
+                "text-missed"
+              )}
+            >
               {busy === "disable" ? "Disabling…" : "Disable"}
             </button>
           </div>
-          {status ? <p role="status" className="mt-3 text-sm text-fixed">{status}</p> : null}
-          {error ? <p role="alert" className="mt-3 text-sm text-missed">{error}</p> : null}
+          {status ? (
+            <p role="status" className="mt-3 text-sm text-fixed">
+              {status}
+            </p>
+          ) : null}
+          {error ? (
+            <p role="alert" className="mt-3 text-sm text-missed">
+              {error}
+            </p>
+          ) : null}
         </div>
       ) : (
         <div className="p-4">
-          <p className="text-sm text-muted">Connect your workforce identity provider with OIDC or SAML. Start unenforced, test the login, then require SSO.</p>
-          {status ? <p role="status" className="mt-3 text-sm text-fixed">{status}</p> : null}
-          {error ? <p role="alert" className="mt-3 text-sm text-missed">{error}</p> : null}
+          <p className="text-sm text-muted">
+            Connect your workforce identity provider with OIDC or SAML. Start
+            unenforced, test the login, then require SSO.
+          </p>
+          {status ? (
+            <p role="status" className="mt-3 text-sm text-fixed">
+              {status}
+            </p>
+          ) : null}
+          {error ? (
+            <p role="alert" className="mt-3 text-sm text-missed">
+              {error}
+            </p>
+          ) : null}
         </div>
       )}
     </Panel>
   );
 }
 
-function SsoField({ label, wide = false, children }: { label: string; wide?: boolean; children: React.ReactNode }) {
+function SsoField({
+  label,
+  wide = false,
+  children
+}: {
+  label: string;
+  wide?: boolean;
+  children: React.ReactNode;
+}) {
   return (
-    <label className={cn("flex min-w-0 flex-col gap-1.5", wide && "sm:col-span-2")}>
+    <label
+      className={cn("flex min-w-0 flex-col gap-1.5", wide && "sm:col-span-2")}
+    >
       <span className="text-xs font-medium text-muted">{label}</span>
       {children}
     </label>

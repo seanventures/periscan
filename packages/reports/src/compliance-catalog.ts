@@ -6,7 +6,10 @@
 // asserted: a control is only "Met" when a measured evidence kind it depends on
 // is actually present. Catalog depth is representative (partial), not program-complete.
 
-import type { ValidationSnapshot } from "@periscan/shared";
+import type {
+  SnapshotComplianceCoverage,
+  ValidationSnapshot
+} from "@periscan/shared";
 
 // The measured evidence primitives Periscan can produce, expressed as capability
 // kinds a control can depend on.
@@ -95,6 +98,17 @@ export const COMPLIANCE_PACK_TYPES = [
   "NISTCSFAttestation"
 ] as const;
 
+/** Evidence-pack labels that share a catalog framework (not extra frameworks). */
+export const COMPLIANCE_PACK_FRAMEWORK_ALIASES: Readonly<
+  Record<string, (typeof COMPLIANCE_PACK_TYPES)[number]>
+> = {
+  SOC2Support: "SOC2Attestation"
+};
+
+function resolveComplianceFramework(framework: string): string {
+  return COMPLIANCE_PACK_FRAMEWORK_ALIASES[framework] ?? framework;
+}
+
 /**
  * Canonical customer-facing disclaimer for every compliance evidence-support
  * pack (Wave G2). Required language: not certification / not audit opinion.
@@ -169,8 +183,9 @@ export const COMPLIANCE_CATALOG_VERSIONS: Record<
     sourceVersion: "45 CFR Parts 160 and 164"
   },
   SOC2Attestation: {
-    catalogVersion: "periscan-2026.07",
-    lastReviewedAt: "2026-07-14T00:00:00.000Z",
+    // Representative TSC CC5/CC6/CC8 expansion (still partial; not Type II).
+    catalogVersion: "periscan-2026.09.soc2-tsc",
+    lastReviewedAt: "2026-09-17T00:00:00.000Z",
     sourceVersion: "AICPA Trust Services Criteria 2017 (2022 points of focus)"
   },
   NISTCSFAttestation: {
@@ -586,6 +601,49 @@ export const COMPLIANCE_CATALOG: Record<string, ComplianceFramework> = {
         controlId: "SOC 2 CC7.4 — Incident response",
         evidencedBy: ["attack-path-analysis", "fix-verification"],
         title: "Respond to identified security incidents and restore control"
+      },
+      // Representative TSC expansions — customer evidence support only; never Type II.
+      {
+        controlId: "SOC 2 CC5.2 — Technology control activities",
+        evidencedBy: [
+          "measured-exposure-validation",
+          "control-detection-validation",
+          "continuous-validation"
+        ],
+        title:
+          "Select and develop general control activities over technology with measured proof"
+      },
+      {
+        controlId: "SOC 2 CC5.3 — Control activity deployment",
+        evidencedBy: ["continuous-validation", "fix-verification"],
+        title:
+          "Deploy control activities through policies and procedures; revalidate after change"
+      },
+      {
+        controlId: "SOC 2 CC6.1 — Logical access",
+        evidencedBy: ["measured-exposure-validation", "attack-path-analysis"],
+        title:
+          "Implement logical access security over protected information assets"
+      },
+      {
+        controlId: "SOC 2 CC6.6 — External boundary logical access",
+        evidencedBy: [
+          "measured-exposure-validation",
+          "control-detection-validation",
+          "attack-path-analysis"
+        ],
+        title:
+          "Protect against threats from sources outside system boundaries"
+      },
+      {
+        controlId: "SOC 2 CC8.1 — Change management",
+        evidencedBy: [
+          "measured-exposure-validation",
+          "fix-verification",
+          "evidence-integrity"
+        ],
+        title:
+          "Authorize, test, and implement changes with integrity-backed revalidation"
       }
     ]
   },
@@ -620,7 +678,7 @@ export function computeComplianceCoverage(
   framework: string,
   presentEvidence: ReadonlySet<ComplianceEvidenceKind> | ComplianceEvidenceKind[]
 ): ComplianceCoverageResult | null {
-  const spec = COMPLIANCE_CATALOG[framework];
+  const spec = COMPLIANCE_CATALOG[resolveComplianceFramework(framework)];
   if (!spec) {
     return null;
   }
@@ -767,5 +825,87 @@ export function computeSnapshotComplianceTrace(
       };
     }),
     evidence
+  };
+}
+
+/**
+ * API/UI DTO for snapshot compliance coverage. Status is derived only from
+ * measured evidence kinds — never Met without evidence, never certification.
+ */
+export function buildSnapshotComplianceCoverage(input: {
+  framework?: string;
+  options?: SnapshotComplianceOptions;
+  snapshot: ValidationSnapshot | null;
+}): SnapshotComplianceCoverage {
+  const framework = input.framework ?? "SOC2Attestation";
+  const spec = COMPLIANCE_CATALOG[framework];
+  const version =
+    COMPLIANCE_CATALOG_VERSIONS[
+      framework as (typeof COMPLIANCE_PACK_TYPES)[number]
+    ];
+  const catalogVersion = version?.catalogVersion ?? "unknown";
+  const displayName = spec?.displayName ?? framework;
+
+  if (!input.snapshot) {
+    return {
+      catalogVersion,
+      configured: false,
+      controls: [],
+      coverageRatio: 0,
+      disclaimer: COMPLIANCE_PACK_DISCLAIMER,
+      displayName,
+      framework: framework as SnapshotComplianceCoverage["framework"],
+      metCount: 0,
+      notCertification: true,
+      partialCount: 0,
+      snapshotId: null,
+      unmetCount: 0
+    };
+  }
+
+  const trace = computeSnapshotComplianceTrace(
+    input.snapshot,
+    framework,
+    input.options
+  );
+  if (!trace) {
+    return {
+      catalogVersion,
+      configured: false,
+      controls: [],
+      coverageRatio: 0,
+      disclaimer: COMPLIANCE_PACK_DISCLAIMER,
+      displayName,
+      framework: framework as SnapshotComplianceCoverage["framework"],
+      metCount: 0,
+      notCertification: true,
+      partialCount: 0,
+      snapshotId: input.snapshot.snapshotId,
+      unmetCount: 0
+    };
+  }
+
+  return {
+    catalogVersion,
+    configured: true,
+    controls: trace.controls.map((control) => ({
+      controlId: control.controlId,
+      evidencedBy: control.evidencedBy,
+      evidenceIds: control.evidenceIds,
+      lastValidatedAt: control.lastValidatedAt,
+      missing: control.missing,
+      satisfiedBy: control.satisfiedBy,
+      status: control.status,
+      title: control.title
+    })),
+    coverageRatio: trace.coverageRatio,
+    disclaimer: COMPLIANCE_PACK_DISCLAIMER,
+    displayName: trace.displayName,
+    framework: trace.framework as SnapshotComplianceCoverage["framework"],
+    metCount: trace.metCount,
+    notCertification: true,
+    partialCount: trace.partialCount,
+    snapshotId: input.snapshot.snapshotId,
+    unmetCount: trace.unmetCount
   };
 }

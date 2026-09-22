@@ -603,6 +603,40 @@ describe("ExecutiveOverview leadership surfaces (P03/P10)", () => {
     ).toBeGreaterThan(0);
     expect(screen.getByTestId("build-board-pack")).toBeDisabled();
   });
+
+  it("shows live tenant baseline provenance on the CTEM board", async () => {
+    render(<ExecutiveOverview />);
+
+    expect(
+      await screen.findByTestId("executive-overview")
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("executive-overview")).toHaveTextContent(
+      /Source: live tenant baseline/
+    );
+    expect(screen.getByTestId("executive-overview")).not.toHaveTextContent(
+      /Source: latest validation snapshot/
+    );
+  });
+
+  it("shows snapshot provenance on the CTEM board", async () => {
+    vi.mocked(api.getCTEMProgram).mockResolvedValue({
+      ...ctemFixture,
+      snapshotId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      source: "Snapshot"
+    } as never);
+
+    render(<ExecutiveOverview />);
+
+    expect(
+      await screen.findByTestId("executive-overview")
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("executive-overview")).toHaveTextContent(
+      /Source: latest validation snapshot/
+    );
+    expect(screen.getByTestId("executive-overview")).not.toHaveTextContent(
+      /Source: live tenant baseline/
+    );
+  });
 });
 
 describe("print stylesheet smoke (board projection)", () => {

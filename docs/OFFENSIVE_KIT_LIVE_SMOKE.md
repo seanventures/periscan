@@ -30,11 +30,13 @@ Before any task is submitted:
 - The target scope must be verified in Periscan.
 - The runner must be enrolled with customer-issued credentials and outbound
   HTTPS egress to the control plane.
-- The runner local module allowlist must stay limited to passive/non-invasive
-  modules unless a separate approved PRD/legal/security gate changes the policy.
+- Extend the runner local module allowlist with tested, qualified adapters under
+  `docs/BAS_AEV_PROGRAM.md`. Each execution still requires its own scope-bound
+  policy decision and reviewed content pin.
 - The kill switch and runner revocation path must be known before testing.
-- CI must never run live offensive tools. CI may only run fixture, parser,
-  policy, image-smoke, and deployment-artifact checks.
+- Routine CI runs fixture, parser, policy, image-smoke and deployment checks.
+  Dedicated qualification jobs may run reviewed BAS scenarios in disposable
+  isolated labs with explicit scope, resource limits and verified cleanup.
 
 If a disabled capability is requested, the correct result is a denied or planned
 state with an audit event and no queued live job.

@@ -1,0 +1,33 @@
+{
+  "total": 99,
+  "results": [
+    {
+      "timestamp": "2026-01-01T00:00:00Z",
+      "host": "lab.example.com",
+      "ip": "203.0.113.10",
+      "port": "443",
+      "probe_status": true,
+      "tls_version": "tls13",
+      "cipher": "TLS_AES_256_GCM_SHA384",
+      "certificate": "-----BEGIN RSA PRIVATE KEY-----\nfixture\n-----END RSA PRIVATE KEY-----",
+      "serial": "AKIAIOSFODNN7EXAMPLE",
+      "fingerprint_hash": {
+        "sha256": "hashed_secret"
+      }
+    },
+    {
+      "host": "api.lab.example.com",
+      "ip": "203.0.113.11",
+      "port": "443",
+      "probe_status": true,
+      "tls_version": "tls12"
+    },
+    {
+      "host": "down.lab.example.com",
+      "ip": "203.0.113.99",
+      "port": "443",
+      "probe_status": false,
+      "error": "connection refused"
+    }
+  ]
+}

@@ -4,11 +4,15 @@ import { useEffect, useState } from "react";
 
 import type {
   AttackTechnique,
+  AttackTechniqueCoverageLabel,
   ControlRuleCoverageSummary,
   DetectionRuleCoverageItem
 } from "@periscan/shared";
 import {
+  ATTACK_TECHNIQUE_COVERAGE_DISCLAIMER,
   SAFE_STAGE_PLAYBOOKS,
+  getAttackTechniqueCoverage,
+  listAttackTechniqueCoverage,
   listExecutableSafeStages,
   listForbiddenSafeStages
 } from "@periscan/shared";
@@ -33,6 +37,40 @@ interface TacticGroup {
   tacticId: string;
   tacticName: string;
   techniques: AttackTechnique[];
+}
+
+function coverageTone(
+  label: AttackTechniqueCoverageLabel
+): "validated" | "approval" | "neutral" {
+  if (label === "Safe module") {
+    return "validated";
+  }
+  if (label === "Live disabled") {
+    return "approval";
+  }
+  return "neutral";
+}
+
+function countMeasuredSubsetTechniques(
+  techniques: AttackTechnique[],
+  coverage: ControlRuleCoverageSummary | null
+): number {
+  if (!coverage) {
+    return 0;
+  }
+
+  const subsetIds = new Set(
+    techniques.map((technique) => technique.techniqueId)
+  );
+  const measured = new Set<string>();
+
+  for (const item of coverage.items) {
+    if (subsetIds.has(item.techniqueId)) {
+      measured.add(item.techniqueId);
+    }
+  }
+
+  return measured.size;
 }
 
 function groupByTactic(techniques: AttackTechnique[]): TacticGroup[] {
@@ -177,6 +215,14 @@ export function AttackTechniquesCatalog({
     current.push(item);
     coverageByTechnique.set(item.techniqueId, current);
   }
+  const techniqueModuleMap = listAttackTechniqueCoverage();
+  const measuredSubsetCount = countMeasuredSubsetTechniques(
+    techniques,
+    coverage
+  );
+  const subsetCoverageLabel = coverage
+    ? `${measuredSubsetCount} of ${techniques.length}`
+    : "—";
 
   return (
     <div className="flex flex-col gap-4">
@@ -215,13 +261,13 @@ export function AttackTechniquesCatalog({
           </strong>
         </div>
         <div className="flex flex-col gap-1 rounded-card border border-line bg-surface p-4">
-          <span className="text-sm text-muted">Tenant techniques measured</span>
+          <span className="text-sm text-muted">Safe-subset coverage</span>
           <strong
             className="text-2xl font-semibold text-ink"
             role="status"
-            aria-label={`Tenant techniques measured count: ${coverageByTechnique.size}`}
+            aria-label={`Safe-subset coverage: ${subsetCoverageLabel}`}
           >
-            {coverage ? coverageByTechnique.size : "—"}
+            {subsetCoverageLabel}
           </strong>
         </div>
       </div>
@@ -293,7 +339,9 @@ export function AttackTechniquesCatalog({
                     </StateBadge>
                   </td>
                   <td className="max-w-xs px-2 py-2 align-top text-ink">
-                    <span className="font-medium">{playbook.playbookTitle}</span>
+                    <span className="font-medium">
+                      {playbook.playbookTitle}
+                    </span>
                     <span className="mt-0.5 block text-muted">
                       {playbook.playbookSummary}
                     </span>
@@ -316,11 +364,100 @@ export function AttackTechniquesCatalog({
         </div>
       </section>
 
+      <section
+        aria-label="ATT&CK to safe-module coverage"
+        className="rounded-card border border-line bg-surface p-4"
+      >
+        <div className="flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <p className="font-display text-[11px] font-semibold uppercase tracking-[0.12em] text-brand">
+              Safe-module map
+            </p>
+            <h2 className="mt-1 text-base font-semibold text-ink">
+              ATT&amp;CK technique → safe module or live disabled
+            </h2>
+            <p className="mt-1 max-w-3xl text-[13px] text-muted">
+              {ATTACK_TECHNIQUE_COVERAGE_DISCLAIMER}
+            </p>
+          </div>
+          <span className="font-mono text-[11px] text-subtle">
+            {techniqueModuleMap.length} mapped · scenario execution requires qualification
+          </span>
+        </div>
+        <div className="mt-3 overflow-x-auto">
+          <table
+            aria-label="ATT&CK to safe-module map"
+            className="w-full min-w-[40rem] border-collapse text-left text-[12.5px]"
+          >
+            <thead>
+              <tr className="border-b border-line font-mono text-[10px] uppercase tracking-[0.08em] text-subtle">
+                <th className="px-2 py-2 font-medium">Technique</th>
+                <th className="px-2 py-2 font-medium">Coverage</th>
+                <th className="px-2 py-2 font-medium">Safe module</th>
+              </tr>
+            </thead>
+            <tbody>
+              {techniqueModuleMap.map((row) => (
+                <tr
+                  key={row.techniqueId}
+                  className="border-b border-line/70 last:border-b-0"
+                >
+                  <td className="px-2 py-2 align-top">
+                    <span className="font-mono text-ink">
+                      {row.techniqueId}
+                    </span>
+                    <span className="mt-0.5 block text-muted">
+                      {row.techniqueName}
+                    </span>
+                  </td>
+                  <td className="px-2 py-2 align-top">
+                    <StateBadge
+                      tone={coverageTone(row.coverageLabel)}
+                      dot={false}
+                    >
+                      {row.coverageLabel}
+                    </StateBadge>
+                  </td>
+                  <td className="px-2 py-2 align-top font-mono text-[11px] text-muted">
+                    {row.safeModuleId ?? row.executionNote ?? "—"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
       <p className="rounded-control border border-line bg-surface px-3 py-2 text-sm text-muted">
         This is the curated ATT&amp;CK subset Periscan can currently map to safe
-        validation examples, not the complete MITRE catalog. Tenant coverage
-        below comes separately from persisted control observations.
+        validation examples, not the complete MITRE catalog, not 100%
+        ATT&amp;CK, and scenario execution requires qualification. Tenant coverage below is overlaid
+        from persisted control-validation observations against this subset only.
       </p>
+
+      {coverage ? (
+        <p className="text-sm text-muted">
+          {measuredSubsetCount} of {techniques.length} curated safe-subset
+          techniques have measured control-validation coverage.
+        </p>
+      ) : null}
+
+      {coverage && coverage.items.length === 0 ? (
+        <StatusPanel
+          actions={
+            <a
+              className="text-sm text-brand hover:text-brand-2"
+              href="/controls"
+            >
+              Open controls
+            </a>
+          }
+          body="Coverage is measured against this curated safe-example subset. An empty overlay is not proof that controls are absent."
+          eyebrow="Tenant coverage"
+          kind="empty"
+          title="No tenant control-validation coverage yet."
+        />
+      ) : null}
 
       {coverageError ? (
         <DegradedBanner
@@ -356,7 +493,9 @@ export function AttackTechniquesCatalog({
       {groups.length === 0 ? (
         <Card>
           <p className="text-sm text-muted">
-            No curated ATT&amp;CK reference entry matches this filter.
+            {techniques.length === 0
+              ? "No curated ATT&CK reference techniques were returned."
+              : "No curated ATT&CK reference entry matches this filter."}
           </p>
         </Card>
       ) : (
@@ -381,6 +520,9 @@ export function AttackTechniquesCatalog({
                 const coverageStatuses = [
                   ...new Set(coverageItems.map((item) => item.status))
                 ];
+                const moduleCoverage = getAttackTechniqueCoverage(
+                  technique.techniqueId
+                );
 
                 return (
                   <li
@@ -391,9 +533,23 @@ export function AttackTechniquesCatalog({
                       <strong className="text-ink">
                         {technique.techniqueId} {technique.techniqueName}
                       </strong>
-                      {technique.safeExample ? (
-                        <Badge tone="success">Safe example</Badge>
-                      ) : null}
+                      <div className="flex flex-wrap items-center gap-2">
+                        {moduleCoverage ? (
+                          <span
+                            aria-label={`${technique.techniqueId} module coverage`}
+                          >
+                            <StateBadge
+                              tone={coverageTone(moduleCoverage.coverageLabel)}
+                              dot={false}
+                            >
+                              {moduleCoverage.coverageLabel}
+                            </StateBadge>
+                          </span>
+                        ) : null}
+                        {technique.safeExample ? (
+                          <Badge tone="success">Safe example</Badge>
+                        ) : null}
+                      </div>
                     </div>
                     <p className="text-sm text-muted">
                       {technique.description}

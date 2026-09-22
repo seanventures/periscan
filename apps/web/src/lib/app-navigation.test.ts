@@ -4,6 +4,10 @@ import { join, relative, sep } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { APP_NAV_ITEMS, APP_NAV_SECTIONS } from "./app-navigation";
+import {
+  LABS_DESTINATION_HREFS,
+  LABS_PORTAL_DEEP_LINKS
+} from "./labs-portal";
 import { PRIMARY_NAV, PRIMARY_NAV_ITEMS } from "./primary-nav";
 
 const appRoot = join(process.cwd(), "app");
@@ -47,6 +51,8 @@ const offRailStaticRoutes = new Set<string>([
   "/threat-feed",
   // UX-W2 alias → /threat-center (single Threats door)
   "/threats",
+  // P3-REMALIAS: plural list URL redirects to /remediation (primary rail)
+  "/remediations",
   "/validation-ops",
   // Object explorer catalog (P11 light) — /shift is Setup catalog (JOBS-SIMPLE)
   "/objects",
@@ -59,7 +65,15 @@ const offRailStaticRoutes = new Set<string>([
   "/model-gateway",
   "/ai-apps",
   "/non-human-identities",
-  "/threat-center"
+  "/threat-center",
+  // SETTLED PERISCAN-583: Atomic catalog is a Controls deep-link. Live
+  // start stays policy-denied; do not promote onto PRIMARY_NAV.
+  "/bas/scenarios"
+]);
+
+const labsOffRailRoutes = new Set([
+  ...LABS_DESTINATION_HREFS,
+  ...LABS_PORTAL_DEEP_LINKS.map((item) => item.href)
 ]);
 
 function collectPageFiles(directory: string): string[] {
@@ -128,7 +142,10 @@ describe("app navigation route contract", () => {
     );
     const navRoutes = new Set(APP_NAV_ITEMS.map((item) => item.href));
     const uncovered = staticPageRoutes.filter(
-      (route) => !navRoutes.has(route) && !offRailStaticRoutes.has(route)
+      (route) =>
+        !navRoutes.has(route) &&
+        !offRailStaticRoutes.has(route) &&
+        !labsOffRailRoutes.has(route)
     );
 
     expect(uncovered).toEqual([]);
@@ -141,4 +158,17 @@ describe("app navigation route contract", () => {
 
     expect(dynamicPageRoutes).toEqual([...dynamicRoutesCoveredByE2e].sort());
   });
+
+  it("registers /remediations as a list alias without a plural detail route (P3-REMALIAS)", () => {
+    const routes = collectAppPageRoutes();
+    expect(routes).toContain("/remediations");
+    expect(routes).toContain("/remediation");
+    expect(routes).toContain("/remediation/[id]");
+    expect(routes).not.toContain("/remediations/[id]");
+    expect(APP_NAV_ITEMS.map((item) => item.href)).toContain("/remediation");
+    expect(APP_NAV_ITEMS.map((item) => item.href)).not.toContain(
+      "/remediations"
+    );
+  });
 });
+

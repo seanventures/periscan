@@ -5,6 +5,7 @@ import {
   isCliArgv,
   parseCli,
   printUsage,
+  runCli,
   runHealthCommand,
   runScopeCommand
 } from "./cli.js";
@@ -135,6 +136,12 @@ describe("printUsage", () => {
     expect(text).toContain("--json");
     expect(text).toContain("PERISCAN_CSRF_TOKEN");
     expect(text).toContain("x-csrf-token");
+    expect(text).toContain("gitleaks.repo_secrets");
+    expect(text).toMatch(/pin/i);
+    expect(text).toMatch(/interactive g/i);
+    expect(text).toContain("psk_");
+    expect(text).toMatch(/\bb BAS\b/u);
+    expect(text).toContain("e evidence");
   });
 });
 
@@ -367,6 +374,81 @@ describe("runScopeCommand", () => {
 
     expect(code).toBe(0);
     expect(JSON.parse(stdout.join(""))).toMatchObject({ jobsQueued: 1 });
+    const start = calls.find((call) =>
+      call.url.endsWith("/api/v1/community/validation-runs")
+    );
+    expect(JSON.parse(String(start?.init?.body))).toEqual({
+      moduleIds: ["gitleaks.repo_secrets"],
+      policyDecisionId: POLICY_ID,
+      scopeId: SCOPE_ID
+    });
+  });
+
+  it("runCli run --scope pins gitleaks.repo_secrets like interactive g", async () => {
+    const calls: Array<{ url: string; init?: RequestInit }> = [];
+    const stdout: string[] = [];
+    const started = {
+      jobsQueued: 1,
+      mission: {
+        missionId: "55555555-5555-4555-8555-555555555555",
+        status: "Queued"
+      },
+      moduleIds: ["gitleaks.repo_secrets"]
+    };
+
+    const code = await runCli(
+      parseCli(["run", "--scope", SCOPE_ID, "--json"], {}),
+      {
+        env: {
+          PERISCAN_API_TOKEN: SESSION,
+          PERISCAN_CSRF_TOKEN: CSRF
+        },
+        fetchImpl: async (input, init) => {
+          const url = String(input);
+          calls.push({ init, url });
+          if (url.endsWith(`/api/v1/scopes/${SCOPE_ID}`)) {
+            return jsonResponse({
+              scopeId: SCOPE_ID,
+              scopeType: "Repository",
+              value: "/opt/customer/repo",
+              verificationStatus: "Verified"
+            });
+          }
+          if (url.includes("/api/v1/community/validation-suite")) {
+            return jsonResponse({
+              cloudAwsAvailable: false,
+              runnerAvailable: false,
+              startableModuleIds: [
+                "gitleaks.repo_secrets",
+                "trivy.repo_dependency_scan",
+                "dependency_check.sca"
+              ]
+            });
+          }
+          if (url.includes("/policy-decisions/preview")) {
+            return jsonResponse({
+              approvalState: "NotRequired",
+              outcome: "Allowed",
+              policyDecisionId: POLICY_ID,
+              rationale: "Verified scope",
+              scopeId: SCOPE_ID
+            });
+          }
+          if (url.endsWith("/api/v1/community/validation-runs")) {
+            return jsonResponse(started);
+          }
+          return jsonResponse({ error: "not found" }, 404);
+        },
+        stdout: {
+          write(chunk: string) {
+            stdout.push(chunk);
+            return true;
+          }
+        }
+      }
+    );
+
+    expect(code).toBe(0);
     const start = calls.find((call) =>
       call.url.endsWith("/api/v1/community/validation-runs")
     );

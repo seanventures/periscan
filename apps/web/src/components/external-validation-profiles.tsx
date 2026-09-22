@@ -16,12 +16,19 @@ import type {
 } from "@periscan/shared";
 
 import {
+  EXTERNAL_ASSESSMENT_PRIMARY_CTA,
+  canStartExternalAssessment,
+  honestApiEmpty
+} from "../lib/continuous-external-operator";
+import {
   browserPeriscanApiClient as api,
   PeriscanApiClientError
 } from "../lib/periscan-api-client";
 import {
   Button,
+  EmptyState,
   ErrorState,
+  PageHeader,
   Panel,
   PanelHeader,
   PartialLoadBanner,
@@ -51,7 +58,12 @@ const ACTIVE_MISSION_STATUSES = new Set([
 const FIELD_CLASS =
   "h-10 w-full rounded-control border border-line bg-surface px-3 text-sm text-ink outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20 disabled:cursor-not-allowed disabled:opacity-60";
 
-type LoadStatus = "loading" | "authenticated" | "unauthenticated" | "error";
+type LoadStatus =
+  | "loading"
+  | "authenticated"
+  | "unauthenticated"
+  | "error"
+  | "empty";
 
 interface WorkspaceData {
   attackPaths: AttackPathAssessment[];
@@ -196,13 +208,6 @@ export function ExternalValidationProfiles() {
   );
   const currentState = externalValidationState(activeMission, activeRuns);
   const targetAuthorized = targetMatchesScope(selectedScope, targetHostname);
-  const canLaunch =
-    Boolean(policyDecision) &&
-    policyDecision?.outcome === "Allowed" &&
-    (policyDecision.approvalState === "NotRequired" ||
-      policyDecision.approvalState === "Approved") &&
-    Boolean(externalModule) &&
-    targetAuthorized;
 
   useEffect(() => {
     let active = true;
@@ -211,6 +216,13 @@ export function ExternalValidationProfiles() {
       if (!active) return;
       if (error instanceof PeriscanApiClientError && error.status === 401) {
         setLoadStatus("unauthenticated");
+        return;
+      }
+      if (
+        error instanceof PeriscanApiClientError &&
+        honestApiEmpty(error.status)
+      ) {
+        setLoadStatus("empty");
         return;
       }
       setErrorMessage(
@@ -596,8 +608,39 @@ export function ExternalValidationProfiles() {
     );
   }
 
+  if (loadStatus === "empty") {
+    return (
+      <div className="flex flex-col gap-4" data-testid="external-assessment-empty">
+        <PageHeader
+          eyebrow="Proof OS"
+          title="External assessment"
+          description="Start from a verified Domain. Results come from the API."
+        />
+        <EmptyState
+          title="External assessment not available"
+          description="External assessment is not available from the API."
+        />
+      </div>
+    );
+  }
+
+  const canStart =
+    canStartExternalAssessment(selectedScope ?? null) &&
+    targetAuthorized &&
+    Boolean(externalModule);
+
   return (
     <div className="flex flex-col gap-5">
+      <PageHeader
+        eyebrow="Proof OS"
+        title="External assessment"
+        description="Start from a verified Domain. Safe GET-only observations; results come from the API."
+      />
+      {canStartExternalAssessment(selectedScope ?? null) ? null : (
+        <p className="text-sm text-muted" data-testid="external-assessment-gate">
+          Start requires a verified Domain.
+        </p>
+      )}
       {degradedRails.length > 0 ? (
         <PartialLoadBanner
           rails={degradedRails}
@@ -885,11 +928,12 @@ export function ExternalValidationProfiles() {
                   </Link>
                 ) : null}
                 <Button
-                  disabled={!canLaunch}
+                  data-testid="external-assessment-primary"
+                  disabled={!canStart}
                   loading={launching}
                   onClick={launchValidation}
                 >
-                  Launch safe validation
+                  {EXTERNAL_ASSESSMENT_PRIMARY_CTA}
                 </Button>
               </div>
             </div>
@@ -1023,7 +1067,7 @@ export function ExternalValidationProfiles() {
           />
 
           <div className="grid items-start gap-5 xl:grid-cols-[1.15fr_0.85fr]">
-            <Panel>
+            <Panel data-testid="external-assessment-results">
               <PanelHeader
                 title={`Normalized results · ${currentState}`}
                 actions={

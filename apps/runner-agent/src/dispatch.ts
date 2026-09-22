@@ -7,8 +7,20 @@ import {
   type ModuleOutput
 } from "@periscan/modules";
 
+import {
+  AtomicArgvDeniedError,
+  executeAtomicArgv,
+  isAtomicArgvTask,
+  resolveAtomicArgvFromTask,
+  type AtomicArgvExec
+} from "./atomic-argv.js";
+import {
+  executeBoundRunnerSiemModule,
+  isBoundRunnerSiemModuleId
+} from "./bound-runner-siem.js";
 import { stringifyCanonicalJson } from "./canonical.js";
 import type { RunnerAgentConfig } from "./config.js";
+import { executeSiemSignedTask } from "./siem-signed-task-dispatch.js";
 import { verifyTaskEnvelope, type VerifyDeps } from "./verify.js";
 import type { TaskEnvelope, TaskResult } from "./types.js";
 
@@ -20,6 +32,7 @@ export type ModuleExecutor = (
 ) => Promise<ModuleOutput>;
 
 export interface DispatchDeps extends VerifyDeps {
+  atomicArgvExec?: AtomicArgvExec;
   executor?: ModuleExecutor;
   now?: Date;
 }
@@ -65,6 +78,16 @@ function buildResult(
   return { ...base, localAuditSha256 };
 }
 
+export async function executeRunnerAgentModule(
+  moduleId: string,
+  context: ModuleExecutionContext
+): Promise<ModuleOutput> {
+  if (isBoundRunnerSiemModuleId(moduleId)) {
+    return executeBoundRunnerSiemModule(context);
+  }
+  return executeModuleById(moduleId, context);
+}
+
 // Verify the signed envelope, then (only if valid) dispatch the named module via
 // the shared module framework. Verification failures and execution errors both
 // return a result the agent submits back — the SaaS sees every outcome.
@@ -74,7 +97,7 @@ export async function processTask(
   deps: DispatchDeps = {}
 ): Promise<TaskResult> {
   const startedAt = nowIso(deps);
-  const executor = deps.executor ?? executeModuleById;
+  const executor = deps.executor ?? executeRunnerAgentModule;
 
   const verdict = verifyTaskEnvelope(task, config, deps);
   if (!verdict.ok) {
@@ -85,6 +108,44 @@ export async function processTask(
       startedAt,
       validationState: null
     });
+  }
+
+  if (isAtomicArgvTask(task)) {
+    try {
+      const resolved = resolveAtomicArgvFromTask(task);
+      const argvResult = await executeAtomicArgv({
+        argv: resolved.argv,
+        exec: deps.atomicArgvExec,
+        guid: resolved.guid
+      });
+      if (!argvResult.executed) {
+        return buildResult(task, "Failed", {
+          completedAt: nowIso(deps),
+          errorSummary: `atomic argv cleanup ${argvResult.cleanup}`,
+          outcome: null,
+          startedAt,
+          validationState: null
+        });
+      }
+      return buildResult(task, "Completed", {
+        completedAt: nowIso(deps),
+        errorSummary: null,
+        outcome: "atomic_argv_executed",
+        startedAt,
+        validationState: "Executed"
+      });
+    } catch (error) {
+      return buildResult(task, "Failed", {
+        completedAt: nowIso(deps),
+        errorSummary:
+          error instanceof AtomicArgvDeniedError || error instanceof Error
+            ? error.message
+            : String(error),
+        outcome: null,
+        startedAt,
+        validationState: null
+      });
+    }
   }
 
   try {
@@ -98,7 +159,10 @@ export async function processTask(
       target: task.target ?? {},
       tenantId: task.tenantId
     });
-    const output = await executor(task.moduleId, context);
+    const output =
+      !deps.executor && isBoundRunnerSiemModuleId(task.moduleId)
+        ? await executeSiemSignedTask(task, config)
+        : await executor(task.moduleId, context);
 
     return buildResult(task, "Completed", {
       completedAt: nowIso(deps),

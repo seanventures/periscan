@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import { isLabsPath } from "./labs-portal";
+import { operateHint } from "./operate-screen-jobs";
 
 export interface PrimaryNavItem {
   href: string;
@@ -350,8 +351,8 @@ const I = {
  * Groups:
  * - Operate (default-open): JOBS-SIMPLE daily spine
  * - Setup (collapsed catalog): Getting started · Connect · Runners · Engines ·
- *   Schedule · Assets · External Validation · Controls · Compliance · Shift ·
- *   Paths · Executive · Reports
+ *   Feed pins · Schedule · Assets · External Validation · Controls ·
+ *   Compliance · Shift · Paths · Executive · CTEM · Reports
  *   UX-W15 (PERISCAN-483): shell allow-lists collapse Operating Setup to
  *   Runners · Engines (Schedule re-surfaces for SecurityEngineer daily).
  *   Full Setup restored via Show Labs & more / palette / direct URL.
@@ -378,14 +379,14 @@ export const PRIMARY_NAV: PrimaryNavGroup[] = [
         href: "/dashboard",
         label: "Home",
         icon: I.dashboard,
-        hint: "Proof-loop command center"
+        hint: operateHint("/dashboard")
       },
       {
         // P07-2: demo/product Authorize stage lives at /scopes (not inventory).
         href: "/scopes",
         label: "Scope",
         icon: I.scope,
-        hint: "Verify authorized validation scope"
+        hint: operateHint("/scopes")
       },
       {
         href: "/missions",
@@ -393,25 +394,25 @@ export const PRIMARY_NAV: PrimaryNavGroup[] = [
         // Do not rename to "Missions" until multi-type MissionsWorkbench is mounted.
         label: "Validate",
         icon: I.snapshot,
-        hint: "Guided Validation Snapshot on authorized scope"
+        hint: operateHint("/missions")
       },
       {
         href: "/findings",
         label: "Findings",
         icon: I.finding,
-        hint: "Evidence-backed exposure queue"
+        hint: operateHint("/findings")
       },
       {
         href: "/remediation",
         label: "Remediate",
         icon: I.remediate,
-        hint: "Fix plans & verification"
+        hint: operateHint("/remediation")
       },
       {
         href: "/evidence",
         label: "Evidence",
         icon: I.evidence,
-        hint: "The evidence ledger"
+        hint: operateHint("/evidence")
       }
     ]
   },
@@ -425,7 +426,7 @@ export const PRIMARY_NAV: PrimaryNavGroup[] = [
         href: "/getting-started",
         label: "Getting started",
         icon: I.snapshot,
-        hint: "Alias of Home first-run (Connect → Scope → Validate)"
+        hint: "Alias of Home first-run (authorize → Gitleaks → Fixed)"
       },
       {
         href: "/integrations",
@@ -447,11 +448,18 @@ export const PRIMARY_NAV: PrimaryNavGroup[] = [
         hint: "Engine Lab / tool governance"
       },
       {
+        // Operate-adjacent pin ledger — Setup / mobile More, not Home.
+        href: "/security-feeds",
+        label: "Feed pins",
+        icon: I.tool,
+        hint: "Review recorded pins; PendingReview does not execute"
+      },
+      {
         // UX-W1: recurring validation config — Setup, not Operate spine.
         href: "/schedules",
         label: "Schedule",
         icon: I.schedule,
-        hint: "Recurring validation"
+        hint: operateHint("/schedules")
       },
       {
         // P07-2/P07-18: inventory ownership, not authorize. /data-fabric redirects.
@@ -495,6 +503,12 @@ export const PRIMARY_NAV: PrimaryNavGroup[] = [
         label: "Executive",
         icon: I.finding,
         hint: "Leadership posture & trends"
+      },
+      {
+        href: "/ctem",
+        label: "CTEM",
+        icon: I.control,
+        hint: "AEV / CTEM proof on authorized scope"
       },
       {
         href: "/reports",
@@ -581,6 +595,14 @@ export const PRIMARY_NAV_ITEMS: PrimaryNavItem[] = PRIMARY_NAV.flatMap(
 export function isNavItemActive(pathname: string, href: string): boolean {
   if (href === "/dashboard") {
     return pathname === "/dashboard" || pathname === "/";
+  }
+  // P3-REMALIAS: plural list URL is the Remediate index, not a second rail item.
+  if (href === "/remediation") {
+    return (
+      pathname === "/remediation" ||
+      pathname.startsWith("/remediation/") ||
+      pathname === "/remediations"
+    );
   }
   // UX-W10: Labs portal door stays active on any portal destination/deep-link.
   if (href === "/labs") {

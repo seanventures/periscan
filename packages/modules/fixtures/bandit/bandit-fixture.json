@@ -1,0 +1,48 @@
+{
+  "errors": [],
+  "generated_at": "2026-01-01T00:00:00Z",
+  "metrics": {
+    "_totals": {
+      "CONFIDENCE.HIGH": 2,
+      "SEVERITY.HIGH": 2,
+      "loc": 12,
+      "nosec": 0
+    }
+  },
+  "results": [
+    {
+      "code": "aws_key = 'AKIAIOSFODNN7EXAMPLE'\nsubprocess.call(cmd, shell=True)\n",
+      "col_offset": 0,
+      "end_col_offset": 32,
+      "filename": "./app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 78,
+        "link": "https://cwe.mitre.org/data/definitions/78.html"
+      },
+      "issue_severity": "HIGH",
+      "issue_text": "subprocess call with shell=True identified, security issue.",
+      "line_number": 4,
+      "line_range": [4],
+      "more_info": "https://bandit.readthedocs.io/en/1.8.3/plugins/b602_subprocess_popen_with_shell_equals_true.html",
+      "test_id": "B602",
+      "test_name": "subprocess_popen_with_shell_equals_true"
+    },
+    {
+      "code": "pickle.loads(data)\n",
+      "filename": "./app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 502,
+        "link": "https://cwe.mitre.org/data/definitions/502.html"
+      },
+      "issue_severity": "HIGH",
+      "issue_text": "Pickle library appears to be in use, possible security issue.",
+      "line_number": 9,
+      "line_range": [9],
+      "more_info": "https://bandit.readthedocs.io/en/1.8.3/plugins/b301_pickle.html",
+      "test_id": "B301",
+      "test_name": "pickle"
+    }
+  ]
+}

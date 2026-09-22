@@ -63,7 +63,7 @@ export const CLAIM_LANGUAGE_CATALOG: readonly ClaimLanguageEntry[] = [
     id: "aev-ctem-proof-layer",
     phrase: "AEV / CTEM proof layer on authorized scope",
     rationale:
-      "Category home is continuous exposure validation and proof, not a peer scenario-library BAS."
+      "BAS/AEV development combines qualified scenarios, exposure validation and measured proof; describe delivered coverage separately from the roadmap."
   },
   {
     bucket: "prove",
@@ -86,31 +86,41 @@ export const CLAIM_LANGUAGE_CATALOG: readonly ClaimLanguageEntry[] = [
   },
   {
     bucket: "integrate",
-    id: "bas-library-partner",
-    phrase: "Partner or walk on full multi-vector BAS library RFPs",
+    id: "bas-library-interoperability",
+    phrase: "Integrate external BAS evidence with Periscan scenario and verification workflows",
     rationale:
-      "Cymulate/AttackIQ-class scenario libraries are not a Periscan home category."
+      "BAS is a product objective; external engine evidence retains source, revision and measured/imported provenance."
   },
   {
     bucket: "refuse",
     id: "full-bas-peer",
     phrase: "Full multi-vector BAS platform like Cymulate/AttackIQ",
     rationale:
-      "Atomic is dry-run/import; control inject is hard-disabled; ransomware/kill-chain stages are plan-only scaffolds."
+      "Current Atomic/Caldera/Metasploit paths are content/plan imports and SharpHound collection is unqualified. Full BAS is the development objective; shipped parity needs scenario-level execution and outcome evidence."
   },
   {
     bucket: "refuse",
-    id: "live-ransomware-emulation",
-    phrase: "Live ransomware encryption / mass file lock emulation",
+    id: "unmarked-ransomware-first-hour",
+    phrase:
+      "T1486 / ransomware / persistence / unrestricted Metasploit PAYLOAD as Community default start or unmarked Validate",
     rationale:
-      "Safety floor forever: no live crypto, shadow-copy delete, or mass lock. Scaffold only until a detection canary exists."
+      "Impact-class T1486 lives in the High-danger section. Extra acknowledgement + qualification + tenant authorization. Not Community default start."
+  },
+  {
+    bucket: "prove",
+    id: "high-danger-section",
+    phrase:
+      "T1486, unscoped spray, credential harvest, and kill-chain impact are High-danger catalog entries",
+    rationale:
+      "Productized in their own section. Start still never queues without danger acknowledgement."
   },
   {
     bucket: "refuse",
-    id: "live-kill-chain-engine",
-    phrase: "Live kill-chain / APT execution engine",
+    id: "unmarked-spray-harvest",
+    phrase:
+      "Unscoped spray or credential harvest as Community default start",
     rationale:
-      "exploitation.killchain.engine is a coverage planner; most stages have null safeLiveModuleId."
+      "Those classes live in High danger. Extra acknowledgement required. Not unmarked Validate. Owned-account password-policy spray on verified-scope identities is the default spray path."
   },
   {
     bucket: "refuse",
@@ -150,7 +160,7 @@ export const CLAIM_LANGUAGE_CATALOG: readonly ClaimLanguageEntry[] = [
     id: "auto-pentest-peer",
     phrase: "Autonomous red team / full auto-pentest peer",
     rationale:
-      "Safety floor refuses live offensive chaining; complement human red team with continuous proof of cheap links."
+      "Qualified bounded campaigns are in scope. Do not claim unrestricted autonomy or human red-team replacement from imported plans or fixtures."
   },
   {
     bucket: "refuse",
@@ -231,9 +241,9 @@ export const CLAIM_LANGUAGE_CATALOG: readonly ClaimLanguageEntry[] = [
     bucket: "refuse",
     id: "scim-production-inbound",
     phrase:
-      "Inbound SCIM 2.0 for Periscan users is Production / shipped / full IdP lifecycle",
+      "Inbound SCIM is Okta/Azure certified or a full IdP lifecycle including JIT",
     rationale:
-      "PERISCAN-30: identityProvisioning.scimInbound.status is NotConfigured; /api/v1/scim/v2/* returns 501 stubs. CyberArk SCIM is read-only inventory only. Plane is Partial (SSO/MFA/role map) — never claim SCIM Production."
+      "Inbound SCIM Users/Groups provision memberships with a tenant bearer token. JIT remains NotConfigured. CyberArk SCIM is read-only inventory only. Plane stays Partial — never claim certification or Production-equivalent full joiner/mover/leaver."
   },
   {
     bucket: "refuse",
@@ -242,6 +252,53 @@ export const CLAIM_LANGUAGE_CATALOG: readonly ClaimLanguageEntry[] = [
       "Vendor SOC 2 Type II certified / product packs equal Type II attestation",
     rationale:
       "PERISCAN-30: vendorAssurance.soc2TypeIiStatus defaults None; customer evidence packs are not Periscan vendor Type II. No fake Type II reports or bridge letters."
+  },
+  {
+    bucket: "prove",
+    id: "metasploit-check-claim-split",
+    phrase:
+      "Distinguish Metasploit vulnerability presence, check support, and measured exploitability",
+    rationale:
+      "PERISCAN-589: allowlisted checks record presence or check support from fixtures/plans. Measured exploitability requires a qualified live receipt, which this adapter does not produce."
+  },
+  {
+    bucket: "refuse",
+    id: "metasploit-check-is-exploitability",
+    phrase:
+      "A Metasploit check() method proves exploitability or is a safety guarantee",
+    rationale:
+      "PERISCAN-589: certify side effects per module. check() is not non-destructive by name. Fixture/check support is not a live exploit receipt."
+  },
+  {
+    bucket: "refuse",
+    id: "stratus-customer-cloud-destroy",
+    phrase:
+      "Stratus Red Team live detonation that destroys customer cloud resources",
+    rationale:
+      "PERISCAN-591: Stratus evaluation is disposable-account only with resource budgets, selected techniques, cleanup verification, liveSupported false, and no default enable."
+  },
+  {
+    bucket: "refuse",
+    id: "navigator-import-executed-coverage",
+    phrase:
+      "Imported ATT&CK Navigator layer is executed coverage or 100% ATT&CK",
+    rationale:
+      "PERISCAN-591: Navigator import/export carries tested/detected/blocked/stale distinctions and evidence links; imported content is not executed coverage."
+  },
+  {
+    bucket: "prove",
+    id: "continuous-validation-cadence",
+    phrase:
+      "Continuous validation as a policy-approved Hourly/Daily/Weekly/Monthly cadence",
+    rationale:
+      "Sub-daily Hourly and drift-triggered Continuous fires stay quota- and maintenance-window-gated on verified scopes. Denied fires queue nothing."
+  },
+  {
+    bucket: "refuse",
+    id: "always-on-bas",
+    phrase: "Always-on BAS / always-on live BAS / NodeZero-class autonomous pentest",
+    rationale:
+      "Scheduling is cadence plus drift, not 24/7 live BAS theater. Use Continuous validation; never sell NodeZero or autonomous pentest parity."
   }
 ] as const;
 

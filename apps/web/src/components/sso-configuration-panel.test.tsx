@@ -30,6 +30,12 @@ describe("SsoConfigurationPanel", () => {
     expect(
       screen.getByLabelText("Group to role mappings")
     ).toBeInTheDocument();
+    expect(
+      screen.getByLabelText("JIT email domains")
+    ).toBeInTheDocument();
+    const jitDefaultRole = screen.getByLabelText("JIT default role");
+    expect(jitDefaultRole).toHaveValue("Viewer");
+    expect(jitDefaultRole.querySelector('option[value="Owner"]')).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "SAML" }));
     expect(screen.getByLabelText("IdP X.509 certificate")).toBeRequired();

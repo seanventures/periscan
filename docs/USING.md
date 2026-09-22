@@ -1,13 +1,16 @@
 # How to use Periscan (Community)
 
+> **BAS/AEV program:** [BAS_AEV_PROGRAM.md](BAS_AEV_PROGRAM.md) — qualified open-source simulation, emulation and evidence-backed validation (PERISCAN-583).
+
 Authorize a target you own (or are contracted to test). Run the Community
 pack under policy. Keep evidence. Mark **Fixed** only after a re-measurement.
 
-This is the operator path. Questions: [`FAQ.md`](./FAQ.md). Offering:
+This is the operator path. Install, compose, ports, doctor:
+[`SETUP.md`](./SETUP.md). Questions: [`FAQ.md`](./FAQ.md). Offering:
 [`COMMUNITY.md`](../COMMUNITY.md). Safety floor:
 [`SECURITY_BOUNDARIES.md`](../SECURITY_BOUNDARIES.md).
 
-Not full BAS. Not automated pentest. Not a Wiz / Tenable replacement. Fixture
+BAS/AEV development follows qualified adapters; this guide describes current workflows. Fixture
 demo login is **not** measured proof.
 
 ---
@@ -207,7 +210,7 @@ curl -fsS "${auth[@]}" -X POST "$API/api/v1/community/validation-runs" \
 Do **not** put Nuclei in primary `moduleIds`. Nuclei is a **second mission**
 (External PoA) so a PoA kill-switch cannot block the rest.
 
-Theater (Atomic, Caldera, SharpHound, sqlmap, Metasploit) never starts here.
+Current unqualified adapters do not start here; new BAS adapters enter after qualification.
 
 ---
 
@@ -375,7 +378,7 @@ Read `jobsQueued` on start. Reconstruct pack + Nuclei sibling:
 | Prowler deferred | No Connected AWS | Count it as “engines start now” |
 | `tool_unavailable` | Binary not installed | Invent a finding |
 | `pnpm seed:demo` tenant | Labeled fixture | Cite it as measured lab proof |
-| Live Atomic / Caldera offer | Catalog theater | Enable without a legal SOW |
+| Atomic / Caldera adapters | In development; current content/plan imports | Claim live execution before adapter qualification |
 
 ---
 

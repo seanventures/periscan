@@ -67,7 +67,7 @@ const OPEN_SOURCE_TOOL_DEFINITIONS = [
     license: "MIT",
     moduleIds: ["nuclei.external_exposure_safe"],
     notes:
-      "Safe external exposure engine. Must run only against verified scope and safe template profiles.",
+      "Safe external exposure engine. Must run only against verified scope and safe template profiles. BAS scenario pin v3.8.0.",
     npmPackage: null,
     phase: "Current",
     pipPackage: null,
@@ -86,7 +86,7 @@ const OPEN_SOURCE_TOOL_DEFINITIONS = [
     license: "MIT",
     moduleIds: ["nuclei.external_exposure_safe"],
     notes:
-      "Template pack for Nuclei. Periscan should allowlist only safe, non-destructive templates.",
+      "Template pack for Nuclei. Periscan should allowlist only safe, non-destructive templates. BAS scenario pin v10.4.4.",
     npmPackage: null,
     phase: "Current",
     pipPackage: null,
@@ -542,7 +542,7 @@ const OPEN_SOURCE_TOOL_DEFINITIONS = [
     license: "MIT",
     moduleIds: ["atomic.control_validation_safe"],
     notes:
-      "ATT&CK scenario content pack for dry-run import only. Not live inject BAS: Periscan loads allowlisted scenarios as fixture/dry-run evidence and never executes Atomic techniques against customer endpoints.",
+      "ATT&CK scenario content pack with a dry-run import implementation. Customer execution requires a qualified Atomic adapter; see the BAS/AEV program and separate local lab qualification harness.",
     npmPackage: null,
     phase: "Current",
     pipPackage: null,
@@ -607,6 +607,27 @@ const OPEN_SOURCE_TOOL_DEFINITIONS = [
     policyStatus: "RequiresLegalReview",
     runtimePreference: ["git"],
     toolId: "sharphound"
+  },
+  {
+    binaryName: null,
+    category: "AdvancedAdversarial",
+    defaultVersion: "v2.3.0",
+    displayName: "Infection Monkey",
+    dockerImage: null,
+    docsUrl: "https://github.com/guardicore/monkey",
+    gitRepo: "https://github.com/guardicore/monkey.git",
+    license: "GPL-3.0",
+    licenseUrl: "https://github.com/guardicore/monkey/blob/develop/LICENSE",
+    moduleIds: ["infection-monkey.discover"],
+    notes:
+      "Guardicore Infection Monkey. GPL-3.0 Engine Lab only. Discover/crawl of verified-scope hosts as promote-to-scope candidates. Propagation, Mimikatz, Zerologon, and ransomware payloads stay default-deny. Not redistributed in the Community default image.",
+    npmPackage: null,
+    phase: "LaterPhase",
+    pipPackage: null,
+    policyStatus: "RequiresLegalReview",
+    runtimePreference: ["git"],
+    toolId: "infection-monkey",
+    userLicenseAcceptanceRequired: true
   },
   {
     binaryName: null,
@@ -780,7 +801,7 @@ const OPEN_SOURCE_TOOL_DEFINITIONS = [
     license: "Apache-2.0",
     moduleIds: ["web.zap_baseline"],
     notes:
-      "OWASP ZAP passive baseline scan. ServiceViaProxy; passive spider + passive rules only (no active attack rules).",
+      "OWASP ZAP passive baseline scan. ServiceViaProxy; passive spider + passive rules only (no active attack rules). BAS scenario pin 2.17.0.",
     npmPackage: null,
     phase: "Current",
     pipPackage: null,
@@ -889,7 +910,7 @@ const OPEN_SOURCE_TOOL_DEFINITIONS = [
     license: "BSD-3-Clause",
     moduleIds: ["exploit.metasploit_check"],
     notes:
-      "Exploitation framework (Metasploit). Dry-run/fixture-only in the current release; live exploitation checks remain disabled by product policy. Export-control + authorized-use notice applies (THIRD_PARTY_NOTICES).",
+      "Exploitation framework (Metasploit). Reviewed check allowlist is fixture/plan-only at pin 6.4.0; check() is not a safety guarantee. Live execution stays disabled. Export-control + authorized-use notice applies (THIRD_PARTY_NOTICES).",
     npmPackage: null,
     phase: "LaterPhase",
     pipPackage: null,
@@ -2303,7 +2324,7 @@ const OPEN_SOURCE_CAPABILITY_DEFINITIONS = [
     ],
     capabilityId: "metasploit.exploitation-check-plan",
     description:
-      "Produces dry-run exploitation-check plans and fixture evidence while live Metasploit execution remains disabled by current product policy.",
+      "Produces reviewed Metasploit check plans and fixture evidence. Distinguishes vulnerability presence from check support; never claims measured exploitability. Live execution remains disabled.",
     evidenceTypes: ["NormalizedEvidence"],
     executionMode: "InternalRunner",
     featureTags: ["advanced-adversarial", "dry-run", "exploitation-disabled"],
@@ -2440,6 +2461,27 @@ const OPEN_SOURCE_CAPABILITY_DEFINITIONS = [
     safetyLevels: ["PassiveReadOnly"],
     status: "BlockedLegalReview",
     toolId: "sharphound"
+  },
+  {
+    apiRoutes: ["/api/v1/open-source-tools", "/api/v1/modules"],
+    capabilityId: "infection-monkey.discover-crawl",
+    description:
+      "Plans verified-scope Infection Monkey discover/crawl as promote-to-scope candidates. Island C2 reports import as graph hypotheses. Propagation and exploiters remain default-deny. GPL-3.0 Engine Lab; not in the default image.",
+    evidenceTypes: ["NormalizedEvidence"],
+    executionMode: "InternalRunner",
+    featureTags: ["discover", "engine-lab", "gpl", "copyleft"],
+    inputSchemaRef: "InfectionMonkeyDiscoverTargetSchema",
+    interfaceKind: "ValidationModule",
+    missionTypes: ["ExposureValidation", "ValidationSnapshot"],
+    moduleId: "infection-monkey.discover",
+    name: "Infection Monkey Discover Crawl",
+    outputSchemaRef: "ModuleOutputSchema",
+    phase: "LaterPhase",
+    requiredIntegrations: [],
+    requiredScopes: ["InternalNetwork", "IPRange"],
+    safetyLevels: ["ActiveNonInvasive"],
+    status: "BlockedLegalReview",
+    toolId: "infection-monkey"
   },
   {
     apiRoutes: ["/api/v1/open-source-tools", "/api/v1/missions"],

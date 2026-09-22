@@ -428,19 +428,9 @@ export function createTenantServices(
       const snapshots = await this.listSnapshots(context);
       const latestSnapshot = snapshots[0];
 
-      if (latestSnapshot) {
-        return buildCTEMProgramSummary(latestSnapshot);
-      }
-
-      const payload = await buildValidationSnapshotPayload({
-        audience: "Security Team",
-        context,
-        maxTopItems: 5,
-        prisma
-      });
-
       // Incorporate evidence from recent non-snapshot scheduled runs (Control/AI/Fix packs)
-      // so continuous non-snap schedules visibly advance the CTEM "Validate" stage.
+      // so continuous non-snap schedules visibly advance CTEM Validate/Verify even when a
+      // Snapshot report already exists.
       const nonSnapPacks = await prisma.evidencePack.findMany({
         where: {
           tenantId: context.tenant.tenantId,
@@ -470,6 +460,25 @@ export function createTenantServices(
         },
         { validate: 0, verify: 0 }
       );
+
+      if (latestSnapshot) {
+        return buildCTEMProgramSummary(latestSnapshot, {
+          source: "Snapshot",
+          ...(nonSnapPacks.length > 0
+            ? {
+                nonSnapValidateEvidence: nonSnapStageCounts.validate,
+                nonSnapVerifyEvidence: nonSnapStageCounts.verify
+              }
+            : {})
+        });
+      }
+
+      const payload = await buildValidationSnapshotPayload({
+        audience: "Security Team",
+        context,
+        maxTopItems: 5,
+        prisma
+      });
 
       const sortNewestFirst = <T extends { updatedAt: Date }>(
         left: T,
@@ -966,8 +975,7 @@ export function createTenantServices(
       if (!connectedSource) {
         // Community first-run: a vendor source is optional extra signal, not
         // an Attention peer of missing authorized scope.
-        const sourceMissingIsOptional =
-          !latestSource && (maturity === "New" || maturity === "Activating");
+        const sourceMissingIsOptional = !latestSource;
         diagnostics.push({
           code: latestSource ? "source_not_connected" : "source_missing",
           detail: latestSource
@@ -1092,7 +1100,8 @@ export function createTenantServices(
         failedRuns,
         readyForRetest,
         evidenceChain,
-        schedules
+        schedules,
+        settledRemediations
       ] = await Promise.all([
         this.getProductActivationState(context),
         this.listValidatedFindings(context),
@@ -1134,8 +1143,20 @@ export function createTenantServices(
             updatedAt: true
           },
           where: { tenantId }
+        }),
+        prisma.remediationTask.findMany({
+          select: { relatedFindingFingerprint: true },
+          where: {
+            status: { in: ["Fixed", "Mitigated"] },
+            tenantId
+          }
         })
       ]);
+      const settledFingerprints = new Set(
+        settledRemediations
+          .map((task) => task.relatedFindingFingerprint?.trim())
+          .filter((value): value is string => Boolean(value))
+      );
       // Monday taxonomy (server + client fallback must agree on these kinds).
       const noiseDisposition = new Set(["FalsePositive", "Suppressed"]);
       const newFindings = findings.filter(
@@ -1148,7 +1169,8 @@ export function createTenantServices(
         (finding) =>
           finding.priorityScore >= 70 &&
           isUnownedValidatedFinding(finding) &&
-          !noiseDisposition.has(finding.disposition?.disposition ?? "")
+          !noiseDisposition.has(finding.disposition?.disposition ?? "") &&
+          !settledFingerprints.has(finding.fingerprint?.trim() ?? "")
       );
       const pendingRiskApprovals = findings.filter(
         (finding) => finding.disposition?.approvalState === "Pending"
@@ -2004,6 +2026,7 @@ export function createTenantServices(
             const owners = await tx.membership.count({
               where: {
                 role: "Owner",
+                status: "Active",
                 tenantId: context.tenant.tenantId
               }
             });
@@ -2092,6 +2115,7 @@ export function createTenantServices(
             const owners = await tx.membership.count({
               where: {
                 role: "Owner",
+                status: "Active",
                 tenantId: context.tenant.tenantId
               }
             });

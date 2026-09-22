@@ -97,6 +97,11 @@ const coverage = {
   totalTechniques: 1
 };
 
+function expectOverlayHonestyCopy() {
+  expect(screen.getAllByText(/not 100% ATT&CK/i).length).toBeGreaterThan(0);
+  expect(screen.getAllByText(/scenario execution requires qualification/i).length).toBeGreaterThan(0);
+}
+
 function mockFetch(payloadByRoute: Record<string, unknown>) {
   return vi.fn(async (input: RequestInfo | URL) => {
     const route = String(input).split("?")[0] ?? "";
@@ -177,7 +182,7 @@ describe("AttackTechniquesCatalog", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByRole("status", {
-        name: "Tenant techniques measured count: 1"
+        name: "Safe-subset coverage: 1 of 2"
       })
     ).toBeInTheDocument();
     expect(
@@ -188,5 +193,246 @@ describe("AttackTechniquesCatalog", () => {
     expect(
       screen.getByText(/not the complete MITRE catalog/i)
     ).toBeInTheDocument();
+  });
+
+  it("shows an ATT&CK to safe-module coverage column without claiming BAS parity", async () => {
+    vi.stubGlobal(
+      "fetch",
+      mockFetch({
+        "/api/v1/attack-techniques": { items: techniques },
+        "/api/v1/control-sources/rule-coverage": coverage,
+        "/api/v1/me": authPayload
+      })
+    );
+
+    render(<AttackTechniquesCatalog />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("table", { name: "ATT&CK to safe-module map" })
+      ).toBeInTheDocument();
+    });
+
+    const map = screen.getByRole("table", {
+      name: "ATT&CK to safe-module map"
+    });
+    expect(
+      within(map).getByRole("columnheader", { name: "Coverage" })
+    ).toBeInTheDocument();
+    expect(
+      within(map).getByRole("columnheader", { name: "Safe module" })
+    ).toBeInTheDocument();
+
+    const scanning = within(map).getByRole("row", { name: /T1595/i });
+    expect(within(scanning).getByText("Live disabled")).toBeInTheDocument();
+    expect(
+      within(scanning).getByText("not executed (live disabled)")
+    ).toBeInTheDocument();
+
+    const credentials = within(map).getByRole("row", { name: /T1552/i });
+    expect(within(credentials).getByText("Safe module")).toBeInTheDocument();
+    expect(
+      within(credentials).getByText("gitleaks.repo_secrets")
+    ).toBeInTheDocument();
+
+    const validAccounts = within(map).getByRole("row", { name: /T1078/i });
+    expect(within(validAccounts).getByText("Catalog only")).toBeInTheDocument();
+
+    expect(
+      within(screen.getByLabelText("T1595 module coverage")).getByText(
+        "Live disabled"
+      )
+    ).toBeInTheDocument();
+
+    expect(
+      screen.getByText(/partial ATT&CK mapping; execution coverage requires measured receipts/i)
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/complete ATT&CK BAS parity/i)
+    ).not.toBeInTheDocument();
+  });
+
+  it("overlays control-validation coverage against the safe subset, not 100% ATT&CK", async () => {
+    const coverageWithOutOfSubset = {
+      ...coverage,
+      coveredTechniques: 2,
+      totalTechniques: 2,
+      items: [
+        ...coverage.items,
+        {
+          ...coverage.items[0],
+          scenarioId: "scenario.process-injection",
+          tacticName: "Defense Evasion",
+          techniqueId: "T1055",
+          techniqueName: "Process Injection",
+          title: "Process injection detection"
+        }
+      ]
+    };
+
+    vi.stubGlobal(
+      "fetch",
+      mockFetch({
+        "/api/v1/attack-techniques": { items: techniques },
+        "/api/v1/control-sources/rule-coverage": coverageWithOutOfSubset,
+        "/api/v1/me": authPayload
+      })
+    );
+
+    render(<AttackTechniquesCatalog />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("status", { name: "Safe-subset coverage: 1 of 2" })
+      ).toBeInTheDocument();
+    });
+
+    expect(
+      screen.getByText(/1 of 2 curated safe-subset techniques/i)
+    ).toBeInTheDocument();
+    expectOverlayHonestyCopy();
+    expect(
+      within(screen.getByLabelText("T1595 tenant coverage")).getByText(
+        "Covered"
+      )
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByLabelText("T1087 tenant coverage")).getByText(
+        "No measured scenario"
+      )
+    ).toBeInTheDocument();
+    expect(screen.queryByText("T1055")).not.toBeInTheDocument();
+    expect(screen.queryByText(/complete ATT&CK BAS parity/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/live Atomic/i)).not.toBeInTheDocument();
+  });
+
+  it("shows an empty overlay when the tenant has no control-validation coverage", async () => {
+    const emptyCoverage = {
+      ...coverage,
+      coveredTechniques: 0,
+      items: [],
+      totalTechniques: 0
+    };
+
+    vi.stubGlobal(
+      "fetch",
+      mockFetch({
+        "/api/v1/attack-techniques": { items: techniques },
+        "/api/v1/control-sources/rule-coverage": emptyCoverage,
+        "/api/v1/me": authPayload
+      })
+    );
+
+    render(<AttackTechniquesCatalog />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("status", {
+          name: "No tenant control-validation coverage yet."
+        })
+      ).toBeInTheDocument();
+    });
+
+    expect(
+      screen.getByRole("status", { name: "Safe-subset coverage: 0 of 2" })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/not proof that controls are absent/i)
+    ).toBeInTheDocument();
+    expectOverlayHonestyCopy();
+    expect(screen.getByText("T1595 Active Scanning")).toBeInTheDocument();
+    expect(
+      within(screen.getByLabelText("T1595 tenant coverage")).getByText(
+        "No measured scenario"
+      )
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByLabelText("T1595 tenant coverage")).queryByText(
+        "Covered"
+      )
+    ).not.toBeInTheDocument();
+  });
+
+  it("does not claim 100% ATT&CK when every safe-subset technique is covered", async () => {
+    const fullSubsetCoverage = {
+      ...coverage,
+      coveredTechniques: 2,
+      totalTechniques: 2,
+      items: [
+        coverage.items[0],
+        {
+          ...coverage.items[0],
+          scenarioId: "scenario.account-discovery",
+          tacticName: "Discovery",
+          techniqueId: "T1087",
+          techniqueName: "Account Discovery",
+          title: "Account discovery detection"
+        }
+      ]
+    };
+
+    vi.stubGlobal(
+      "fetch",
+      mockFetch({
+        "/api/v1/attack-techniques": { items: techniques },
+        "/api/v1/control-sources/rule-coverage": fullSubsetCoverage,
+        "/api/v1/me": authPayload
+      })
+    );
+
+    render(<AttackTechniquesCatalog />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("status", { name: "Safe-subset coverage: 2 of 2" })
+      ).toBeInTheDocument();
+    });
+
+    expect(
+      screen.getByText(/2 of 2 curated safe-subset techniques/i)
+    ).toBeInTheDocument();
+    expectOverlayHonestyCopy();
+    expect(screen.queryByText(/complete ATT&CK BAS parity/i)).not.toBeInTheDocument();
+    expect(
+      within(screen.getByLabelText("T1595 tenant coverage")).getByText(
+        "Covered"
+      )
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByLabelText("T1087 tenant coverage")).getByText(
+        "Covered"
+      )
+    ).toBeInTheDocument();
+  });
+
+  it("shows an empty catalog state when the ATT&CK reference API returns no techniques", async () => {
+    vi.stubGlobal(
+      "fetch",
+      mockFetch({
+        "/api/v1/attack-techniques": { items: [] },
+        "/api/v1/control-sources/rule-coverage": {
+          ...coverage,
+          coveredTechniques: 0,
+          items: [],
+          totalTechniques: 0
+        },
+        "/api/v1/me": authPayload
+      })
+    );
+
+    render(<AttackTechniquesCatalog />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(
+          "No curated ATT&CK reference techniques were returned."
+        )
+      ).toBeInTheDocument();
+    });
+
+    expect(
+      screen.getByRole("status", { name: "Safe-subset coverage: 0 of 0" })
+    ).toBeInTheDocument();
+    expectOverlayHonestyCopy();
   });
 });

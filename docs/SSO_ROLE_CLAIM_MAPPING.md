@@ -62,14 +62,15 @@ For SAML, use the attribute name your IdP puts in the assertion.
   groups appear on the verified ID token Periscan already consumes). Add the
   corresponding scope (often `groups`) to the tenant SSO scopes list.
 - SAML: release the group attribute in the assertion Periscan validates.
-- Pre-provision users (invite flow). Unprovisioned emails still fail with
-  `sso_user_not_provisioned`.
+- Pre-provision users (invite flow), **or** enable optional JIT on the tenant
+  SSO config (`jitEnabled` + domain allowlist). Unprovisioned emails still fail
+  with `sso_user_not_provisioned` unless JIT matches.
 
 ## Out of scope
 
 - Full SCIM 2.0 user lifecycle (create/disable/deprovision from the IdP)
-- Just-in-time (JIT) user creation on first SSO
 - Custom permission sets beyond the fixed `MembershipRole` enum
 
-Those remain sales-assisted / roadmap items; this feature only closes the
-group → role claim mapping gap for enterprise SSO.
+Optional JIT create-on-first-SSO is a separate tenant SSO flag (domain
+allowlist + default Viewer, never Owner, audit `user.jit_provisioned`). This
+mapping feature still does not create users by itself.

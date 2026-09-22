@@ -5,7 +5,14 @@ import { useEffect, useState } from "react";
 
 import type { ProductActivationState } from "@periscan/shared";
 
-import { resolveFirstRunPrimaryAction } from "../lib/first-run-primary-action";
+import {
+  AEV_BAS_BOUNDARY_SENTENCE,
+  COMMUNITY_DEFAULT_START_HEADLINE
+} from "../lib/aev-bas-copy";
+import {
+  resolveFirstRunPrimaryAction,
+  resolveOptionalAwsFirstHourCta
+} from "../lib/first-run-primary-action";
 import {
   type FirstProofResume,
   clearFirstProofResume,
@@ -213,8 +220,12 @@ export function showFirstMeasuredProofPercent(
  * completes it and the onboarding retires itself once the first validation has
  * run.
  */
-export function GetStarted({ userName }: { userName?: string }) {
+export function GetStarted({ userName: _userName }: { userName?: string }) {
   const activation = useApiResource(() => api.getProductActivationState(), []);
+  const communitySuite = useApiResource(
+    () => api.getCommunityValidationSuite(),
+    []
+  );
   const milestoneDone = (key: string) =>
     activation.data?.milestones.some(
       (milestone) => milestone.key === key && milestone.state === "Completed"
@@ -244,8 +255,8 @@ export function GetStarted({ userName }: { userName?: string }) {
     },
     {
       n: 2,
-      title: "Run your first validation",
-      desc: "Run Community validation on a verified local repository: first-hour is Gitleaks-class secrets. Run full Community pack for SCA, SAST, and IaC — then keep the evidence.",
+      title: "Run Gitleaks-class",
+      desc: "Default start is Gitleaks-class secrets on a verified local repository. Full Community pack is later for SCA, SAST, and IaC. Keep the evidence and schedule the next run.",
       href: scopeVerified && !hasValidation ? primary.href : "/missions",
       cta:
         scopeVerified && !hasValidation
@@ -271,6 +282,13 @@ export function GetStarted({ userName }: { userName?: string }) {
   const primaryHref = primary.href;
   const primaryLabel = primary.label;
   const primaryReason = primary.reason;
+  const optionalAwsCta =
+    !hasValidation
+      ? resolveOptionalAwsFirstHourCta({
+          cloudAwsAvailable: communitySuite.data?.cloudAwsAvailable,
+          startableModuleIds: communitySuite.data?.startableModuleIds
+        })
+      : null;
   const maturity = activation.data?.maturity ?? null;
   const navIsGuided = maturity === "New" || maturity === "Activating";
   const actionableDiagnostics = (activation.data?.diagnostics ?? []).filter(
@@ -317,22 +335,22 @@ export function GetStarted({ userName }: { userName?: string }) {
         <div className="max-w-xl">
           <p className="font-display text-[11px] font-semibold uppercase tracking-[0.08em] text-brand-2">
             {completed === 0
-              ? "Welcome to Periscan"
+              ? "Proof board"
               : setupComplete
-                ? "Setup complete"
-                : "Getting started"}
+                ? "Keep proving"
+                : "Stand up the board"}
           </p>
           <h1 className="mt-3 text-balance font-display text-4xl font-bold leading-[1.08] text-ink md:text-5xl">
             {completed === 0
-              ? "Let's prove your first path."
+              ? COMMUNITY_DEFAULT_START_HEADLINE
               : setupComplete
-                ? "Continue toward Prove."
-                : `${remaining} more step${remaining === 1 ? "" : "s"} to your first proof.`}
+                ? "Keep proving."
+                : `${remaining} more step${remaining === 1 ? "" : "s"} to stand up the board.`}
           </h1>
           <p className="mt-4 text-[15px] leading-relaxed text-muted">
             {setupComplete
-              ? "The two setup steps are done. Finish the remaining proof-loop milestones — remediate, re-validate, and deliver evidence-backed proof."
-              : `${userName ? `${userName.split(" ")[0]}, two` : "Two"} steps take you from an empty console to a measured, evidence-backed snapshot of authorized exposures you can prove — and Fixed only after verification.`}
+              ? "Authorize and Gitleaks-class are in place. Review findings, re-verify until Fixed, and schedule the next run. This board stays up."
+              : "Authorize a local path. Run Gitleaks-class. Review, re-verify, and schedule the next run. This board stays up — Fixed only after a retest."}
           </p>
           {/* Mid-market / VP pilot confidence: success criteria one-liner. */}
           <p
@@ -345,7 +363,7 @@ export function GetStarted({ userName }: { userName?: string }) {
             {" + one re-validate"}
             <span className="text-muted">
               {" "}
-              — pilot complete when a fix lands Fixed only via verification.
+              — the loop is closed when a fix lands Fixed only via verification.
             </span>
           </p>
           {/* P04 trust: runner is optional for cloud/source-side Validation Snapshot. */}
@@ -373,8 +391,8 @@ export function GetStarted({ userName }: { userName?: string }) {
             </p>
           ) : null}
 
-          {/* UX-W1 / #36–38: singular primary CTA only in the hero row.
-              Demo / full guide stay secondary (muted text links below). */}
+          {/* UX-W1 / #36–38: Gitleaks-class primary. Optional AWS Prowler is a
+              second primary only when Connected — never a Connect-a-source twin. */}
           <div className="mt-7 flex flex-col gap-2">
             <div className="flex flex-wrap items-center gap-3">
               <Link
@@ -400,6 +418,15 @@ export function GetStarted({ userName }: { userName?: string }) {
                   />
                 </svg>
               </Link>
+              {optionalAwsCta ? (
+                <Link
+                  href={optionalAwsCta.href}
+                  data-testid="get-started-aws-prowler-cta"
+                  className={buttonClassName({ className: "gap-2" })}
+                >
+                  {optionalAwsCta.label}
+                </Link>
+              ) : null}
               {/* UX-W16: resume only when mid-setup; keeps primary singular otherwise. */}
               {!setupComplete && resume ? (
                 <Link
@@ -434,7 +461,7 @@ export function GetStarted({ userName }: { userName?: string }) {
               aria-label={
                 setupComplete
                   ? "Proof-loop milestone progress"
-                  : "First-run setup progress"
+                  : "Board setup progress"
               }
             >
               <div
@@ -489,6 +516,13 @@ export function GetStarted({ userName }: { userName?: string }) {
           How the full loop works
         </summary>
         <div className="space-y-4 border-t border-line px-4 py-4">
+          <p
+            data-testid="get-started-aev-bas-boundary"
+            className="max-w-xl text-[12.5px] leading-relaxed text-muted"
+          >
+            {AEV_BAS_BOUNDARY_SENTENCE} Catalog, BAS, and CTEM live here — not
+            the default start.
+          </p>
           <FirstMeasuredProofCountdown
             progress={firstProof}
             loading={activation.loading}
@@ -689,13 +723,13 @@ export function GetStarted({ userName }: { userName?: string }) {
             <>
               While you activate, the left rail shows the Operate path (Home,
               Scope, Validate) — not every product surface. Labs stay hidden
-              until Show Labs &amp; more. This Home setup retires once your
-              first measured validation is available.
+              until Show Labs &amp; more. This Home setup retires once a
+              measured result is on the board.
             </>
           ) : (
             <>
               Use Home, Scope, Validate on the rail. This Home setup retires
-              once your first measured validation is available.
+              once a measured result is on the board.
             </>
           )}
         </p>

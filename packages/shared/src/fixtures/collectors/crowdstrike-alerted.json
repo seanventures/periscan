@@ -1,0 +1,25 @@
+{
+  "meta": {
+    "query_time": 0.02,
+    "pagination": { "offset": 0, "limit": 100, "total": 1 },
+    "powered_by": "crowdstrike-api-gateway",
+    "trace_id": "trace-alerted"
+  },
+  "resources": [
+    {
+      "id": "cs-alert-1",
+      "cid": "cid-lab",
+      "composite_id": "cs-alert-1:cid-lab:1",
+      "display_name": "Falcon detected benign marker",
+      "filename": "periscan-r-aaaa-s-bbbb-nonce1.exe",
+      "cmdline": "periscan-r-aaaa-s-bbbb-nonce1 --benign",
+      "parent_details": { "filename": "cmd.exe" },
+      "grandparent_details": { "filename": "explorer.exe" },
+      "device": { "hostname": "lab-edr-01", "device_id": "dev-1" },
+      "pattern_disposition": 0,
+      "created_timestamp": "2026-09-17T14:01:00.000Z",
+      "updated_timestamp": "2026-09-17T14:01:30.000Z",
+      "technique": "T1059"
+    }
+  ]
+}

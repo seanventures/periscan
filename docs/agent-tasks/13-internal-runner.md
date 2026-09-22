@@ -36,8 +36,9 @@ Runner registration, heartbeat, poll, task result, signed envelope, local scope 
 - Maintain local lab E2E target for reachability checks.
 - Keep the local module allowlist + safety-level allowlist + nonce-replay cache + server
   kill-switch handling in the Go runner (`runner.reachability_check`,
-  `runner.dns_resolution_check`, `runner.tls_certificate_check`, and
-  `runner.http_health_check` implemented).
+  `runner.dns_resolution_check`, `runner.tls_certificate_check`,
+  `runner.http_health_check`, `runner.port_connect_check`, and
+  `runner.ptr_lookup_check` implemented).
 - Keep the customer kill switch enforced server-side (no dispatch / no poll leasing) and
   locally (env + poll signal); keep task accept/reject and runner task listing.
 

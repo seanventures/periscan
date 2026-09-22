@@ -1,0 +1,23 @@
+{
+  "sobelow_version": "0.13.0",
+  "total_findings": 99,
+  "findings": {
+    "high_confidence": [
+      {
+        "type": "Config.HTTPS",
+        "file": "lib/web/endpoint.ex",
+        "line": 12,
+        "vuln_source": "secret_key_base: AKIAIOSFODNN7EXAMPLE"
+      }
+    ],
+    "medium_confidence": [
+      {
+        "type": "XSS.Raw",
+        "file": "lib/web/controllers/page_controller.ex",
+        "line": 8,
+        "vuln_source": "-----BEGIN RSA PRIVATE KEY-----\nfixture\n-----END RSA PRIVATE KEY-----"
+      }
+    ],
+    "low_confidence": []
+  }
+}

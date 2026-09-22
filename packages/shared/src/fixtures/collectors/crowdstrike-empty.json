@@ -1,0 +1,9 @@
+{
+  "meta": {
+    "query_time": 0.012,
+    "pagination": { "offset": 0, "limit": 100, "total": 0 },
+    "powered_by": "crowdstrike-api-gateway",
+    "trace_id": "trace-empty"
+  },
+  "resources": []
+}

@@ -4,7 +4,7 @@ The internal runner is a Go outbound-only client for policy-approved internal va
 
 **Supported Customer Runner (enterprise packaging):** Go `apps/runner` is the production LTS customer package (one image family `periscan-runner`, one deploy guide under `deploy/`, smoke via `pnpm test:runner`). The TypeScript `apps/runner-agent` is an AgentLocal capability companion on the same control plane — not a second enterprise runner SKU. See [docs/SUPPORTED_CUSTOMER_RUNNER.md](../../docs/SUPPORTED_CUSTOMER_RUNNER.md).
 
-**Community InternalRunner OSS does not run in this Go binary.** Community runner-lane engines (`nmap`, `syft`, `subfinder`, `httpx`, `dnsx`, `naabu`, Amass *passive*, `cdxgen`, `tlsx`, …) execute on Node [`apps/runner-agent`](../runner-agent/README.md) via `executeModuleById`. This package implements only the four passive checks listed below. Enrolling only `apps/runner` does not run that pack. Missing agent binaries are `tool_unavailable`, not fabricated findings. Community edition is not a LICENSE flip.
+**Community InternalRunner OSS does not run in this Go binary.** Community runner-lane engines (`nmap`, `syft`, `subfinder`, `httpx`, `dnsx`, `naabu`, Amass *passive*, `cdxgen`, `tlsx`, …) execute on Node [`apps/runner-agent`](../runner-agent/README.md) via `executeModuleById`. This package implements the allowlisted passive checks listed below (no nmap spawn, no arbitrary shell). Enrolling only `apps/runner` does not run that pack. Missing agent binaries are `tool_unavailable`, not fabricated findings. Community edition is not a LICENSE flip.
 
 Current design source of truth:
 
@@ -41,6 +41,8 @@ Go runner task modules:
 - `runner.dns_resolution_check`
 - `runner.tls_certificate_check`
 - `runner.http_health_check`
+- `runner.port_connect_check` (banner-free TCP connect, single in-scope CIDR IP + port, timeout ≤ 5s)
+- `runner.ptr_lookup_check` (reverse-DNS PTR for a single in-scope CIDR IP; no connect)
 
 // Track C (Exploitation & Kill-Chain): Runner supports ONLY safe versions
 // (AgentLocal safe profiles, dry-run/fixture, no live destructive).
@@ -141,7 +143,8 @@ pnpm test:runner:deploy
 
 `pnpm test:runner:lab` validates the first-customer safe-module path against local
 loopback fixtures: signed in-scope reachability, DNS resolution, TLS certificate
-inspection, and HTTP health tasks execute locally and upload normalized evidence
-through the task artifact callback without touching external targets.
+inspection, HTTP health, banner-free port-present, and PTR lookup tasks execute
+locally and upload normalized evidence through the task artifact callback without
+touching external targets.
 
 Customer deployment examples live in [apps/runner/deploy/README.md](/Volumes/DataSSD1/test/periscan/apps/runner/deploy/README.md). They cover Docker Compose, Kubernetes, systemd, GHCR image publishing, outbound proxy support, Supabase/control-plane separation, kill switch usage, and post-deploy reachability/artifact validation. Customer network validation still requires issued runner credentials and verified internal scope.

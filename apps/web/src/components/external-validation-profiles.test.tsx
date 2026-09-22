@@ -271,7 +271,7 @@ describe("ExternalValidationProfiles", () => {
     );
 
     const launch = await screen.findByRole("button", {
-      name: "Launch safe validation"
+      name: "Start external assessment"
     });
     await waitFor(() => expect(launch).toBeEnabled());
     expect(screen.getByText(decisionId)).toBeInTheDocument();
@@ -330,5 +330,118 @@ describe("ExternalValidationProfiles", () => {
     expect(
       externalValidationState({ ...mission, status: "Failed" }, [timedOutRun])
     ).toBe("Timed out");
+  });
+
+  it("starts from a verified Domain with one primary CTA and shows API results", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const route = String(input).split("?")[0] ?? "";
+        const method = init?.method ?? "GET";
+        if (route === "/api/v1/me") return jsonResponse(authPayload);
+        if (route === "/api/v1/scopes") return jsonResponse({ items: [scope] });
+        if (route === "/api/v1/external-validation/profiles") {
+          return jsonResponse({ items: profiles });
+        }
+        if (route === "/api/v1/modules") {
+          return jsonResponse({
+            items: [
+              {
+                moduleId: "nuclei.external_exposure_safe",
+                resourceLimits: { maxNetworkRequests: 25, memoryMb: 192 },
+                timeoutSeconds: 120
+              }
+            ]
+          });
+        }
+        if (route === "/api/v1/external-validation/attempts") {
+          return jsonResponse({
+            items: [{ mission, runs: [run] }]
+          });
+        }
+        if (route === "/api/v1/evidence") return jsonResponse({ items: [] });
+        if (route === "/api/v1/attack-paths") return jsonResponse({ items: [] });
+        if (route === "/api/v1/remediations" && method === "GET") {
+          return jsonResponse({ items: [] });
+        }
+        return jsonResponse({ error: `Unhandled route ${route}` }, 404);
+      }) as unknown as typeof fetch
+    );
+
+    render(<ExternalValidationProfiles />);
+
+    expect(
+      await screen.findByRole("heading", { name: /External assessment/i })
+    ).toBeInTheDocument();
+    const start = await screen.findByTestId("external-assessment-primary");
+    expect(start).toHaveTextContent(/Start external assessment/i);
+    expect(start).toBeEnabled();
+    expect(
+      screen.queryByRole("link", { name: /Validation Ops/i })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: /^Registries$/i })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByTestId("external-assessment-results")
+    ).toHaveTextContent(/Safe external baseline completed/i);
+    expect(document.body.textContent).not.toMatch(/NodeZero/i);
+    expect(document.body.textContent).not.toMatch(/automated pentest/i);
+    expect(document.body.textContent).not.toMatch(/always-on BAS/i);
+    expect(document.body.textContent).not.toMatch(/CTEM\s*%/i);
+  });
+
+  it("does not start an external assessment from an unverified Domain", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const route = String(input).split("?")[0] ?? "";
+        if (route === "/api/v1/me") return jsonResponse(authPayload);
+        if (route === "/api/v1/scopes") {
+          return jsonResponse({
+            items: [{ ...scope, verificationStatus: "Pending", verifiedAt: null }]
+          });
+        }
+        if (route === "/api/v1/external-validation/profiles") {
+          return jsonResponse({ items: profiles });
+        }
+        if (route === "/api/v1/modules") return jsonResponse({ items: [] });
+        if (route === "/api/v1/external-validation/attempts") {
+          return jsonResponse({ items: [] });
+        }
+        if (route === "/api/v1/evidence") return jsonResponse({ items: [] });
+        if (route === "/api/v1/attack-paths") return jsonResponse({ items: [] });
+        if (route === "/api/v1/remediations") return jsonResponse({ items: [] });
+        return jsonResponse({ error: `Unhandled ${route}` }, 404);
+      }) as unknown as typeof fetch
+    );
+
+    render(<ExternalValidationProfiles />);
+
+    const start = await screen.findByTestId("external-assessment-primary");
+    expect(start).toBeDisabled();
+    expect(screen.getByTestId("external-assessment-gate")).toHaveTextContent(
+      /verified Domain/i
+    );
+  });
+
+  it("shows honest empty when external assessment APIs return 404", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const route = String(input).split("?")[0] ?? "";
+        if (route === "/api/v1/me") return jsonResponse(authPayload);
+        return jsonResponse({ error: "Not found" }, 404);
+      }) as unknown as typeof fetch
+    );
+
+    render(<ExternalValidationProfiles />);
+
+    expect(
+      await screen.findByTestId("external-assessment-empty")
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("external-assessment-empty")).toHaveTextContent(
+      /not available from the API/i
+    );
   });
 });

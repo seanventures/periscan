@@ -9,6 +9,7 @@ export type ScreenId =
   | "engines"
   | "health"
   | "evidence"
+  | "bas"
   | "help";
 
 export const SCREEN_ORDER: ScreenId[] = [
@@ -35,6 +36,7 @@ export function screenLabel(id: ScreenId): string {
     engines: "engines",
     health: "health",
     evidence: "evidence",
+    bas: "bas",
     help: "help"
   };
   return labels[id];

@@ -1,0 +1,35 @@
+{
+  "vulnerability_count": 99,
+  "dependencies": [
+    {
+      "name": "flask",
+      "version": "0.5",
+      "vulns": [
+        {
+          "id": "PYSEC-2019-179",
+          "fix_versions": ["1.0"],
+          "aliases": ["CVE-2019-1010083"],
+          "description": "Trap secret AKIAIOSFODNN7EXAMPLE"
+        },
+        {
+          "id": "PYSEC-2018-66",
+          "fix_versions": ["0.12.3"],
+          "aliases": ["CVE-2018-1000656"],
+          "description": "-----BEGIN RSA PRIVATE KEY-----\nfixture\n-----END RSA PRIVATE KEY-----"
+        }
+      ]
+    },
+    {
+      "name": "jinja2",
+      "version": "3.0.2",
+      "vulns": []
+    }
+  ],
+  "fixes": [
+    {
+      "name": "flask",
+      "old_version": "0.5",
+      "new_version": "1.0"
+    }
+  ]
+}

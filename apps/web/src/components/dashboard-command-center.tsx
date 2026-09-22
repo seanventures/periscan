@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type {
+  CTEMStage,
+  ProofLoopStage,
   RemediationTask,
   TenantThreatAlert,
   ValidatedFinding
@@ -11,9 +13,14 @@ import type {
 import {
   countOpenRemediations,
   deriveAttackPathClaim,
-  formatRiskBandDisplayLabel
+  formatRiskBandDisplayLabel,
+  PROOF_LOOP_TO_CTEM
 } from "@periscan/shared";
 
+import {
+  COMMUNITY_FIRST_HOUR_AFTER_FINDING_HEADLINE,
+  COMMUNITY_FIRST_HOUR_AFTER_FINDING_SENTENCE
+} from "../lib/aev-bas-copy";
 import { projectFindingClaimDisplay } from "../lib/claim-safe-display";
 import {
   activationHasRevalidation,
@@ -21,8 +28,11 @@ import {
   resolveCtemBoardHonesty
 } from "../lib/ctem-board-honesty";
 import {
+  resolveCommunityReviewFindingsMissionId,
   resolveFirstRunPrimaryAction,
-  resolvePostFindingPrimaryAction
+  homeTopFindingIsSettled,
+  resolvePostFindingPrimaryAction,
+  selectHomeTopFinding
 } from "../lib/first-run-primary-action";
 import { browserPeriscanApiClient as api } from "../lib/periscan-api-client";
 import {
@@ -56,6 +66,16 @@ import {
   type ChartDatum,
   type StateTone
 } from "../ui";
+import {
+  COMMUNITY_RUN_WATCH_LABEL,
+  accumulateCommunityHomeWatchDwellVisibleMs,
+  communityHomeWatchDwellRemainingMs,
+  communityHomeWatchShouldStart,
+  formatCommunityFindingPathRule,
+  readCommunityHomeWatchDwellRecord,
+  resolveCommunityHomeWatchDwellMount,
+  writeCommunityHomeWatchDwellRecord
+} from "./community-run-progress";
 import { GetStarted } from "./get-started";
 import { HeroLoopCoach } from "./hero-loop-coach";
 import { ProofLoopMap } from "./proof-loop-map";
@@ -63,6 +83,33 @@ import { relTime as formatAge } from "./remediation-lib";
 
 /** Monday mode: collapse Home chrome to Needs-you + primary CTA + top path (UX-W5 / 198). */
 export const MONDAY_MODE_STORAGE_KEY = "periscan-monday-mode";
+
+/**
+ * First-hour Proof Home clock. Primary verbs stay Authorize/Run/Review/Verify.
+ * CTEM names are secondary aliases via PROOF_LOOP_TO_CTEM (ontology CTEM_TO_PROOF_LOOP inverse).
+ * Never Connect / Discover — Connect is optional extra signal, not a first-hour door.
+ */
+export type FirstHourProofClockStep = {
+  primary: "Authorize" | "Run" | "Review" | "Verify";
+  proofStage: ProofLoopStage;
+  ctemAlias: CTEMStage;
+};
+
+const FIRST_HOUR_PROOF_CLOCK_CORE: ReadonlyArray<{
+  primary: FirstHourProofClockStep["primary"];
+  proofStage: ProofLoopStage;
+}> = [
+  { primary: "Authorize", proofStage: "Authorize" },
+  { primary: "Run", proofStage: "Validate" },
+  { primary: "Review", proofStage: "Understand" },
+  { primary: "Verify", proofStage: "Verify" }
+];
+
+export const FIRST_HOUR_PROOF_CLOCK: readonly FirstHourProofClockStep[] =
+  FIRST_HOUR_PROOF_CLOCK_CORE.map((step) => ({
+    ...step,
+    ctemAlias: PROOF_LOOP_TO_CTEM[step.proofStage]
+  }));
 
 /**
  * UX-W17: read Monday preference.
@@ -108,6 +155,50 @@ export function resolveMondayModeDefault(
 
 const EMPTY_PATHS_PROOF_MESSAGE =
   "Community findings still count; Connect is extra signal later.";
+
+const MONDAY_MODE_TITLE = "Proof board";
+const MONDAY_MODE_DESCRIPTION =
+  "Needs you, the next action, and the top path — the board you keep running.";
+const PROGRAM_CONTEXT_TITLE = "The proof loop, at a glance";
+const PROGRAM_CONTEXT_DESCRIPTION =
+  "What's measured, what controls were observed to miss, what's waiting on you, and where proof is missing. Every number links to its evidence certainty.";
+
+/** True when a finding carries VALIDATED evidence — first-hour job has moved to review / prove Fixed. */
+export function findingHasValidatedEvidence(
+  finding: Pick<ValidatedFinding, "evidenceIds" | "status" | "validationState">
+): boolean {
+  return (
+    (finding.evidenceIds?.length ?? 0) > 0 &&
+    (finding.validationState === "Validated" || finding.status === "Validated")
+  );
+}
+
+/**
+ * Home H1 after programStarted. VALIDATED Community evidence leads with the
+ * first-hour job outcome. Monday collapsed chrome stays the toggle — not a
+ * second heading, not AEV/CTEM platform copy.
+ */
+export function resolveProgramStartedHomeCopy(input: {
+  hasValidatedEvidence: boolean;
+  mondayMode: boolean;
+}): { title: string; description: string } {
+  if (input.hasValidatedEvidence) {
+    return {
+      title: COMMUNITY_FIRST_HOUR_AFTER_FINDING_HEADLINE,
+      description: COMMUNITY_FIRST_HOUR_AFTER_FINDING_SENTENCE
+    };
+  }
+  if (input.mondayMode) {
+    return {
+      title: MONDAY_MODE_TITLE,
+      description: MONDAY_MODE_DESCRIPTION
+    };
+  }
+  return {
+    title: PROGRAM_CONTEXT_TITLE,
+    description: PROGRAM_CONTEXT_DESCRIPTION
+  };
+}
 
 /** First-hour Home empty-path CTA: proof rail, never Integrations Connect. */
 export function resolveFirstHourHomeAction(
@@ -264,6 +355,129 @@ export function DashboardCommandCenter() {
   const programListsReady =
     !paths.loading && !findings.loading && !snapshots.loading;
   const emptyPathsAction = resolveFirstHourHomeAction(activation.data);
+  const [watchNowMs, setWatchNowMs] = useState(() => Date.now());
+  const watchStartedAtRef = useRef<number | null>(null);
+  const watchMountAtRef = useRef<number | null>(null);
+  const watchVisibleMsRef = useRef(0);
+  const homeWatchFinding = (findings.data ?? [])[0] ?? null;
+  const homeWatchClaim = homeWatchFinding
+    ? projectFindingClaimDisplay(homeWatchFinding)
+    : null;
+  const homeWatchJobsQueued =
+    (findings.data ?? []).length > 0 &&
+    (findings.data ?? []).every((finding) =>
+      finding.source.includes("gitleaks.repo_secrets")
+    )
+      ? 1
+      : 0;
+  const shouldStartHomeWatch = homeWatchFinding
+    ? communityHomeWatchShouldStart({
+        displayValidationState: homeWatchClaim?.displayValidationState,
+        findingCreatedAtMs: Date.parse(homeWatchFinding.createdAt),
+        hasEvidence: (homeWatchFinding.evidenceIds?.length ?? 0) > 0,
+        jobsQueued: homeWatchJobsQueued,
+        nowMs: watchNowMs,
+        source: homeWatchFinding.source
+      })
+    : false;
+  let homeWatchStorage: Storage | null = null;
+  if (typeof window !== "undefined") {
+    try {
+      homeWatchStorage = window.sessionStorage;
+    } catch {
+      homeWatchStorage = null;
+    }
+  }
+  const storedWatchRecord = homeWatchFinding
+    ? readCommunityHomeWatchDwellRecord(
+        homeWatchStorage,
+        homeWatchFinding.findingId,
+        watchNowMs
+      )
+    : null;
+  const resolvedWatchMount = resolveCommunityHomeWatchDwellMount({
+    nowMs: watchNowMs,
+    shouldStart: shouldStartHomeWatch,
+    stored: storedWatchRecord
+  });
+  if (resolvedWatchMount.startedAtMs != null) {
+    watchStartedAtRef.current = resolvedWatchMount.startedAtMs;
+  }
+  if (
+    resolvedWatchMount.thisMountAtMs != null &&
+    watchMountAtRef.current == null
+  ) {
+    watchMountAtRef.current = resolvedWatchMount.thisMountAtMs;
+    watchVisibleMsRef.current = resolvedWatchMount.accumulatedVisibleMs;
+  }
+  if (
+    resolvedWatchMount.shouldPersist &&
+    homeWatchFinding &&
+    resolvedWatchMount.startedAtMs != null
+  ) {
+    writeCommunityHomeWatchDwellRecord(
+      homeWatchStorage,
+      homeWatchFinding.findingId,
+      {
+        startedAtMs: resolvedWatchMount.startedAtMs,
+        visibleMs: 0
+      }
+    );
+  }
+  const homeWatchRemainingMs = communityHomeWatchDwellRemainingMs({
+    accumulatedVisibleMs: watchVisibleMsRef.current,
+    evidenceAtMs: watchMountAtRef.current,
+    hasEvidence: shouldStartHomeWatch,
+    jobsQueued: homeWatchJobsQueued,
+    nowMs: watchNowMs
+  });
+  const homeWatchDwelling = homeWatchRemainingMs > 0;
+  const homeWatchFindingId = homeWatchFinding?.findingId ?? null;
+
+  useEffect(() => {
+    if (!homeWatchFindingId || !shouldStartHomeWatch) {
+      return;
+    }
+    let storage: Storage | null = null;
+    try {
+      storage = window.sessionStorage;
+    } catch {
+      storage = null;
+    }
+    const persistVisible = (nowMs: number) => {
+      if (
+        watchMountAtRef.current == null ||
+        watchStartedAtRef.current == null
+      ) {
+        return;
+      }
+      writeCommunityHomeWatchDwellRecord(storage, homeWatchFindingId, {
+        startedAtMs: watchStartedAtRef.current,
+        visibleMs: accumulateCommunityHomeWatchDwellVisibleMs({
+          accumulatedVisibleMs: watchVisibleMsRef.current,
+          nowMs,
+          thisMountAtMs: watchMountAtRef.current
+        })
+      });
+    };
+    if (!homeWatchDwelling) {
+      persistVisible(watchNowMs);
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      setWatchNowMs(Date.now());
+    }, homeWatchRemainingMs);
+    return () => {
+      window.clearTimeout(timer);
+      persistVisible(Date.now());
+    };
+  }, [
+    homeWatchDwelling,
+    homeWatchFindingId,
+    homeWatchRemainingMs,
+    shouldStartHomeWatch,
+    watchNowMs
+  ]);
 
   // UX-W17: hydrate Monday mode once.
   // Explicit "1"/"0" apply immediately; unset defaults ON when programStarted.
@@ -632,29 +846,59 @@ export function DashboardCommandCenter() {
 
   const topPathId = topPaths[0]?.attackPath.pathId ?? null;
 
-  const topFinding = (findings.data ?? [])[0] ?? null;
+  const topFinding = selectHomeTopFinding(
+    findings.data ?? [],
+    remediations.data ?? []
+  );
+  const topFindingClaim = topFinding
+    ? projectFindingClaimDisplay(topFinding)
+    : null;
+  const reviewFindingsMissionId = resolveCommunityReviewFindingsMissionId({
+    measuredResultHref: activation.data?.milestones.find(
+      (milestone) => milestone.key === "MeasuredResult"
+    )?.href,
+    snapshots: snapshots.data
+  });
   const postFindingPrimary = resolvePostFindingPrimaryAction({
     findingsCount: findings.data?.length ?? 0,
+    measuredFixedCount: (remediations.data ?? []).filter(
+      (task) =>
+        (task.status === "Fixed" || task.status === "Mitigated") &&
+        Boolean(task.latestVerification)
+    ).length,
+    missionId: reviewFindingsMissionId,
     openRemediationCount: countOpenRemediations(remediations.data ?? [])
   });
+  const topFindingSettled = homeTopFindingIsSettled(
+    topFinding,
+    remediations.data ?? []
+  );
   const emptyPathsHomeAction = postFindingPrimary
     ? undefined
     : emptyPathsAction;
+  const hasValidatedEvidence = (findings.data ?? []).some(
+    findingHasValidatedEvidence
+  );
+  const homeCopy = resolveProgramStartedHomeCopy({
+    hasValidatedEvidence,
+    mondayMode
+  });
 
   return (
     <PageShell data-monday-mode={mondayMode ? "1" : "0"}>
       <PageHeader
-        eyebrow="Proof"
-        title={
-          mondayMode ? "Monday mode" : "The proof loop, at a glance"
-        }
-        description={
-          mondayMode
-            ? "Needs you, primary next action, and the top path or finding — nothing else."
-            : "What's measured, what controls were observed to miss, what's waiting on you, and where proof is missing. Every number links to its evidence certainty."
-        }
+        eyebrow="Proof OS"
+        title={homeCopy.title}
+        description={homeCopy.description}
         meta={
           <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href="/schedules"
+              data-testid="home-cadence-link"
+              className="inline-flex items-center rounded-control border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-ink hover:border-brand hover:text-brand"
+            >
+              Keep on a cadence
+            </Link>
             <button
               type="button"
               data-testid="monday-mode-toggle"
@@ -685,6 +929,48 @@ export function DashboardCommandCenter() {
           </div>
         }
       />
+
+      {homeWatchDwelling && homeWatchFinding ? (
+        <Panel
+          data-testid="home-watch-dwell"
+          aria-labelledby="home-watch-dwell-heading"
+        >
+          <div className="flex flex-col gap-2 p-4">
+            <p
+              id="home-watch-dwell-heading"
+              data-testid="community-run-watch"
+              className="text-[12px] font-semibold text-ink"
+            >
+              {COMMUNITY_RUN_WATCH_LABEL}
+            </p>
+            <p
+              data-testid="home-watch-finding"
+              className="font-mono text-[13px] text-ink"
+            >
+              {formatCommunityFindingPathRule(homeWatchFinding)}
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              {homeWatchClaim ? (
+                <ValidationStateBadge
+                  state={homeWatchClaim.displayValidationState}
+                  title={homeWatchClaim.ariaLabel}
+                  aria-label={homeWatchClaim.ariaLabel}
+                />
+              ) : null}
+              {homeWatchFinding.severity ? (
+                <span
+                  className="font-mono text-[11px]"
+                  style={{
+                    color: severityChartColor(homeWatchFinding.severity)
+                  }}
+                >
+                  {homeWatchFinding.severity}
+                </span>
+              ) : null}
+            </div>
+          </div>
+        </Panel>
+      ) : null}
 
       {degradedRails.length > 0 ? (
         <DegradedBanner
@@ -848,7 +1134,7 @@ export function DashboardCommandCenter() {
                       Top finding
                     </span>
                     <span className="mt-0.5 block truncate text-sm font-medium text-ink group-hover:text-brand">
-                      {topFinding.title}
+                      {formatCommunityFindingPathRule(topFinding)}
                     </span>
                   </span>
                   <span className="shrink-0 text-[11px] font-semibold text-brand">
@@ -881,8 +1167,8 @@ export function DashboardCommandCenter() {
                 <span className="min-w-8 font-mono text-lg font-semibold text-ink">
                   {workQueue.loading ? "—" : queue.count}
                 </span>
-                <span className="min-w-0">
-                  <span className="flex flex-wrap items-center gap-2 text-sm font-medium text-ink group-hover:text-brand">
+                <span className="min-w-0 flex-1 overflow-hidden">
+                  <span className="flex flex-col items-start gap-0.5 text-sm font-medium text-ink group-hover:text-brand">
                     {queue.title}
                     <span className="font-mono text-[9px] uppercase tracking-wide text-subtle">
                       {queue.stage} · {queue.urgency}
@@ -957,12 +1243,37 @@ export function DashboardCommandCenter() {
         </div>
       </Panel>
 
-      {/* Monday / triage: top path + top finding only (no charts / CTEM / activity) */}
+      {/* Monday / triage: proof clock + top path/finding (no charts / CTEM board rewrite) */}
       {mondayMode ? (
-        <div
-          className="grid gap-4 lg:grid-cols-2"
-          data-testid="monday-mode-focus"
-        >
+        <div className="flex flex-col gap-4" data-testid="monday-mode-focus">
+          <ol
+            className="flex list-none flex-wrap items-stretch gap-2 rounded-control border border-line bg-elevated/80 px-3 py-2"
+            data-testid="proof-clock"
+            aria-label="Proof clock"
+          >
+            {FIRST_HOUR_PROOF_CLOCK.map((step) => (
+              <li
+                key={step.primary}
+                className="flex min-w-[7.5rem] flex-1 flex-col gap-0.5 rounded-control border border-line bg-canvas px-2.5 py-1.5"
+                data-testid={`proof-clock-step-${step.primary.toLowerCase()}`}
+              >
+                <span
+                  className="font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-ink"
+                  data-testid="proof-clock-primary"
+                >
+                  {step.primary}
+                </span>
+                <span
+                  className="font-mono text-[9px] uppercase tracking-[0.08em] text-subtle"
+                  data-testid="proof-clock-ctem-alias"
+                  title={`CTEM alias · ${step.ctemAlias}`}
+                >
+                  {step.ctemAlias}
+                </span>
+              </li>
+            ))}
+          </ol>
+          <div className="grid gap-4 lg:grid-cols-2">
           <Panel>
             <PanelHeader
               title="Top path"
@@ -1028,10 +1339,25 @@ export function DashboardCommandCenter() {
             ) : topFinding ? (
               <div className="flex flex-col gap-3 p-4">
                 <p className="text-[13px] font-medium text-ink">
-                  {topFinding.title}
+                  {formatCommunityFindingPathRule(topFinding)}
                 </p>
                 <div className="flex flex-wrap items-center gap-2">
-                  <ValidationStateBadge state={topFinding.validationState} />
+                  {topFindingSettled ? (
+                    <StateBadge
+                      tone="fixed"
+                      dot={false}
+                      data-testid="dashboard-top-finding-settled"
+                    >
+                      Fixed
+                    </StateBadge>
+                  ) : topFindingClaim ? (
+                    <ValidationStateBadge
+                      state={topFindingClaim.displayValidationState}
+                      title={topFindingClaim.ariaLabel}
+                      aria-label={topFindingClaim.ariaLabel}
+                      data-testid="dashboard-top-finding-claim-safe"
+                    />
+                  ) : null}
                   <span
                     className="font-mono text-[11px]"
                     style={{ color: severityChartColor(topFinding.severity) }}
@@ -1059,6 +1385,7 @@ export function DashboardCommandCenter() {
               </div>
             )}
           </Panel>
+          </div>
         </div>
       ) : (
         <div
@@ -1479,13 +1806,14 @@ export function DashboardCommandCenter() {
                       className="border-b border-line last:border-b-0"
                     >
                       <td className="max-w-0 truncate px-4 py-2.5 text-ink">
-                        {f.title}
+                        {formatCommunityFindingPathRule(f)}
                       </td>
                       <td className="px-2 py-2.5">
                         <ValidationStateBadge
                           state={claimDisplay.displayValidationState}
                           title={claimDisplay.ariaLabel}
                           aria-label={claimDisplay.ariaLabel}
+                          data-testid="dashboard-finding-claim-safe"
                         />
                       </td>
                       <td className="px-2 py-2.5">

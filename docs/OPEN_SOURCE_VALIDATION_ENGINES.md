@@ -1,5 +1,7 @@
 # Open Source Validation Engines
 
+> **BAS/AEV program:** [BAS_AEV_PROGRAM.md](BAS_AEV_PROGRAM.md) — qualified open-source simulation, emulation and evidence-backed validation (PERISCAN-583).
+
 Periscan uses open-source security tools as **internal validation engines**, wrapped
 behind a Periscan-owned adapter framework. Open-source tools are infrastructure for
 measured proof, not a rebrand of upstream projects.
@@ -67,7 +69,7 @@ Inconclusive — they never fabricate findings.
 | **Reference-class adapters** | Handwritten in `packages/modules/src/index.ts` | **Gitleaks, Trivy (repo + container SCA), OSV, Prowler, Nuclei** (safe External PoA, second mission). Dedicated parsers, redaction, fixtures. Gitleaks is the behavior reference. |
 | **Popular-OSS factory** | `packages/modules/src/community-popular-oss.ts` (`PopularOssSpec`); catalog in `community-popular-oss-catalog.ts` | Generic CLI factory with **count parsers**, not Gitleaks-grade adapters. Permissive SPDX only (Bandit, Checkov, detect-secrets, IaC/SCA/SAST siblings, …). Copy a spec; do not duplicate Gitleaks into `index.ts`. |
 | **Copyleft** | `COPYLEFT_OPT_IN_SUITE` | **Engine Lab + SPDX accept.** GPL/LGPL (Semgrep, testssl.sh, Nikto, WhatWeb, ScoutSuite, Hadolint, Lynis, RustScan, …) are not Community start and are not redistributed in the default image. |
-| **Theater** | `ENGINE_LAB_THEATER_TOOL_IDS` / `ENGINE_LAB_THEATER_MODULE_IDS` | **Never Community**, even when catalog `policyStatus` is Enabled. Atomic, Caldera, SharpHound, sqlmap, Metasploit, NetExec, promptfoo. Catalog only — not installable as validation. |
+| **Theater** | `ENGINE_LAB_THEATER_TOOL_IDS` / `ENGINE_LAB_THEATER_MODULE_IDS` | **Currently excluded from Community start**, even when catalog `policyStatus` is Enabled. Qualification under the BAS/AEV program may change eligibility. Atomic, Caldera, SharpHound, sqlmap, Metasploit, NetExec, promptfoo. Catalog only — not installable as validation. |
 
 Nuclei is a **second mission** so an External PoA kill-switch cannot block the
 rest of the pack. First-party DNS/TLS/HTTP modules stay ControlPlane.
@@ -111,7 +113,8 @@ Go LTS runner. `nmap` (`recon.host_discovery`, `recon.service_inventory`) and
   external-PoA modules. The Go internal runner (`apps/runner`) is the production
   LTS customer runner: outbound HTTPS signed-task polling (Ed25519) and the
   current safe internal checks:
-  TCP reachability, DNS resolution, TLS certificate inspection, and HTTP health.
+  TCP reachability, DNS resolution, TLS certificate inspection, and HTTP health,
+  plus CIDR-scoped banner-free port-present and PTR lookup.
   The TypeScript runner-agent shares the same signed-task polling boundary for
   allowlisted AgentLocal module dispatch. **Go runner ≠ runner-agent:** nmap and
   Syft (and other InternalRunner OSS such as cdxgen, naabu, amass, subfinder,
@@ -283,24 +286,24 @@ These hold for every OSS engine integration and are enforced in code/tests:
 6. Raw tool output appears only in evidence detail/technical appendix, never as primary
    UX or report headline.
 7. Sensitive evidence is redacted before storage and before any model/context exposure.
-8. SharpHound, Caldera live execution, and Atomic live execution remain disabled.
+8. BAS adapters require scenario qualification before live execution.
 9. Tenant-disabled tools are denied before mission jobs are queued.
 10. Install/pull jobs use only allowlisted catalog artifacts; no customer-supplied
     arbitrary package/image/repository/URL/shell command is accepted.
 11. Copyleft (GPL/LGPL) engines are Engine Lab + SPDX accept — not Community
     start, not default-image redistribution.
-12. Theater tool IDs never Community-start, even when catalog `policyStatus` is
-    Enabled.
+12. Unqualified tool IDs cannot Community-start, even when catalog `policyStatus`
+    is Enabled. New BAS adapters require reviewed pack membership.
 
 ## Tool integration order
 
 Reference-class adapters first (already real): **Gitleaks, Trivy, OSV, Prowler,
 Nuclei**. Community density beyond those five is the popular-OSS factory
 (permissive SPDX, count parsers). Copyleft is Engine Lab, not this sequence.
-Theater (Atomic, Caldera, SharpHound, sqlmap, Metasploit, promptfoo) is never
+The current theater set (Atomic, Caldera, SharpHound, sqlmap, Metasploit, promptfoo) is not currently
 Community start — catalog/content only.
 
-The original program order (foundation first, riskiest capabilities last) is:
+Reference adapter inventory (BAS delivery order is in BAS_AEV_PROGRAM.md):
 
 1. Gitleaks (reference adapter — already real)
 2. Trivy + OSV (dependency/container)
@@ -308,14 +311,14 @@ The original program order (foundation first, riskiest capabilities last) is:
 4. Nuclei (safe external exposure)
 5. ZAP (web app passive baseline)
 6. promptfoo / PyRIT / Garak (AI app validation harnesses; promptfoo is
-   **theater**, never Community)
+   currently unqualified for Community)
 7. OpenCTI / Sigma / OCSF (threat intel + normalization; OpenCTI, Sigma, and
    OCSF are implemented as content/schema mapping modules; MISP remains blocked
    by the current AGPL license policy)
 8. Atomic Red Team / Caldera (content/plan import only; live execution disabled;
-   **theater**, never Community)
+   currently unqualified for Community)
 9. BloodHound CE (identity pathing import; SharpHound collector legal-review
-   blocked and theater)
+   pending qualification)
 
 ## Tool library expansion lifecycle
 

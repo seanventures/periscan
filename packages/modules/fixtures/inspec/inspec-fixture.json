@@ -1,0 +1,18 @@
+{
+  "profiles": [
+    {
+      "controls": [
+        {
+          "id": "sshd-01",
+          "results": [
+            {
+              "code_desc": "PermitRootLogin should be no",
+              "status": "failed"
+            }
+          ]
+        }
+      ],
+      "name": "fixture-linux"
+    }
+  ]
+}

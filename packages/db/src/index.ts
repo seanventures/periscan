@@ -14,6 +14,26 @@ export {
   resolveDatabaseUrlFromEnv
 } from "./database-env.js";
 export {
+  listObserverHealthSamplesCoveringWindow,
+  recordObserverHealthSample,
+  toCorrelationHealthSamples,
+  type CorrelationHealthSample,
+  type ListObserverHealthSamplesCoveringWindowInput,
+  type ObserverHealthSampleRecord,
+  type ObserverHealthStatusValue,
+  type RecordObserverHealthSampleInput
+} from "./observer-health-samples.js";
+export {
+  createEnterpriseSiteRecord,
+  getEnterpriseSiteRecord,
+  listEnterpriseSiteRecords,
+  updateEnterpriseSiteRecord,
+  type CreateEnterpriseSiteRecordInput,
+  type EnterpriseSiteRecord,
+  type GetEnterpriseSiteRecordInput,
+  type UpdateEnterpriseSiteRecordInput
+} from "./enterprise-sites.js";
+export {
   createCoreRepositories,
   type CreateMembershipInput,
   type CreateTenantInput,

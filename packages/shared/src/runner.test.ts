@@ -298,7 +298,9 @@ describe("RunnerCheckTaskRequest", () => {
     expect(modules).toEqual([
       "runner.dns_resolution_check",
       "runner.tls_certificate_check",
-      "runner.http_health_check"
+      "runner.http_health_check",
+      "runner.port_connect_check",
+      "runner.ptr_lookup_check"
     ]);
     expect(new Set(modules).size).toBe(modules.length);
   });
@@ -328,6 +330,33 @@ describe("RunnerCheckTaskRequest", () => {
         targetHost: "internal.corp.local"
       }).port
     ).toBe(8080);
+  });
+
+  it("allows PTR lookup without a port and requires a port for banner-free port-present", () => {
+    expect(
+      RunnerCheckTaskRequestSchema.parse({
+        module: "runner.ptr_lookup_check",
+        scopeId,
+        targetHost: "10.0.0.12"
+      }).module
+    ).toBe("runner.ptr_lookup_check");
+
+    expect(
+      RunnerCheckTaskRequestSchema.safeParse({
+        module: "runner.port_connect_check",
+        scopeId,
+        targetHost: "10.0.0.12"
+      }).success
+    ).toBe(false);
+
+    expect(
+      RunnerCheckTaskRequestSchema.parse({
+        module: "runner.port_connect_check",
+        port: 22,
+        scopeId,
+        targetHost: "10.0.0.12"
+      }).port
+    ).toBe(22);
   });
 });
 

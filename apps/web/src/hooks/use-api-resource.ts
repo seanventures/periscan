@@ -9,6 +9,7 @@ export interface ApiResource<T> {
   loading: boolean;
   refreshing: boolean;
   error: string | null;
+  errorStatus: number | null;
   lastUpdatedAt: string | null;
   refetch: () => Promise<void>;
 }
@@ -29,6 +30,7 @@ export function useApiResource<T>(
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorStatus, setErrorStatus] = useState<number | null>(null);
   const [lastUpdatedAt, setLastUpdatedAt] = useState<string | null>(null);
   const hasLoadedRef = useRef(false);
   const refetchIntervalMs = options.refetchIntervalMs;
@@ -48,6 +50,7 @@ export function useApiResource<T>(
           hasLoadedRef.current = true;
           setData(next);
           setError(null);
+          setErrorStatus(null);
           setLastUpdatedAt(new Date().toISOString());
         }
       } catch (caught) {
@@ -58,6 +61,9 @@ export function useApiResource<T>(
               : caught instanceof Error
                 ? caught.message
                 : "Unable to load."
+          );
+          setErrorStatus(
+            caught instanceof PeriscanApiClientError ? caught.status : null
           );
         }
       } finally {
@@ -117,5 +123,13 @@ export function useApiResource<T>(
     };
   }, [load, refetchIntervalMs]);
 
-  return { data, error, lastUpdatedAt, loading, refetch, refreshing };
+  return {
+    data,
+    error,
+    errorStatus,
+    lastUpdatedAt,
+    loading,
+    refetch,
+    refreshing
+  };
 }

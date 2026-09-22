@@ -1,16 +1,17 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type {
-  ControlRuleCoverageSummary,
-  ControlSource,
-  DetectionMarkerProofResult,
-  DnsExfilCanaryProofResult,
-  PolicyDecision,
-  RunnerRecord,
-  Scope,
-  ValidationStimulus,
-  ValidationRun
+import {
+  listBasControlPlaneScenarios,
+  type ControlRuleCoverageSummary,
+  type ControlSource,
+  type DetectionMarkerProofResult,
+  type DnsExfilCanaryProofResult,
+  type PolicyDecision,
+  type RunnerRecord,
+  type Scope,
+  type ValidationStimulus,
+  type ValidationRun
 } from "@periscan/shared";
 
 import { browserPeriscanApiClient as api } from "../lib/periscan-api-client";
@@ -26,6 +27,9 @@ const snapshotId = "55555555-5555-4555-8555-555555555555";
 describe("ControlsWorkbench", () => {
   beforeEach(() => {
     vi.spyOn(api, "listValidationStimuli").mockResolvedValue([]);
+    vi.spyOn(api, "listBasControlPlaneScenarios").mockResolvedValue(
+      listBasControlPlaneScenarios()
+    );
   });
 
   afterEach(() => {
@@ -222,7 +226,9 @@ describe("ControlsWorkbench", () => {
     expect(document.body.textContent ?? "").not.toMatch(/\bBASLite\b/);
     expect(document.body.textContent ?? "").not.toMatch(/\bBAS-Lite\b/i);
     expect(
-      screen.getByText(/Inject loop not available \(control_live_execution_disabled\)/)
+      screen.getByText(
+        /Inject loop not available \(control_live_execution_disabled\)/
+      )
     ).toBeInTheDocument();
     expect(screen.getByText("Regressed from Covered")).toBeInTheDocument();
     expect(
@@ -304,24 +310,26 @@ describe("ControlsWorkbench", () => {
     vi.spyOn(api, "listIntegrations").mockResolvedValue([]);
     vi.spyOn(api, "listScopes").mockResolvedValue([]);
     vi.spyOn(api, "listRunners").mockResolvedValue([]);
-    const createTask = vi.spyOn(api, "createControlGapRemediation").mockResolvedValue({
-      remediationId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
-      tenantId,
-      title: "Detection gap: T1059",
-      status: "Open",
-      recommendedAction: "Tune detection",
-      relatedPathId: null,
-      relatedFindingFingerprint: null,
-      ticketId: null,
-      ticketUrl: null,
-      owner: null,
-      ownerId: null,
-      ownerDisplay: null,
-      dueAt: null,
-      createdAt: now,
-      updatedAt: now,
-      latestVerification: null
-    } as never);
+    const createTask = vi
+      .spyOn(api, "createControlGapRemediation")
+      .mockResolvedValue({
+        remediationId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        tenantId,
+        title: "Detection gap: T1059",
+        status: "Open",
+        recommendedAction: "Tune detection",
+        relatedPathId: null,
+        relatedFindingFingerprint: null,
+        ticketId: null,
+        ticketUrl: null,
+        owner: null,
+        ownerId: null,
+        ownerDisplay: null,
+        dueAt: null,
+        createdAt: now,
+        updatedAt: now,
+        latestVerification: null
+      } as never);
 
     render(<ControlsWorkbench />);
 
@@ -531,6 +539,12 @@ describe("ControlsWorkbench", () => {
     render(<ControlsWorkbench />);
 
     expect(
+      await screen.findByRole("link", { name: "BAS operator workspace" })
+    ).toHaveAttribute("href", "/bas");
+    expect(
+      await screen.findByRole("link", { name: "Atomic catalog" })
+    ).toHaveAttribute("href", "/bas/scenarios");
+    expect(
       await screen.findByRole("heading", { name: "Validation scenarios" })
     ).toBeInTheDocument();
     await waitFor(() => {
@@ -678,9 +692,7 @@ describe("ControlsWorkbench", () => {
     expect(
       screen.getByText(/benign marker only · no Atomic live/i)
     ).toBeInTheDocument();
-    expect(
-      screen.getByText(/Matrix row DRV stays/i)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Matrix row DRV stays/i)).toBeInTheDocument();
     expect(
       screen.getByText(/library-wide inject is productized \(refused today\)/i)
     ).toBeInTheDocument();
@@ -711,7 +723,10 @@ describe("ControlsWorkbench", () => {
       resultRegion
     );
     expect(resultRegion).toHaveTextContent(/Result receipt/i);
-    expect(resultRegion).toHaveTextContent(/limited safe stimulus only/i);
+    // SETTLED PERISCAN-583: this receipt is measured marker coverage /
+    // benign_marker_only, not live BAS. "limited safe stimulus" is the
+    // Observe telemetry panel, not the marker-proof claim class.
+    expect(resultRegion).toHaveTextContent(/measured marker coverage/i);
     expect(resultRegion).toHaveTextContent(/mission·77777777/i);
     expect(resultRegion).toHaveTextContent(
       /periscan\.detection_marker_emit_observe/
@@ -858,9 +873,7 @@ describe("ControlsWorkbench", () => {
     // Honesty aside splits measured pin across elements — assert container text.
     const dnsPanel = heading.closest("[aria-labelledby]") as HTMLElement | null;
     expect(dnsPanel?.textContent ?? "").toMatch(/measured:true/i);
-    expect(dnsPanel?.textContent ?? "").toMatch(
-      /real emit \+ live telemetry/i
-    );
+    expect(dnsPanel?.textContent ?? "").toMatch(/real emit \+ live telemetry/i);
     expect(dnsPanel?.textContent ?? "").toMatch(/realDataExfiltrated/i);
 
     // Wait until sources hydrate so selectedSourceId is non-empty and CTA works.
@@ -882,9 +895,7 @@ describe("ControlsWorkbench", () => {
     const receipt = await screen.findByRole("status", {
       name: "DNS exfil canary proof result"
     });
-    expect(screen.getByTestId("dns-exfil-canary-proof-receipt")).toBe(
-      receipt
-    );
+    expect(screen.getByTestId("dns-exfil-canary-proof-receipt")).toBe(receipt);
     expect(receipt).toHaveTextContent(/periscan-dns-ui-1/);
     expect(receipt).toHaveTextContent(/measured:false/);
     expect(receipt).toHaveTextContent(/benign_marker_only/);
@@ -948,5 +959,117 @@ describe("ControlsWorkbench", () => {
         expectedBehaviors: ["Detected", "Logged", "Routed"]
       })
     );
+  });
+
+  it("shows the policy decision id and deny reason when live Atomic is not queued", async () => {
+    const policyDecisionId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+    const source: ControlSource = {
+      controlSourceId,
+      controlType: "SIEM",
+      createdAt: now,
+      expectedBehaviors: ["Detected"],
+      healthStatus: "Healthy",
+      integrationId,
+      lastValidatedAt: now,
+      provider: "Splunk",
+      telemetryStatus: "Healthy",
+      tenantId,
+      updatedAt: now
+    };
+    const scope = {
+      assetClass: "Network",
+      businessCriticality: "High",
+      createdAt: now,
+      createdBy: null,
+      effectiveMaxSafetyLevel: "BASLite",
+      externalValidationProfileId: null,
+      isOperationalTechnology: false,
+      lastPostureCheckAt: null,
+      maxSafetyLevel: "BASLite",
+      nextPostureCheckAt: null,
+      purdueLevel: null,
+      safetyRestrictionReason: "This scope permits validation through BASLite.",
+      scopeId,
+      scopeType: "ControlSource",
+      segmentName: null,
+      sensitivity: "Moderate",
+      tags: [],
+      tenantId,
+      updatedAt: now,
+      value: "splunk-observer",
+      verificationExpiresAt: null,
+      verificationMethod: "MANUAL",
+      verificationStale: false,
+      verificationStatus: "Verified",
+      verificationToken: null,
+      verifiedAt: now,
+      verifiedBy: null
+    } satisfies Scope;
+
+    vi.spyOn(api, "listControlSources").mockResolvedValue([source]);
+    vi.spyOn(api, "getControlRuleCoverage").mockResolvedValue({
+      blockedTechniques: 0,
+      controlSourceId: null,
+      coveredTechniques: 0,
+      generatedAt: now,
+      history: [],
+      improvedTechniques: 0,
+      items: [],
+      loggedOnlyTechniques: 0,
+      missedTechniques: 0,
+      needsTuningTechniques: 0,
+      noEvidenceTechniques: 0,
+      notTestedTechniques: 0,
+      recommendations: [],
+      regressedTechniques: 0,
+      snapshotId: null,
+      staleTechniques: 0,
+      tenantId,
+      totalTechniques: 0
+    });
+    vi.spyOn(api, "listIntegrations").mockResolvedValue([]);
+    vi.spyOn(api, "listScopes").mockResolvedValue([scope]);
+    vi.spyOn(api, "listRunners").mockResolvedValue([]);
+    const start = vi.spyOn(api, "startBasScenario").mockResolvedValue({
+      claimClass: "qualification_required",
+      denyReason:
+        "Atomic adapter qualification is required before live execution. Denied tasks are never queued.",
+      jobsQueued: 0,
+      mission: null,
+      outcome: "Denied",
+      policyDecisionId,
+      queued: false,
+      rationale:
+        "Atomic adapter qualification is required before live execution. Denied tasks are never queued.",
+      runs: [],
+      scenarioId: "atomic.live"
+    });
+
+    render(<ControlsWorkbench />);
+
+    const scenarioSelect = await screen.findByRole("combobox", {
+      name: "BAS control-plane scenario"
+    });
+    fireEvent.change(scenarioSelect, { target: { value: "atomic.live" } });
+    fireEvent.click(screen.getByRole("button", { name: "Start scenario" }));
+
+    await waitFor(() =>
+      expect(start).toHaveBeenCalledWith({
+        controlSourceId,
+        scenarioId: "atomic.live",
+        scopeId
+      })
+    );
+
+    const receipt = await screen.findByRole("status", {
+      name: "BAS scenario policy decision"
+    });
+    expect(receipt).toHaveTextContent(policyDecisionId);
+    expect(receipt).toHaveTextContent(
+      "Atomic adapter qualification is required before live execution. Denied tasks are never queued."
+    );
+    expect(receipt).toHaveTextContent("jobsQueued");
+    expect(receipt).toHaveTextContent("0");
+    expect(receipt).toHaveTextContent("not queued");
   });
 });

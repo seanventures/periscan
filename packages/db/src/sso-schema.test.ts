@@ -22,6 +22,10 @@ const roleMappingMigrationPath = resolve(
   currentDir,
   "../prisma/migrations/20260729060000_add_sso_role_claim_mapping/migration.sql"
 );
+const jitMigrationPath = resolve(
+  currentDir,
+  "../prisma/migrations/20260917230000_add_sso_jit_provisioning/migration.sql"
+);
 
 function readSchema() {
   return readFileSync(schemaPath, "utf8");
@@ -41,6 +45,10 @@ function readSamlMigration() {
 
 function readRoleMappingMigration() {
   return readFileSync(roleMappingMigrationPath, "utf8");
+}
+
+function readJitMigration() {
+  return readFileSync(jitMigrationPath, "utf8");
 }
 
 function modelBlock(schema: string, modelName: string) {
@@ -161,6 +169,30 @@ describe("tenant SSO Prisma contract", () => {
     expect(migration).toContain('"role_claim_name" TEXT');
     expect(migration).toContain('"role_mappings" JSONB');
     expect(migration).toContain('"default_mapped_role" "MembershipRole"');
+    expect(migration).not.toMatch(/CREATE TABLE "users"/iu);
+    expect(migration).not.toMatch(/CREATE TABLE "memberships"/iu);
+  });
+
+  it("stores optional JIT create-on-first-SSO fields and audit action", () => {
+    const schema = readSchema();
+    const migration = readJitMigration();
+    const block = modelBlock(schema, "TenantSsoConfig");
+
+    expect(block).toContain("jitEnabled");
+    expect(block).toContain("jitEmailDomains");
+    expect(block).toContain("jitDefaultRole");
+    expect(block).toContain('@map("jit_enabled")');
+    expect(block).toContain('@map("jit_email_domains")');
+    expect(block).toContain('@map("jit_default_role")');
+    expect(block).toContain("@default(false)");
+    expect(block).toContain("@default(Viewer)");
+    expect(schema).toContain("user_jit_provisioned");
+    expect(migration).toContain('"jit_enabled" BOOLEAN');
+    expect(migration).toContain('"jit_email_domains" TEXT[]');
+    expect(migration).toContain('"jit_default_role" "MembershipRole"');
+    expect(migration).toContain(
+      "ALTER TYPE \"AuditEventAction\" ADD VALUE IF NOT EXISTS 'user_jit_provisioned'"
+    );
     expect(migration).not.toMatch(/CREATE TABLE "users"/iu);
     expect(migration).not.toMatch(/CREATE TABLE "memberships"/iu);
   });

@@ -59,8 +59,9 @@ may already exist under a different namespace or just need a client wrapper._
 - **Runner pairing** has no server-side "approve" step: enrollment completes when
   the runner dials in (`/runners/register` + `/runners/:id/heartbeat`). The UI
   confirms by auto-detecting check-in and showing the cert fingerprint (TOFU).
-- **Offensive tools** (SharpHound, Caldera, etc.) stay disabled in Tool Governance
-  and are excluded from MCP exposure unless the API explicitly permits them.
+- **BAS/AEV execution eligibility** comes from the API's qualified adapter and
+  policy state. Implement adapters under PERISCAN-583; expose start controls
+  when the implementation and its qualification tests establish readiness.
 - **A risk is only "Fixed"** via a real verification event; the UI never offers a
   UI-only fixed status.
 

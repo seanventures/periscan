@@ -11,7 +11,10 @@ import {
   type ReactNode
 } from "react";
 
-import { resolveFirstRunPrimaryAction } from "../lib/first-run-primary-action";
+import {
+  railPrimaryCompetesWithFindingsFirstHour,
+  resolveFirstRunPrimaryAction
+} from "../lib/first-run-primary-action";
 import { writeFirstProofResume } from "../lib/first-proof-resume";
 import { PRIMARY_NAV, isNavItemActive } from "../lib/primary-nav";
 import { browserPeriscanApiClient } from "../lib/periscan-api-client";
@@ -316,7 +319,7 @@ const OPERATING_SETUP_NAV = new Set(["/runners", "/engines"]);
  * Setup junk drawer stays off the default Operating rail until Show Labs & more
  * / palette / direct URL / persona allow-list: Getting started, Connect,
  * Assets, External Validation, Controls, Compliance, Shift, Paths, Executive,
- * Reports. Schedule re-surfaces on engineer daily.
+ * CTEM, Reports, Feed pins. Schedule re-surfaces on engineer daily.
  *
  * New / Activating keep richer first-run Setup via NEW_TENANT_NAV /
  * ACTIVATING_TENANT_NAV. Labs / Admin / MSSP never enter these sets —
@@ -350,7 +353,9 @@ const OPERATING_SETUP_HIDDEN = new Set([
   "/shift",
   "/attack-paths",
   "/executive",
-  "/reports"
+  "/ctem",
+  "/reports",
+  "/security-feeds"
 ]);
 
 function RailNav({
@@ -405,6 +410,7 @@ function RailNav({
       "/shift",
       "/getting-started",
       "/executive",
+      "/ctem",
       "/attack-paths",
       "/findings",
       "/remediation",
@@ -430,6 +436,7 @@ function RailNav({
       "/getting-started",
       "/mssp",
       "/executive",
+      "/ctem",
       "/findings",
       "/remediation",
       "/reports",
@@ -460,7 +467,7 @@ function RailNav({
       (maturity === "New" || maturity === "Activating") &&
       persona === "SecurityLeader"
     ) {
-      return new Set([...base, "/executive"]);
+      return new Set([...base, "/executive", "/ctem"]);
     }
     return base;
   })();
@@ -549,6 +556,10 @@ function RailNav({
           setupIncomplete: false as const,
           reason: undefined as string | undefined
         };
+  const hideCompetingRailPrimary = railPrimaryCompetesWithFindingsFirstHour(
+    pathname,
+    primaryAction
+  );
 
   return (
     <div className="flex flex-1 flex-col">
@@ -566,36 +577,42 @@ function RailNav({
         ) : null}
       </div>
 
-      {/* Primary action — the one thing a new user should do next. */}
+      {/* Primary action — the one thing a new user should do next.
+          On /findings first-hour, hide remediations rail CTAs so the in-page
+          Create/Review remediations verb is the only one. */}
       <div className="px-3 pb-2 pt-4">
-        <Link
-          href={primaryAction.href}
-          data-testid="rail-primary-cta"
-          onClick={() => {
-            // UX-W16: remember incomplete first-run CTAs for Home resume.
-            if (primaryAction.setupIncomplete) {
-              writeFirstProofResume(primaryAction.label, primaryAction.href);
-            }
-          }}
-          className="flex items-center justify-center gap-2 rounded-control border border-brand-fill bg-brand-fill px-3 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-brand hover:border-brand"
-        >
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 16 16"
-            fill="none"
-            aria-hidden
+        {hideCompetingRailPrimary ? null : (
+          <Link
+            href={primaryAction.href}
+            data-testid="rail-primary-cta"
+            onClick={() => {
+              // UX-W16: remember incomplete first-run CTAs for Home resume.
+              if (primaryAction.setupIncomplete) {
+                writeFirstProofResume(primaryAction.label, primaryAction.href);
+              }
+            }}
+            className="flex items-center justify-center gap-2 rounded-control border border-brand-fill bg-brand-fill px-3 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-brand hover:border-brand"
           >
-            <path
-              d="M8 3v10M3 8h10"
-              stroke="currentColor"
-              strokeWidth="1.7"
-              strokeLinecap="round"
-            />
-          </svg>
-          {translateUiText(locale, primaryAction.label)}
-        </Link>
-        {primaryAction.reason && primaryAction.setupIncomplete ? (
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 16 16"
+              fill="none"
+              aria-hidden
+            >
+              <path
+                d="M8 3v10M3 8h10"
+                stroke="currentColor"
+                strokeWidth="1.7"
+                strokeLinecap="round"
+              />
+            </svg>
+            {translateUiText(locale, primaryAction.label)}
+          </Link>
+        )}
+        {!hideCompetingRailPrimary &&
+        primaryAction.reason &&
+        primaryAction.setupIncomplete ? (
           <p
             className="mt-1.5 px-0.5 text-[10px] leading-snug text-subtle"
             data-testid="rail-primary-reason"
@@ -780,6 +797,7 @@ function RailNav({
           activation={activation.data}
           loading={activation.loading}
           variant="rail"
+          suppressNextAction={hideCompetingRailPrimary}
         />
       ) : null}
       <div
@@ -896,7 +914,7 @@ function CommandBar({
       <TenantSwitcher
         name={tenantName}
         loading={session.loading}
-        error={!!session.error}
+        error={session.errorStatus === 401}
         workingAs={working}
         onLeaveClient={requestLeaveClientWorkspace}
       />
@@ -1085,7 +1103,7 @@ function CommandBar({
         <UserMenu
           name={user?.name}
           email={user?.email}
-          unauthenticated={!!session.error}
+          unauthenticated={session.errorStatus === 401}
         />
       </div>
     </header>
@@ -1128,6 +1146,7 @@ function TenantSwitcher({
     return (
       <div
         className="flex max-w-[min(100%,20rem)] shrink-0 items-center gap-2 rounded-control border border-brand/50 bg-brand/10 px-2.5 py-1.5 text-sm text-ink"
+        role="status"
         title={`Working as client tenant: ${workingAs.name}`}
         aria-label={`Working as: ${workingAs.name}`}
         data-testid="working-tenant-chrome"
@@ -1158,6 +1177,7 @@ function TenantSwitcher({
   return (
     <div
       className="hidden shrink-0 items-center gap-2 rounded-control border border-line px-2.5 py-1.5 text-sm text-ink sm:flex"
+      role="status"
       title={loading ? "Loading workspace" : `Workspace: ${label}`}
       aria-label={loading ? "Workspace loading" : `Current workspace: ${label}`}
     >
@@ -1206,12 +1226,14 @@ function UserMenu({
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        aria-controls={panelId}
+        aria-controls={open ? panelId : undefined}
         aria-haspopup="true"
         aria-label="Account menu"
-        className="grid size-7 place-items-center rounded-full bg-blocked text-xs font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-bg"
+        className="account-menu-trigger grid size-7 place-items-center rounded-full bg-brand-fill text-xs font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-bg"
       >
-        {initial}
+        <span aria-hidden="true" className="account-menu-glyph">
+          {initial}
+        </span>
       </button>
       {open ? (
         <>

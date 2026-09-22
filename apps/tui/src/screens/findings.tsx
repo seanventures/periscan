@@ -178,6 +178,9 @@ export function FindingsScreen(props: {
           <Text color={theme.muted}>
             Empty is not a clean bill of health.
           </Text>
+          <Text color={theme.muted}>
+            4 run to start Gitleaks-class on verified scope.
+          </Text>
         </Box>
       ) : null}
 

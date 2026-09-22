@@ -1,0 +1,44 @@
+{
+  "Golang errors": {},
+  "Issues": [
+    {
+      "severity": "HIGH",
+      "confidence": "HIGH",
+      "cwe": {
+        "ID": "78",
+        "URL": "https://cwe.mitre.org/data/definitions/78.html"
+      },
+      "rule_id": "G204",
+      "details": "Subprocess launched with variable",
+      "file": "/src/main.go",
+      "code": "key := \"AKIAIOSFODNN7EXAMPLE\"\nexec.Command(cmd)",
+      "line": "12",
+      "column": "2",
+      "nosec": false,
+      "suppressions": []
+    },
+    {
+      "severity": "MEDIUM",
+      "confidence": "HIGH",
+      "cwe": {
+        "ID": "326",
+        "URL": "https://cwe.mitre.org/data/definitions/326.html"
+      },
+      "rule_id": "G401",
+      "details": "Use of weak cryptographic primitive",
+      "file": "/src/crypto.go",
+      "code": "md5.Sum(data)",
+      "line": "8",
+      "column": "2",
+      "nosec": false,
+      "suppressions": []
+    }
+  ],
+  "Stats": {
+    "files": 2,
+    "lines": 40,
+    "nosec": 0,
+    "found": 2
+  },
+  "GosecVersion": "2.22.0"
+}

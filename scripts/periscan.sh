@@ -124,7 +124,7 @@ print_ports() {
 }
 
 print_first_hour_next() {
-  echo "Next: open the printed URL, create an account, git clone YOUR repo, paste the absolute path (not github.com/org/repo). First hour runs Gitleaks. Fixed only after a retest."
+  echo "Next: open the printed URL, create an account, git clone YOUR repo, paste the absolute path (not github.com/org/repo). Default start runs Gitleaks. Keep proving. Fixed only after a retest."
 }
 
 export_selected_deps() {

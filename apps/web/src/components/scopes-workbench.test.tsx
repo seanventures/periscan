@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { CommunityValidationSuiteResponse, Scope } from "@periscan/shared";
@@ -100,6 +100,17 @@ describe("ScopesWorkbench", () => {
     vi.spyOn(api, "getCommunityValidationSuite").mockResolvedValue(
       communitySuite()
     );
+    vi.spyOn(api, "getAssetOwnershipSurface").mockResolvedValue({
+      entries: [],
+      generatedAt: now,
+      summary: {
+        attributedAssetCount: 0,
+        averageAttributedConfidence: 0,
+        internetFacingAssetCount: 0,
+        unattributedCandidateCount: 0,
+        verifiedRootCount: 0
+      }
+    });
   });
 
   afterEach(() => {
@@ -112,8 +123,15 @@ describe("ScopesWorkbench", () => {
     render(<ScopesWorkbench />);
 
     expect(
-      await screen.findByText("Nothing runs until a scope is verified.")
+      await screen.findByText(/Nothing runs until a scope is verified/)
     ).toBeInTheDocument();
+    expect(
+      screen.getByText(/authorize a local path/i)
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/CTEM/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/Automated Security Validation/i)
+    ).not.toBeInTheDocument();
 
     const type = screen.getByLabelText("Scope type");
     expect(type).toHaveValue("Repository");
@@ -176,7 +194,7 @@ describe("ScopesWorkbench", () => {
     const createScope = vi.spyOn(api, "createScope").mockResolvedValue(created);
 
     render(<ScopesWorkbench />);
-    await screen.findByText("Nothing runs until a scope is verified.");
+    await screen.findByText(/Nothing runs until a scope is verified/);
     expect(screen.getByLabelText("Scope type")).toHaveValue("Repository");
 
     fireEvent.change(screen.getByLabelText("Scope value"), {
@@ -204,7 +222,7 @@ describe("ScopesWorkbench", () => {
     const createScope = vi.spyOn(api, "createScope").mockResolvedValue(created);
 
     render(<ScopesWorkbench />);
-    await screen.findByText("Nothing runs until a scope is verified.");
+    await screen.findByText(/Nothing runs until a scope is verified/);
 
     fireEvent.change(screen.getByLabelText("Scope type"), {
       target: { value: "Domain" }
@@ -344,7 +362,7 @@ describe("ScopesWorkbench", () => {
       "git clone https://github.com/acme/payments-api.git"
     );
     expect(screen.getByTestId("github-clone-hint")).toHaveTextContent(
-      "then paste the local path"
+      /then paste the local absolute path/i
     );
 
     expect(screen.getByRole("button", { name: /^add scope$/i })).toBeDisabled();
@@ -535,6 +553,55 @@ describe("ScopesWorkbench", () => {
     }
   });
 
+  it("suggests .periscan-authorization.txt on Chromium so the leading dot is not dropped", async () => {
+    vi.spyOn(api, "listScopes").mockResolvedValue([
+      scope({
+        assetClass: "Code",
+        scopeType: "Repository",
+        value: "/tmp/customer-repo",
+        verificationMethod: "FILE",
+        verificationToken: "periscan-a0901c6698480ffcb3c0bbfe"
+      })
+    ]);
+    vi.stubGlobal("navigator", {
+      ...navigator,
+      clipboard: { writeText: vi.fn().mockResolvedValue(undefined) },
+      platform: "MacIntel",
+      userAgent:
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+    });
+
+    let downloadedName = "";
+    const createObjectURL = vi
+      .spyOn(URL, "createObjectURL")
+      .mockImplementation(() => "blob:mock-authorization");
+    const revokeObjectURL = vi
+      .spyOn(URL, "revokeObjectURL")
+      .mockImplementation(() => undefined);
+    const clickSpy = vi
+      .spyOn(HTMLAnchorElement.prototype, "click")
+      .mockImplementation(function (this: HTMLAnchorElement) {
+        downloadedName = this.download;
+      });
+
+    try {
+      render(<ScopesWorkbench />);
+      fireEvent.click(
+        await screen.findByRole("button", {
+          name: /download \.periscan-authorization/i
+        })
+      );
+      expect(downloadedName).toBe(".periscan-authorization.txt");
+      expect(downloadedName.startsWith(".")).toBe(true);
+      expect(downloadedName).not.toBe("periscan-authorization.txt");
+    } finally {
+      createObjectURL.mockRestore();
+      revokeObjectURL.mockRestore();
+      clickSpy.mockRestore();
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("does not present Repository Attest as equal to the authorization file", async () => {
     vi.spyOn(api, "listScopes").mockResolvedValue([
       scope({
@@ -604,6 +671,9 @@ describe("ScopesWorkbench", () => {
         /Connect an AWS integration whose account id matches this scope/i
       )
     ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Periscan authorization token \(not an AWS IAM secret\)/i)
+    ).toBeInTheDocument();
     expect(screen.queryByText(/DNS TXT _periscan\./i)).not.toBeInTheDocument();
     expect(screen.queryByText(/lab only/i)).not.toBeInTheDocument();
     expect(
@@ -630,6 +700,28 @@ describe("ScopesWorkbench", () => {
         operatorAttestation: true
       });
     });
+  });
+
+  it("P2-CLOUDVERIFY: operator-attested CloudAccount paints Attested, not Verified", async () => {
+    const cloud = scope({
+      assetClass: "Cloud",
+      scopeType: "CloudAccount",
+      value: "123456789012",
+      verificationMethod: "OPERATOR_ATTESTATION",
+      verificationStatus: "Verified",
+      verifiedAt: now,
+      verifiedBy: userId
+    });
+    vi.spyOn(api, "listScopes").mockResolvedValue([cloud]);
+
+    render(<ScopesWorkbench />);
+
+    const row = await screen.findByRole("button", { name: /123456789012/ });
+    expect(within(row).getByText("Attested")).toBeInTheDocument();
+    expect(within(row).queryByText("Verified")).not.toBeInTheDocument();
+    expect(
+      screen.getByText(/Periscan authorization token \(not an AWS IAM secret\)/i)
+    ).toBeInTheDocument();
   });
 
   it("does not advertise Run Community validation for an attested CloudAccount with 0 startable engines", async () => {

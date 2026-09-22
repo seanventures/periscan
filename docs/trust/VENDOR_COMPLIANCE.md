@@ -30,6 +30,7 @@ Set via `PERISCAN_VENDOR_SOC2_STATUS` (invalid values fail soft to `None`).
 
 ## Related
 
+- [`docs/SOC2.md`](../SOC2.md) — evaluator-facing vendor Type II vs customer support pack
 - `packages/reports` — pack labels and HTML/PDF disclaimers
 - Trust & Safety UI — vendor compliance panel
 - `docs/trust/LEGAL_PACK.md` — DPA/BAA/subprocessors

@@ -6,7 +6,7 @@
 import { looksLikeHostedGitHubUrl } from "@periscan/shared";
 
 export const HOSTED_GITHUB_CLONE_FOLLOW_UP =
-  "then paste the local path (this GitHub URL is not a control-plane identifier).";
+  "then paste the local absolute path (this GitHub URL is not a control-plane identifier).";
 
 const GITHUB_ORG_REPO =
   /(?:https?:\/\/)?(?:[^/\s@]+@)?(?:www\.)?github\.com[:/]+([^/\s]+)\/([^/\s?#]+)/iu;

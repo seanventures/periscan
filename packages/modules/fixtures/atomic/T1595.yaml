@@ -1,0 +1,23 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) Atomic Red Team contributors
+# Source: https://github.com/redcanaryco/atomic-red-team (MIT)
+# Periscan allowlist: dry-run catalog import only. Do not Invoke-AtomicRedTeam live.
+attack_technique: T1595
+display_name: Active Scanning
+tactic: Discovery
+license: MIT
+atomic_tests:
+  - name: Active Discovery Safety Simulation
+    auto_generated_guid: 7c9c0f1a-4d2e-4b11-9c0a-000000001595
+    description: >
+      Allowlisted Atomic Red Team content for ATT&CK T1595. Periscan imports
+      this YAML as a dry-run catalog row only. Live technique execution is
+      disabled (atomic_live_disabled).
+    supported_platforms:
+      - windows
+      - linux
+      - macos
+    executor:
+      name: powershell
+      elevation_required: false
+      command: Invoke-AtomicTest T1595 -ShowDetailsBrief

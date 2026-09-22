@@ -41,7 +41,7 @@ Only safe, scoped, approved validation. No exploit modules.
 
 ## Explicitly Not Allowed
 
-Do not enable Caldera live execution, SharpHound collection, or Atomic live execution by default.
+Build qualified Caldera, SharpHound and Atomic adapters with per-scenario policy, bounded execution, cleanup and lab evidence.
 
 ## Required Environment Variables
 

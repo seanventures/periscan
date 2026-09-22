@@ -105,7 +105,7 @@ describe("last-owner demotion/removal Serializable guard", () => {
 
     expect(transaction).toHaveBeenCalledTimes(1);
     expect(membershipCount).toHaveBeenCalledWith({
-      where: { role: "Owner", tenantId }
+      where: { role: "Owner", status: "Active", tenantId }
     });
     expect(membershipUpdate).toHaveBeenCalledTimes(1);
     expect(result.membership.role).toBe("Admin");
@@ -136,7 +136,7 @@ describe("last-owner demotion/removal Serializable guard", () => {
 
     expect(transaction).toHaveBeenCalledTimes(1);
     expect(membershipCount).toHaveBeenCalledWith({
-      where: { role: "Owner", tenantId }
+      where: { role: "Owner", status: "Active", tenantId }
     });
     expect(membershipDelete).toHaveBeenCalledTimes(1);
   });

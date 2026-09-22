@@ -1,0 +1,21 @@
+{
+  "status_code": 200,
+  "body": {
+    "errors": [],
+    "resources": [
+      {
+        "id": "cs-wrapped-1",
+        "composite_id": "cs-wrapped-1:cid-lab:1",
+        "display_name": "Falcon detected benign marker",
+        "filename": "canary.exe",
+        "cmdline": "canary.exe periscan-r-aaaa-s-bbbb-nonce1",
+        "parent_details": { "filename": "cmd.exe" },
+        "grandparent_details": { "filename": "explorer.exe" },
+        "device": { "hostname": "lab-edr-01" },
+        "pattern_disposition": 0,
+        "created_timestamp": "2026-09-17T14:01:00.000Z",
+        "updated_timestamp": "2026-09-17T14:01:30.000Z"
+      }
+    ]
+  }
+}

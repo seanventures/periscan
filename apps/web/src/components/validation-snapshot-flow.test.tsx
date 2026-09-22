@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within
+} from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type {
@@ -9,7 +15,6 @@ import type {
 } from "@periscan/shared";
 
 import { browserPeriscanApiClient as api } from "../lib/periscan-api-client";
-import { communityMissionHref } from "./community-run-progress";
 import { ValidationSnapshotFlow } from "./validation-snapshot-flow";
 
 const push = vi.fn();
@@ -299,6 +304,8 @@ describe("ValidationSnapshotFlow engine start count", () => {
     vi.spyOn(api, "getCommunityValidationSuite").mockResolvedValue(suite());
     vi.spyOn(api, "listMissions").mockResolvedValue([]);
     vi.spyOn(api, "previewPolicyDecision").mockResolvedValue(policy());
+    vi.spyOn(api, "getMission").mockResolvedValue(started().mission);
+    vi.spyOn(api, "listMissionRuns").mockResolvedValue([]);
   }
 
   function stubSearch(search: string) {
@@ -307,6 +314,29 @@ describe("ValidationSnapshotFlow engine start count", () => {
       search
     });
   }
+
+  it("P2-CTEMCOPY: Validate leads with the first-hour job, not AEV/CTEM platform copy", async () => {
+    stubSearch("");
+    mockValidateApis();
+    render(<ValidationSnapshotFlow />);
+
+    const heading = await screen.findByRole("heading", { name: "Validate" });
+    const lead = await screen.findByTestId("validate-first-hour-lead");
+    expect(lead).toHaveTextContent(/authorized local path/i);
+    expect(lead).toHaveTextContent(/Gitleaks-class/i);
+    expect(lead).toHaveTextContent(/Keep this board running/i);
+    expect(lead).toHaveTextContent(/Fixed after retest|Fixed only after a retest/i);
+    expect(lead).not.toHaveTextContent(/first hour/i);
+    expect(lead).not.toHaveTextContent(/AEV\/CTEM proof layer/i);
+    expect(lead).not.toHaveTextContent(/Automated Security Validation platform/i);
+    expect(lead).not.toHaveTextContent(/attack paths/i);
+    expect(lead).not.toHaveTextContent(/we are a CTEM platform/i);
+    expect(heading.closest("header")).toContainElement(lead);
+
+    const below = screen.getByTestId("validate-aev-bas-boundary");
+    expect(below).toHaveTextContent(/AEV\/CTEM proof layer/i);
+    expect(heading.closest("header")).not.toContainElement(below);
+  });
 
   it("does not claim 38 engines will start when a first-hour pin queues Gitleaks", async () => {
     stubSearch("?moduleIds=gitleaks.repo_secrets");
@@ -342,11 +372,14 @@ describe("ValidationSnapshotFlow engine start count", () => {
     expect(
       await screen.findByTestId("community-validation-started")
     ).toHaveTextContent("queued 1 job across 1 engine");
-    expect(push).toHaveBeenCalledWith(communityMissionHref(missionId));
-    expect(push).not.toHaveBeenCalledWith(expect.stringMatching(/findings/));
+    const watch = await screen.findByTestId("community-run-progress");
+    expect(within(watch).getByTestId("community-run-watch")).toHaveTextContent(
+      /^Watch$/
+    );
+    expect(push).not.toHaveBeenCalled();
   });
 
-  it("opens the mission Watch page after Community start instead of findings", async () => {
+  it("stays on Validate Watch after Community start instead of bouncing to mission or findings", async () => {
     stubSearch("?moduleIds=gitleaks.repo_secrets");
     mockValidateApis();
     vi.spyOn(api, "startCommunityValidation").mockResolvedValue(started());
@@ -362,10 +395,13 @@ describe("ValidationSnapshotFlow engine start count", () => {
     );
     fireEvent.click(screen.getByTestId("run-community-validation"));
 
-    await waitFor(() => {
-      expect(push).toHaveBeenCalledWith(`/missions/${missionId}`);
-    });
-    expect(push.mock.calls.flat().join(" ")).not.toMatch(/findings/i);
+    const watch = await screen.findByTestId("community-run-progress");
+    expect(within(watch).getByTestId("community-run-watch")).toHaveTextContent(
+      /^Watch$/
+    );
+    expect(watch).not.toHaveTextContent("%");
+    expect(push).not.toHaveBeenCalled();
+    expect(push.mock.calls.flat().join(" ")).not.toMatch(/missions|findings/i);
   });
 
   it("defaults unpinned Repository start to Gitleaks, not 38 engines", async () => {
@@ -419,14 +455,13 @@ describe("ValidationSnapshotFlow engine start count", () => {
     const pack = await screen.findByTestId("community-validation-suite");
     expect(pack).toHaveTextContent("1 engine start now");
 
-    const fullPack = await screen.findByTestId("run-full-community-pack");
+    const details = await screen.findByTestId("full-community-pack-details");
+    expect(details).toHaveTextContent("More engines (catalog)");
+    const fullPack = screen.getByTestId("run-full-community-pack");
     expect(fullPack).toHaveTextContent("Run full Community pack");
     expect(
       screen.getByTestId("full-community-pack-start-now")
-    ).toHaveTextContent("38 engines start now");
-    expect(
-      screen.getByTestId("full-community-pack-start-now")
-    ).toHaveTextContent("runner needed");
+    ).toHaveTextContent("Remaining catalog engines. Not the default start.");
 
     fireEvent.click(
       screen.getByRole("button", { name: "Preview policy decision" })
@@ -450,6 +485,69 @@ describe("ValidationSnapshotFlow engine start count", () => {
     expect(
       await screen.findByTestId("community-validation-started")
     ).toHaveTextContent("queued 38 jobs across 38 engines");
+  });
+
+  it("empty tenant Validate keeps Gitleaks-only one CTA", async () => {
+    stubSearch("");
+    mockValidateApis();
+    render(<ValidationSnapshotFlow />);
+
+    expect(
+      await screen.findByTestId("run-community-validation")
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("assess-connected-aws-prowler")
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/full cloud BAS/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/High-danger/i)).not.toBeInTheDocument();
+  });
+
+  it("AWS Connected offers Assess connected AWS (Prowler) next to Gitleaks", async () => {
+    stubSearch("");
+    mockValidateApis();
+    vi.spyOn(api, "getCommunityValidationSuite").mockResolvedValue(
+      suite({
+        cloudAwsAvailable: true,
+        startableModuleIds: startable38
+      })
+    );
+    const start = vi
+      .spyOn(api, "startCommunityValidation")
+      .mockResolvedValue({
+        ...started(),
+        jobsQueued: 1,
+        moduleIds: ["prowler.aws_posture"],
+        scopeType: "CloudAccount"
+      });
+
+    render(<ValidationSnapshotFlow />);
+
+    const gitleaks = await screen.findByTestId("run-community-validation");
+    const assess = await screen.findByTestId("assess-connected-aws-prowler");
+    expect(gitleaks).toHaveTextContent("Run Community validation");
+    expect(assess).toHaveTextContent("Assess connected AWS (Prowler)");
+    expect(assess).not.toHaveTextContent(/full cloud BAS/i);
+    expect(screen.queryByText(/full cloud BAS/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/CTEM %/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/High-danger/i)).not.toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Preview policy decision" })
+    );
+    await screen.findByText(
+      "Verified scope with a passive or non-invasive safety level is allowed."
+    );
+    fireEvent.click(assess);
+
+    await waitFor(() => {
+      expect(start).toHaveBeenCalledWith(
+        expect.objectContaining({
+          moduleIds: ["prowler.aws_posture"],
+          policyDecisionId,
+          scopeId
+        })
+      );
+    });
   });
 });
 

@@ -56,7 +56,7 @@ ALL`, read-only rootfs + scratch, resource limits from the manifest, pinned dige
    redaction happens before anything leaves the customer network where feasible.
 5. **Kill switch + audit.** Honors `PERISCAN_EXTERNAL_VALIDATION_KILL_SWITCH`; every task
    has a policy decision and audit event; denied tasks are never dispatched.
-6. **No live BASLite+/disallowed execution** until separately approved.
+6. **BAS/AEV adapter development is authorized.** Customer execution requires a qualified scenario and scope-bound approval; disallowed actions remain excluded.
 
 This delivers "run tools inside the network" without inbound ports or a reverse shell.
 
@@ -79,5 +79,5 @@ firewall egress, verified internal scope, and approval windows are available.
   policy decisions, local allowlists, and fixture-backed certification.
 - Keep any future restricted task-tunnel design outbound-initiated, per-task,
   time-boxed, destination-locked to in-scope targets, auditable, and kill-switchable.
-- Do not enable live BASLite+ or adversarial workflows without explicit legal/safety
-  approval and customer authorization.
+- Build BAS/AEV workflows with qualified adapters, reviewed licenses and
+  scenario-specific customer authorization.

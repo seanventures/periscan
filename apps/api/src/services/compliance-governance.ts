@@ -1,9 +1,11 @@
 import type { Prisma } from "@prisma/client";
+import { inspectChainLinks } from "@periscan/evidence";
 import {
   COMPLIANCE_CATALOG,
   COMPLIANCE_CATALOG_VERSIONS,
   COMPLIANCE_PACK_DISCLAIMER,
-  COMPLIANCE_PACK_TYPES
+  COMPLIANCE_PACK_TYPES,
+  buildSnapshotComplianceCoverage
 } from "@periscan/reports/compliance-catalog";
 import {
   BatchComplianceGovernanceResultSchema,
@@ -11,13 +13,15 @@ import {
   ComplianceGovernanceInventorySchema,
   ComplianceGovernanceMultiFrameworkSummarySchema,
   MultiFrameworkComplianceExportResultSchema,
+  SnapshotComplianceCoverageSchema,
   type BatchComplianceGovernanceInput,
   type BatchComplianceGovernanceResult,
   type ComplianceFrameworkKey,
   type ComplianceGovernanceInventory,
   type ComplianceGovernanceMultiFrameworkSummary,
   type MultiFrameworkComplianceExportInput,
-  type MultiFrameworkComplianceExportResult
+  type MultiFrameworkComplianceExportResult,
+  type SnapshotComplianceCoverage
 } from "@periscan/shared";
 
 import {
@@ -36,6 +40,7 @@ type ComplianceGovernanceServices = Pick<
   AppServices,
   | "batchUpdateComplianceGovernance"
   | "exportMultiFrameworkCompliancePacks"
+  | "getComplianceCoverage"
   | "getComplianceGovernance"
   | "getComplianceGovernanceSummary"
   | "listComplianceGovernanceChanges"
@@ -375,11 +380,126 @@ async function applyGovernanceUpdate(
   };
 }
 
+async function loadLatestValidationSnapshot(
+  deps: RuntimeServiceDeps,
+  context: Parameters<AppServices["getComplianceCoverage"]>[0]
+) {
+  const pack = await deps.prisma.evidencePack.findFirst({
+    orderBy: { createdAt: "desc" },
+    where: {
+      packType: "ValidationSnapshotReport",
+      tenantId: context.tenant.tenantId
+    }
+  });
+  if (!pack) {
+    return null;
+  }
+  return loadValidationSnapshot(deps.prisma, context, pack.evidencePackId);
+}
+
+async function snapshotCoverageOptions(
+  deps: RuntimeServiceDeps,
+  tenantId: string,
+  snapshot: NonNullable<
+    Awaited<ReturnType<typeof loadValidationSnapshot>>
+  >
+) {
+  const [schedule, evidenceRows] = await Promise.all([
+    deps.prisma.missionSchedule.findFirst({
+      where: {
+        lastSnapshotId: snapshot.snapshotId,
+        status: "Active",
+        tenantId
+      }
+    }),
+    deps.prisma.evidenceArtifact.findMany({
+      orderBy: { chainSeq: "asc" },
+      select: {
+        artifactType: true,
+        chainHash: true,
+        chainSeq: true,
+        evidenceId: true,
+        prevChainHash: true,
+        relatedEntityId: true,
+        relatedEntityType: true,
+        sha256: true,
+        tenantId: true
+      },
+      where: { tenantId }
+    })
+  ]);
+  const chained = evidenceRows.filter(
+    (row) => row.chainSeq !== null && row.chainHash !== null
+  );
+  const inspection =
+    chained.length > 0
+      ? inspectChainLinks(
+          chained.map((row) => ({
+            artifactType: row.artifactType,
+            chainHash: row.chainHash ?? "",
+            chainSeq: row.chainSeq ?? 0n,
+            evidenceId: row.evidenceId,
+            prevChainHash: row.prevChainHash,
+            relatedEntityId: row.relatedEntityId,
+            relatedEntityType: row.relatedEntityType,
+            sha256: row.sha256,
+            tenantId: row.tenantId
+          }))
+        )
+      : null;
+
+  return {
+    continuousValidation:
+      schedule?.lastRunAt != null
+        ? {
+            evidenceIds: snapshot.evidenceIds,
+            validatedAt: schedule.lastRunAt.toISOString()
+          }
+        : null,
+    evidenceIntegrity:
+      inspection?.valid && chained.length > 0
+        ? {
+            evidenceIds: snapshot.evidenceIds,
+            validatedAt: new Date().toISOString(),
+            verified: true as const
+          }
+        : null
+  };
+}
+
 export function createComplianceGovernanceServices(
   deps: RuntimeServiceDeps
 ): ComplianceGovernanceServices {
   const { prisma } = deps;
   return {
+    async getComplianceCoverage(context, input): Promise<SnapshotComplianceCoverage> {
+      getFramework(input.framework);
+      const snapshot = input.snapshotId
+        ? await loadValidationSnapshot(prisma, context, input.snapshotId)
+        : await loadLatestValidationSnapshot(deps, context);
+      if (input.snapshotId && !snapshot) {
+        throw new AppServiceError(
+          "Snapshot not found.",
+          404,
+          "snapshot_not_found"
+        );
+      }
+      const options = snapshot
+        ? await snapshotCoverageOptions(
+            deps,
+            context.tenant.tenantId,
+            snapshot
+          )
+        : undefined;
+      return SnapshotComplianceCoverageSchema.parse(
+        buildSnapshotComplianceCoverage({
+          framework: input.framework,
+          options,
+          snapshot
+        })
+      );
+    },
+
     async getComplianceGovernance(context, framework) {
       return buildInventory(deps, context.tenant.tenantId, framework);
     },

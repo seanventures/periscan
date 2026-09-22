@@ -38,6 +38,7 @@ function createInMemoryPrisma() {
           primaryOutcome: null,
           productPersona: null,
           role: data.role,
+          status: "Active",
           tenantId: data.tenantId,
           updatedAt: new Date(),
           userId: data.userId

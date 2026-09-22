@@ -26,6 +26,7 @@ cd "$ROOT_DIR"
 
 echo "==> settled tripwire"
 pnpm settled:check
+pnpm bas:scope:check
 
 echo "==> lint"
 pnpm lint

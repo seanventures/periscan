@@ -6,6 +6,8 @@ import { useMemo, useState } from "react";
 import {
   COMMUNITY_FIRST_RUN_CONNECT_AWS_LABEL,
   COMMUNITY_REPOSITORY_AUTH_FILENAME,
+  communityRepositoryAuthDownloadFilename,
+  communityRepositoryAuthDownloadRequiresExtension,
   communityScopeAuthorizationHint,
   communityScopeVerificationKind,
   defaultAssetClassForCommunityScope,
@@ -32,6 +34,7 @@ import {
   cn,
   type StateTone
 } from "../ui";
+import { DiscoveryCandidates } from "./discovery-candidates";
 import { ScopeSafetyEditor } from "./scope-safety-editor";
 import {
   HOSTED_GITHUB_SCOPE_HINT,
@@ -94,6 +97,20 @@ function attestActionLabel(scopeType: string): string {
     : "Attest as Owner";
 }
 
+export function scopeVerificationBadgeLabel(scope: {
+  scopeType: string;
+  verificationMethod?: string | null;
+  verificationStatus: string;
+}): string {
+  if (
+    scope.verificationStatus === "Verified" &&
+    /attestation/i.test(scope.verificationMethod ?? "")
+  ) {
+    return "Attested";
+  }
+  return scope.verificationStatus;
+}
+
 function attestDisclaimer(scopeType: string): string | null {
   const kind = communityScopeVerificationKind(scopeType);
   if (kind === "repository_token_file") {
@@ -110,10 +127,16 @@ function copyVerificationToken(token: string) {
 }
 
 function downloadAuthorizationFile(token: string) {
+  const filename = communityRepositoryAuthDownloadFilename({
+    requireExtension: communityRepositoryAuthDownloadRequiresExtension({
+      platform: navigator.platform,
+      userAgent: navigator.userAgent
+    })
+  });
   const url = URL.createObjectURL(new Blob([token], { type: "text/plain" }));
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = COMMUNITY_REPOSITORY_AUTH_FILENAME;
+  anchor.download = filename;
   anchor.click();
   URL.revokeObjectURL(url);
 }
@@ -250,7 +273,8 @@ export function ScopesWorkbench() {
           Scope
         </h1>
         <p className="max-w-2xl text-sm text-muted">
-          Nothing runs until a scope is verified.
+          Authorize a local path, then verify. Nothing runs until a scope is
+          verified.
         </p>
       </header>
 
@@ -322,7 +346,7 @@ export function ScopesWorkbench() {
         {githubCloneCommand ? (
           <pre
             data-testid="github-clone-hint"
-            className="mx-4 mb-3 overflow-x-auto rounded-control border border-line bg-bg p-3 font-mono text-xs leading-5 text-ink"
+            className="mx-4 mb-3 whitespace-pre-wrap break-all rounded-control border border-line bg-bg p-3 font-mono text-xs leading-5 text-ink"
           >
             {githubCloneCommand}
             {"\n"}
@@ -376,7 +400,7 @@ export function ScopesWorkbench() {
                       }
                       dot={false}
                     >
-                      {scope.verificationStatus}
+                      {scopeVerificationBadgeLabel(scope)}
                     </StateBadge>
                     {scope.verificationStale ? (
                       <StateBadge tone="missed" dot={false}>
@@ -408,7 +432,11 @@ export function ScopesWorkbench() {
                 {selected.scopeType} · safety ceiling{" "}
                 {selected.effectiveMaxSafetyLevel}
                 {selected.verifiedAt
-                  ? ` · verified ${new Date(selected.verifiedAt).toLocaleString()}`
+                  ? ` · ${
+                      /attestation/i.test(selected.verificationMethod ?? "")
+                        ? "attested"
+                        : "verified"
+                    } ${new Date(selected.verifiedAt).toLocaleString()}`
                   : ""}
               </p>
             </div>
@@ -507,6 +535,11 @@ export function ScopesWorkbench() {
                   <p className="text-sm text-muted">
                     {communityScopeAuthorizationHint(selected.scopeType)}
                   </p>
+                  {selectedKind === "aws_integration" && !pendingToken ? (
+                    <p className="mt-1 text-[12px] text-subtle">
+                      Periscan authorization token (not an AWS IAM secret).
+                    </p>
+                  ) : null}
                   {pendingToken ? (
                     <div className="mt-2 flex flex-wrap items-center gap-2">
                       <p className="font-mono text-[12px] text-ink">
@@ -515,6 +548,9 @@ export function ScopesWorkbench() {
                           ? ` → ${COMMUNITY_REPOSITORY_AUTH_FILENAME}`
                           : selectedKind === "dns_txt"
                             ? " → DNS TXT _periscan."
+                            : selectedKind === "operator_attestation" ||
+                                selectedKind === "aws_integration"
+                              ? " — Periscan authorization token (not an AWS IAM secret)"
                             : ""}
                       </p>
                       <button
@@ -556,6 +592,8 @@ export function ScopesWorkbench() {
           </div>
         </Panel>
       ) : null}
+
+      <DiscoveryCandidates />
     </div>
   );
 }

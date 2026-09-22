@@ -1,0 +1,42 @@
+{
+  "popeye": {
+    "score": 99,
+    "grade": "F",
+    "sections": [
+      {
+        "linter": "deployments",
+        "gvr": "apps/v1/deployments",
+        "tally": {
+          "ok": 0,
+          "info": 0,
+          "warning": 1,
+          "error": 1,
+          "score": 0
+        },
+        "issues": {
+          "default/fixture-web": [
+            {
+              "group": "apps/v1",
+              "gvr": "apps/v1/deployments",
+              "level": 2,
+              "message": "No liveness probe",
+              "snippet": "AKIAIOSFODNN7EXAMPLE"
+            },
+            {
+              "group": "apps/v1",
+              "gvr": "apps/v1/deployments",
+              "level": 3,
+              "message": "Untagged docker image in use",
+              "details": "-----BEGIN RSA PRIVATE KEY-----\nfixture\n-----END RSA PRIVATE KEY-----"
+            },
+            {
+              "group": "apps/v1",
+              "level": 1,
+              "message": "hashed_secret=fixture-info"
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

@@ -8,13 +8,11 @@
  *   pnpm tui -- health
  *   pnpm tui -- run --scope <id> --json
  */
-import {
-  communityFirstHourStartModuleIds,
-  communityPolicyPreviewRequest
-} from "@periscan/shared";
+import { communityPolicyPreviewRequest } from "@periscan/shared";
 
 import { SCREEN_ORDER, screenLabel } from "./nav.js";
 import { PeriscanApi, PeriscanApiError } from "./lib/api.js";
+import { pinGitleaksRepoSecretsModuleIds } from "./lib/gitleaks-pin.js";
 
 export const DEFAULT_API_URL = "http://127.0.0.1:3001";
 
@@ -174,7 +172,7 @@ export function printUsage(write: (chunk: string) => void): void {
 Usage:
   periscan [--api <url>]                    Interactive operator TUI
   periscan health [--api <url>] [--json]    Noninteractive GET /api/v1/health
-  periscan run --scope <id> [--json]        Start Community validation (no Ink)
+  periscan run --scope <id> [--json]        Pin gitleaks.repo_secrets (same as interactive g)
 
   pnpm tui
   pnpm tui -- --api http://127.0.0.1:3001
@@ -183,8 +181,8 @@ Usage:
 
 Environment:
   PERISCAN_API_URL      Control plane origin (default ${DEFAULT_API_URL})
-  PERISCAN_API_TOKEN    Session cookie (periscan_session=…) or raw session JWT
-  PERISCAN_CSRF_TOKEN   periscan_csrf cookie value (sent as x-csrf-token)
+  PERISCAN_API_TOKEN    Session cookie (periscan_session=…), raw session JWT, or Bearer API key (psk_…)
+  PERISCAN_CSRF_TOKEN   periscan_csrf cookie value (sent as x-csrf-token; not used with psk_ keys)
   --api                 Overrides PERISCAN_API_URL for this process
 
 Login:
@@ -195,13 +193,15 @@ Login:
 
 Keys:
   1–9 jump screens (${keys})
+  g pin gitleaks.repo_secrets on run (4)
   e evidence
+  b BAS
   ? help
   q quit
 
 Safety:
   Denied policy decisions never queue.
-  Live Atomic, Caldera, SharpHound, sqlmap, and Metasploit stay off.
+  BAS adapters require qualified scenarios, policy approval and verified cleanup.
 `);
 }
 
@@ -319,13 +319,13 @@ export async function runScopeCommand(options: {
       return 1;
     }
 
-    const firstHour = communityFirstHourStartModuleIds(
+    const moduleIds = pinGitleaksRepoSecretsModuleIds(
       suite.startableModuleIds ?? []
     );
     const started = await api.startCommunity({
       policyDecisionId: policy.policyDecisionId,
       scopeId,
-      ...(firstHour.length > 0 ? { moduleIds: firstHour } : {})
+      ...(moduleIds ? { moduleIds } : {})
     });
     writeJson(stdout, started);
     return 0;

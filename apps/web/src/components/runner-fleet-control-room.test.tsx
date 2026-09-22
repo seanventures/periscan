@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { RunnerFleetWorkspace } from "@periscan/shared";
+import type { EnterpriseSite, RunnerFleetWorkspace } from "@periscan/shared";
 
 import { browserPeriscanApiClient as api } from "../lib/periscan-api-client";
 import { RunnerFleetControlRoom } from "./runner-fleet-control-room";
@@ -11,8 +11,26 @@ const tenantId = "11111111-1111-4111-8111-111111111111";
 const userId = "22222222-2222-4222-8222-222222222222";
 const runnerId = "33333333-3333-4333-8333-333333333333";
 const heartbeatId = "44444444-4444-4444-8444-444444444444";
+const siteId = "55555555-5555-4555-8555-555555555555";
 
-function workspace(configured = true): RunnerFleetWorkspace {
+function chicagoDc(): EnterpriseSite {
+  return {
+    adDomains: ["corp.contoso.local"],
+    cidrs: ["10.8.0.0/16"],
+    name: "Chicago DC",
+    runnerIds: [runnerId],
+    siteId
+  };
+}
+
+function workspace(
+  configured = true,
+  overrides?: {
+    boundCampaigns?: number;
+    labels?: string[];
+    siteId?: string | null;
+  }
+): RunnerFleetWorkspace {
   const runner = {
     arch: "amd64",
     certificateExpiresAt: "2027-01-01T00:00:00.000Z",
@@ -26,9 +44,10 @@ function workspace(configured = true): RunnerFleetWorkspace {
     killSwitchAcknowledgedAt: null,
     killSwitchActive: false,
     killSwitchReason: null,
-    labels: ["production"],
+    labels: overrides?.labels ?? ["production"],
     lastSeenAt: timestamp,
     name: "East datacenter",
+    siteId: overrides?.siteId === undefined ? null : overrides.siteId,
     networkProfile: {
       additionalEgressNotes: null,
       dnsResolutionRequired: true,
@@ -109,7 +128,10 @@ function workspace(configured = true): RunnerFleetWorkspace {
           p50DurationSeconds24h: 8,
           terminal24h: 3
         },
-        versionCompliant: configured ? true : null
+        versionCompliant: configured ? true : null,
+        ...(overrides?.boundCampaigns === undefined
+          ? {}
+          : { boundCampaigns: overrides.boundCampaigns })
       }
     ],
     summary: {
@@ -129,11 +151,15 @@ function workspace(configured = true): RunnerFleetWorkspace {
 describe("RunnerFleetControlRoom", () => {
   afterEach(() => vi.restoreAllMocks());
 
-  function mockReads(state: RunnerFleetWorkspace) {
+  function mockReads(
+    state: RunnerFleetWorkspace,
+    sites: EnterpriseSite[] = []
+  ) {
     vi.spyOn(api, "getRunnerFleetWorkspace").mockResolvedValue(state);
     vi.spyOn(api, "listRunners").mockResolvedValue(
       state.runners.map((item) => item.runner)
     );
+    vi.spyOn(api, "listEnterpriseSites").mockResolvedValue(sites);
     vi.spyOn(api, "listRunnerTransportDecisions").mockResolvedValue([
       {
         channel: "LongPollHttps",
@@ -178,6 +204,48 @@ describe("RunnerFleetControlRoom", () => {
     expect(
       screen.getByRole("button", { name: "Emergency halt" })
     ).toBeEnabled();
+    expect(screen.getByText("Site")).toBeInTheDocument();
+    expect(screen.getAllByText("Unassigned").length).toBeGreaterThan(0);
+    expect(screen.getByText("Labels")).toBeInTheDocument();
+    expect(screen.getAllByText("production").length).toBeGreaterThan(0);
+    const campaigns = screen.getByText("Bound campaigns").closest("div");
+    expect(campaigns).toHaveTextContent("0");
+    expect(screen.queryByText("Headquarters")).not.toBeInTheDocument();
+  });
+
+  it("shows catalog site name and labels when the enterprise-site catalog binds the runner", async () => {
+    mockReads(workspace(true, { siteId }), [chicagoDc()]);
+
+    render(<RunnerFleetControlRoom />);
+
+    expect(await screen.findAllByText("Chicago DC")).not.toHaveLength(0);
+    expect(screen.getAllByText("production").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Headquarters")).not.toBeInTheDocument();
+    expect(screen.getByText("Bound campaigns").closest("div")).toHaveTextContent(
+      "0"
+    );
+  });
+
+  it("falls back to runner siteId when the catalog is empty and keeps bound campaigns at 0 unless the API provides them", async () => {
+    mockReads(workspace(true, { siteId: "plant-3" }));
+
+    render(<RunnerFleetControlRoom />);
+
+    expect(await screen.findAllByText("plant-3")).not.toHaveLength(0);
+    expect(screen.getByText("Bound campaigns").closest("div")).toHaveTextContent(
+      "0"
+    );
+  });
+
+  it("renders an API-provided bound-campaigns count instead of inventing one", async () => {
+    mockReads(workspace(true, { boundCampaigns: 2, siteId }), [chicagoDc()]);
+
+    render(<RunnerFleetControlRoom />);
+
+    expect(await screen.findByText("Bound campaigns")).toBeInTheDocument();
+    expect(screen.getByText("Bound campaigns").closest("div")).toHaveTextContent(
+      "2"
+    );
   });
 
   it("seals a validated tenant fleet policy from the inline editor", async () => {

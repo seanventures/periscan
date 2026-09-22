@@ -43,6 +43,7 @@ describe("nav scope (P07-17 / UX-W15)", () => {
     expect(hrefs).not.toContain("/integrations");
     expect(hrefs).not.toContain("/attack-paths");
     expect(hrefs).not.toContain("/executive");
+    expect(hrefs).not.toContain("/ctem");
     expect(hrefs).not.toContain("/reports");
     expect(hrefs).not.toContain("/mssp");
     expect(hrefs).not.toContain("/labs");
@@ -82,7 +83,9 @@ describe("nav scope (P07-17 / UX-W15)", () => {
         "/shift",
         "/attack-paths",
         "/executive",
-        "/reports"
+        "/ctem",
+        "/reports",
+        "/security-feeds"
       ])
     );
     // JOBS-SIMPLE: demoted Operate peers are Setup junk until Show Labs & more
@@ -101,7 +104,9 @@ describe("nav scope (P07-17 / UX-W15)", () => {
 
   it("applies inert to shell chrome/main when mobile nav or major dialogs open (P16-1)", () => {
     // Content sibling of overlays is inerted for mobile drawer + palette + help.
-    expect(source).toMatch(/shellDialogOpen\s*=\s*mobileOpen\s*\|\|\s*paletteOpen\s*\|\|\s*helpOpen/);
+    expect(source).toMatch(
+      /shellDialogOpen\s*=\s*mobileOpen\s*\|\|\s*paletteOpen\s*\|\|\s*helpOpen/
+    );
     expect(source).toMatch(/shellDialogOpen\s*\?\s*\{\s*inert:\s*true/);
     // Desktop rail inert under palette/help so AT cannot reach under modal.
     expect(source).toMatch(/chromeInert\s*=\s*paletteOpen\s*\|\|\s*helpOpen/);
@@ -171,13 +176,18 @@ describe("nav scope (P07-17 / UX-W15)", () => {
       expect.arrayContaining(["/findings", "/remediation", "/evidence"])
     );
     expect(hrefs).not.toContain("/executive");
+    expect(hrefs).not.toContain("/ctem");
   });
 
   it("unions /executive onto New/Activating only for SecurityLeader", () => {
     expect(source).toMatch(/persona === "SecurityLeader"/);
-    expect(source).toMatch(/new Set\(\[\.\.\.base, "\/executive"\]\)/);
+    expect(source).toMatch(
+      /new Set\(\[\.\.\.base, "\/executive", "\/ctem"\]\)/
+    );
     expect(setHrefs("NEW_TENANT_NAV")).not.toContain("/executive");
+    expect(setHrefs("NEW_TENANT_NAV")).not.toContain("/ctem");
     expect(setHrefs("ACTIVATING_TENANT_NAV")).not.toContain("/executive");
+    expect(setHrefs("ACTIVATING_TENANT_NAV")).not.toContain("/ctem");
   });
 
   it("labels the escape hatch Show Labs & more (not Show all navigation)", () => {
@@ -186,9 +196,7 @@ describe("nav scope (P07-17 / UX-W15)", () => {
   });
 
   it("keeps Labs hidden unless showAllNavigation", () => {
-    expect(source).toMatch(
-      /group\.label === "Labs" && !showAllNavigation/
-    );
+    expect(source).toMatch(/group\.label === "Labs" && !showAllNavigation/);
   });
 
   it("keeps a single rail primary CTA from resolveFirstRunPrimaryAction", () => {
@@ -197,6 +205,7 @@ describe("nav scope (P07-17 / UX-W15)", () => {
     expect((source.match(/data-testid="rail-primary-cta"/g) ?? []).length).toBe(
       1
     );
+    expect(source).toMatch(/railPrimaryCompetesWithFindingsFirstHour/);
   });
 
   it("wires mobile nav trigger aria-expanded / aria-controls (P16-2)", () => {

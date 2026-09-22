@@ -42,7 +42,7 @@ export const SAFE_HOP_PROBE_MODULES = {
   tlsCertificate: "periscan.tls_certificate_check",
   /**
    * Identity hop "measurement" is import + re-import verification only
-   * (BloodHound-compatible graph). Never live credential abuse / SharpHound.
+   * (BloodHound-compatible graph). Collection adapters require separate qualification.
    * Import outcomes stay Heuristic/Inconclusive — not Exploitable path proof.
    */
   identityGraphImport: "bloodhound.identity_pathing"
@@ -121,7 +121,7 @@ export function recommendSafeModulesForHop(input: {
 
   // Identity privilege edges: no live credential/lateral abuse. Safe path is
   // BloodHound-compatible graph import + re-import verification (P05-5).
-  // Never recommend netexec/kerbrute/SharpHound. Import is not Exploitable proof.
+  // Recommend only qualified edge-verification modules. Import is not Exploitable proof.
   if (
     sourceType === "Identity" ||
     targetType === "Identity" ||

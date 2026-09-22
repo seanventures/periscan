@@ -335,6 +335,56 @@ describe("Community CloudAccount suite and start services", () => {
     );
   });
 
+  it("explicit Prowler first-hour start queues only when the AWS connector is Ready", async () => {
+    const { services } = createCommunityServices({
+      integrations: [connectedAwsAccount()]
+    });
+    vi.spyOn(services, "createMission").mockResolvedValue({
+      missionId: MISSION_ID
+    } as never);
+    const startMission = vi.spyOn(services, "startMission").mockResolvedValue({
+      jobsQueued: 1,
+      mission: { missionId: MISSION_ID, status: "Queued" },
+      runs: []
+    } as never);
+
+    const started = await services.startCommunityValidation(
+      ownerContext as never,
+      {
+        moduleIds: ["prowler.aws_posture"],
+        policyDecisionId: POLICY_ID,
+        scopeId: SCOPE_ID
+      }
+    );
+
+    expect(started.jobsQueued).toBe(1);
+    expect(started.moduleIds).toEqual(["prowler.aws_posture"]);
+    expect(startMission).toHaveBeenCalledOnce();
+  });
+
+  it("explicit Prowler first-hour start returns jobsQueued=0 when AWS is NotConfigured", async () => {
+    const missing = createCommunityServices({ integrations: [] });
+    vi.spyOn(missing.services, "createMission").mockResolvedValue({
+      missionId: MISSION_ID,
+      status: "DeniedByPolicy"
+    } as never);
+    const startMission = vi.spyOn(missing.services, "startMission");
+
+    const started = await missing.services.startCommunityValidation(
+      ownerContext as never,
+      {
+        moduleIds: ["prowler.aws_posture"],
+        policyDecisionId: POLICY_ID,
+        scopeId: SCOPE_ID
+      }
+    );
+
+    expect(started.jobsQueued).toBe(0);
+    expect(started.moduleIds).toEqual(["prowler.aws_posture"]);
+    expect(started.mission.status).toBe("DeniedByPolicy");
+    expect(startMission).not.toHaveBeenCalled();
+  });
+
   it("refuses to start CloudAccount Prowler when AWS is not connected", async () => {
     const missing = createCommunityServices({ integrations: [] });
     const bedrockOnly = createCommunityServices({

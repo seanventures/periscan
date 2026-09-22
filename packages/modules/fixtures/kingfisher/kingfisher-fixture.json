@@ -1,0 +1,9 @@
+{
+  "findings": [
+    {
+      "file": "config.env",
+      "rule_id": "generic.api-key",
+      "severity": "high"
+    }
+  ]
+}

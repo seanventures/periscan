@@ -900,7 +900,7 @@ function BoardNarrativePanel({
       </div>
 
       <p className="mt-3 text-[11px] leading-relaxed text-subtle">
-        Board appendix only. Not certification, full BAS, or vendor SOC 2 Type
+        Board appendix only. Not certification or a vendor SOC 2 Type
         II. Formal pack: Reports → Board pack (Executive Risk Summary).
       </p>
     </section>

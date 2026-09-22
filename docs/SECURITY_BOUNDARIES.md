@@ -28,16 +28,12 @@ When a product capability is not available, use one of these states instead of f
 - `RequiresApproval`
 - `NotImplemented`
 
-## Wave D optional lab inject (SOW-gated, default off)
+## Governed BAS / AEV development
 
-Closed inject→measure is **hard-disabled** on the control-plane API
-(`control_live_execution_disabled`). Default product is **observe-only** control
-validation. Optional lab inject requires a signed SOW
-([WAVE_D_INJECT_SOW_TEMPLATE.md](./competitive/WAVE_D_INJECT_SOW_TEMPLATE.md))
-**and** dual runtime gates (tenant flag + operator approval). Atomic / Caldera /
-SharpHound live, ransomware, and real exfil stay never-build. See root
-[SECURITY_BOUNDARIES.md](../SECURITY_BOUNDARIES.md) and
-[DEMO_OFFENSIVE_GUARDRAILS.md](./competitive/DEMO_OFFENSIVE_GUARDRAILS.md).
+The [BAS/AEV program](BAS_AEV_PROGRAM.md) (PERISCAN-583) authorizes qualified
+Atomic, Caldera, SharpHound/BloodHound and Metasploit integrations. The root [security boundaries](../SECURITY_BOUNDARIES.md) define adapter and
+scenario release requirements. Current live inject and import-only restrictions
+remain enforced until real implementations and negative tests replace them.
 
 ## Runner Boundary
 

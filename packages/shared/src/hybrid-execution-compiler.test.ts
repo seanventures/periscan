@@ -69,7 +69,7 @@ describe("hybrid execution compiler contracts", () => {
     expect(withCanary).toContain("periscan.endpoint_benign_marker_emit");
   });
 
-  it("assembles passive multi-agent plan with policy preview (not BAS swarm)", () => {
+  it("assembles passive multi-agent plan with policy preview (passive planning)", () => {
     const assembled = assemblePassiveMultiAgentPlan({
       intent: "dns tls http exposure proof",
       maximumSteps: 4,

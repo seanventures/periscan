@@ -145,7 +145,7 @@ describe("a11y smoke (axe-core / jsdom)", () => {
 
     expect(
       await screen.findByRole("heading", {
-        name: "Let's prove your first path."
+        name: "Keep proving: authorized local path → Gitleaks-class → Fixed after retest."
       })
     ).toBeInTheDocument();
 

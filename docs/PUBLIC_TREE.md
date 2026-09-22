@@ -68,3 +68,4 @@ WS0 preflight: [`OPEN_SOURCE_PROJECT_PLAN.md`](./OPEN_SOURCE_PROJECT_PLAN.md)
 - Authorize a visibility flip
 - Delete the listed files from the private tree
 - Replace Plane as the system of record
+- Omit `pnpm-lock.yaml` from a public snapshot (Dependabot reads the lockfile on `main`; see [`PUBLIC_SNAPSHOT.md`](./PUBLIC_SNAPSHOT.md))

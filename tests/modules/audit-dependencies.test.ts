@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -233,5 +233,92 @@ describe("Dependabot HIGH pins (PERISCAN-490)", () => {
       dependencies?: Record<string, string>;
     };
     expect(manifest.dependencies?.fastify).toBe("^5.12.1");
+  });
+});
+
+describe("P2-DEP vitest mocker pin (GHSA-82fw-gwwq-j7x9)", () => {
+  it("pins vitest and @vitest/mocker 4.1.11 via pnpm overrides", async () => {
+    const manifest = JSON.parse(await readRepoFile("package.json")) as {
+      devDependencies?: Record<string, string>;
+      pnpm?: { overrides?: Record<string, string> };
+    };
+    expect(manifest.devDependencies?.vitest).toBe("^4.1.11");
+    expect(manifest.pnpm?.overrides?.vitest).toBe("4.1.11");
+    expect(manifest.pnpm?.overrides?.["@vitest/mocker"]).toBe("4.1.11");
+  });
+
+  it("aligns TUI vitest with the patched 4.1.11 line (3.x is unmaintained)", async () => {
+    const manifest = JSON.parse(await readRepoFile("apps/tui/package.json")) as {
+      devDependencies?: Record<string, string>;
+    };
+    expect(manifest.devDependencies?.vitest).toBe("^4.1.11");
+  });
+
+  it("does not waive GHSA-82fw-gwwq-j7x9 on the high gate", async () => {
+    const { ALLOWED_GHSA } = await import("../../scripts/audit-dependencies.mjs");
+    const allowed = Object.keys(ALLOWED_GHSA as Record<string, string>).map((id) =>
+      id.toUpperCase()
+    );
+    expect(allowed).not.toContain("GHSA-82FW-GWWQ-J7X9");
+  });
+
+  it("does not lock vitest 4.1.10, vitest 3.2.7, or unpatched @vitest/mocker", async () => {
+    const lockfile = await readRepoFile("pnpm-lock.yaml");
+    expect(lockfile).toMatch(/vitest@4\.1\.11/u);
+    expect(lockfile).toMatch(/['"]@vitest\/mocker@4\.1\.11['"]:/u);
+    expect(lockfile).not.toMatch(/vitest@4\.1\.10/u);
+    expect(lockfile).not.toMatch(/vitest@3\.2\.7/u);
+    expect(lockfile).not.toMatch(/@vitest\/mocker@4\.1\.10/u);
+    expect(lockfile).not.toMatch(/@vitest\/mocker@3\.2\.7/u);
+  });
+});
+
+describe("P2-DEP public snapshot must include the patched lockfile", () => {
+  it("documents that the public snapshot must include pnpm-lock.yaml with vitest 4.1.11", async () => {
+    const snapshot = await readRepoFile("docs/PUBLIC_SNAPSHOT.md");
+    expect(snapshot).toContain("pnpm-lock.yaml");
+    expect(snapshot).toMatch(/must include/i);
+    expect(snapshot).toContain("vitest@4.1.11");
+    expect(snapshot).toContain("@vitest/mocker@4.1.11");
+    expect(snapshot).toContain("GHSA-82fw-gwwq-j7x9");
+    expect(snapshot).toMatch(/Dependabot/i);
+    expect(snapshot).toMatch(/do not retag `?v0\.12\.0`?/i);
+    expect(snapshot).not.toMatch(/\b5\.0\b/u);
+  });
+
+  it("does not exclude pnpm-lock.yaml from the public tree", async () => {
+    const publicTree = await readRepoFile("docs/PUBLIC_TREE.md");
+    const exclude = publicTree.split("## Must not go public")[1]?.split(/^## /m)[0] ?? "";
+    expect(exclude).toContain("compose.yaml");
+    expect(exclude).not.toMatch(/pnpm-lock\.yaml/u);
+  });
+
+  it("keeps pnpm-lock.yaml git-tracked so Dependabot can see the 4.1.11 pin", () => {
+    const listed = spawnSync("git", ["ls-files", "--", "pnpm-lock.yaml"], {
+      cwd: repoRoot,
+      encoding: "utf8"
+    });
+    expect(listed.status, listed.stderr).toBe(0);
+    expect(listed.stdout.trim()).toBe("pnpm-lock.yaml");
+  });
+});
+
+describe("@types/node Fastify typecheck pin (PERISCAN-490)", () => {
+  it("pins @types/node 20.19.43 in root devDependencies and pnpm overrides", async () => {
+    const manifest = JSON.parse(await readRepoFile("package.json")) as {
+      devDependencies?: Record<string, string>;
+      pnpm?: { overrides?: Record<string, string> };
+    };
+    expect(manifest.devDependencies?.["@types/node"]).toBe("20.19.43");
+    expect(manifest.pnpm?.overrides?.["@types/node"]).toBe("20.19.43");
+  });
+
+  it("locks @types/node 20.19.43 and does not lock 25.x", async () => {
+    const lockfile = await readRepoFile("pnpm-lock.yaml");
+    expect(lockfile).toMatch(/^  ['"]@types\/node['"]:\s*20\.19\.43$/mu);
+    expect(lockfile).toMatch(/specifier: 20\.19\.43/u);
+    expect(lockfile).toMatch(/@types\/node@20\.19\.43/u);
+    expect(lockfile).not.toMatch(/@types\/node@25\./u);
+    expect(lockfile).not.toMatch(/specifier: \^25\./u);
   });
 });

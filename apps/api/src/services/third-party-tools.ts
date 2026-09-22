@@ -3131,7 +3131,7 @@ export function isInstallHardBlocked(entry: OpenSourceToolCatalogEntry) {
 /**
  * Hard blocks that never get enablement (AGPL/Blocked readiness, not legal-review).
  * Legal-review tools can enable only after a current license acceptance for the pin.
- * Theater IDs (Atomic / Caldera / SharpHound / sqlmap / Metasploit / …) never enable.
+ * Unqualified tool IDs require tested adapters before install/enable becomes eligible.
  */
 export function isEnableHardBlocked(entry: OpenSourceToolCatalogEntry) {
   if (isEngineLabTheaterToolId(entry.tool.toolId)) {

@@ -159,7 +159,8 @@ export const OpenSourceToolIdSchema = z.enum([
   "volatility3",
   "recon-ng",
   "theharvester",
-  "dirsearch"
+  "dirsearch",
+  "infection-monkey"
 ]);
 
 export const OpenSourceToolStageSchema = z.enum([

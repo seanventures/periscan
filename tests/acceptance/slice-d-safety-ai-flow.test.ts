@@ -2,8 +2,8 @@
  * Continuous loop Slice D — safety scaffolds 16/21/22 + AI ops floors 59/61/64.
  *
  * Safety:
- *  - Inventory API documents APT plan_only, ransomware forever_refuse,
- *    identity exposure_only
+ *  - Inventory API documents APT plan_only, ransomware danger_section,
+ *    identity exposure_only plus High-danger spray/harvest
  *  - Module catalog pins kill-chain liveSupported:false and identity spray
  *    liveSupported:false
  *
@@ -42,7 +42,7 @@ describe("Slice D safety scaffolds + AI ops floors", () => {
     }
   });
 
-  it("inventory API + module catalog pin 16 plan_only / 21 forever_refuse / 22 exposure_only", async () => {
+  it("inventory API + module catalog pin 16 plan_only / 21 danger_section / 22 exposure_only", async () => {
     prisma = createPrismaClient();
     await testHelpers.probeDatabaseConnection(prisma);
     const app = await buildApp({
@@ -97,25 +97,20 @@ describe("Slice D safety scaffolds + AI ops floors", () => {
       expect(apt?.foreverRefuse.join(" ")).toMatch(/APT|exploit chain/i);
 
       const ransomware = body.packs.find((p) => p.scorecardId === 21);
-      expect(ransomware?.claimClass).toBe("forever_refuse");
-      expect(ransomware?.honestSubstituteVerdict).toBe("ForeverRefuse");
-      expect(ransomware?.canElevateSubstituteToPartial).toBe(false);
-      expect(ransomware?.foreverRefuse.join(" ")).toMatch(/ransomware/i);
-      expect(ransomware?.safeModules.join(" ")).not.toMatch(
-        /ransomware_live|encrypt/i
-      );
+      expect(ransomware?.claimClass).toBe("danger_section");
+      expect(ransomware?.honestSubstituteVerdict).toBe("DangerSection");
+      expect(ransomware?.safeModules).toContain("exploitation.impact_t1486");
+      expect(ransomware?.foreverRefuse.join(" ")).toMatch(/first-hour/i);
 
       const identity = body.packs.find((p) => p.scorecardId === 22);
       expect(identity?.claimClass).toBe("exposure_only");
       expect(identity?.honestSubstituteVerdict).toBe("Partial");
       expect(identity?.canElevateSubstituteToPartial).toBe(true);
       expect(identity?.safeModules).toContain("gitleaks.repo_secrets");
-      expect(identity?.foreverRefuse.join(" ")).toMatch(
-        /spray|harvest|SharpHound/i
-      );
+      expect(identity?.foreverRefuse.join(" ")).toMatch(/first-hour|High-danger/i);
 
       expect(body.note).toMatch(/16=plan_only/);
-      expect(body.note).toMatch(/21=forever_refuse/);
+      expect(body.note).toMatch(/21=danger_section/);
       expect(body.note).toMatch(/22=exposure_only/);
       expect(JSON.stringify(body)).not.toMatch(
         /live ransomware encryption as product feature/i

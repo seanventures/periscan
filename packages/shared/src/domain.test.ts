@@ -477,6 +477,71 @@ describe("Periscan domain schemas", () => {
       scopes: ["saml:nameid:emailAddress"]
     });
 
+    const jitDefaults = TenantSsoConfigSchema.parse({
+      authorizationEndpoint: "https://idp.example.com/oauth2/authorize",
+      clientId: "periscan-client",
+      clientSecretSet: true,
+      createdAt: now,
+      emailDomainAllowlist: ["example.com"],
+      enforced: false,
+      issuerUrl: "https://idp.example.com/oauth2/default",
+      providerType: "OIDC",
+      redirectUri: "https://app.periscan.example/auth/callback",
+      scopes: ["openid", "email", "profile"],
+      status: "Enabled",
+      tenantId,
+      tokenEndpoint: "https://idp.example.com/oauth2/token",
+      updatedAt: now
+    });
+    expect(jitDefaults.jitEnabled).toBe(false);
+    expect(jitDefaults.jitEmailDomains).toEqual([]);
+    expect(jitDefaults.jitDefaultRole).toBe("Viewer");
+
+    const jitEnabled = UpdateTenantSsoConfigInputSchema.parse({
+      authorizationEndpoint: "https://idp.example.com/oauth2/authorize",
+      clientId: "periscan-client",
+      issuerUrl: "https://idp.example.com/oauth2/default",
+      jitDefaultRole: "SecurityEngineer",
+      jitEmailDomains: ["Acme.example"],
+      jitEnabled: true
+    });
+    expect(jitEnabled).toMatchObject({
+      jitDefaultRole: "SecurityEngineer",
+      jitEmailDomains: ["Acme.example"],
+      jitEnabled: true
+    });
+    expect(
+      UpdateTenantSsoConfigInputSchema.safeParse({
+        authorizationEndpoint: "https://idp.example.com/oauth2/authorize",
+        clientId: "periscan-client",
+        issuerUrl: "https://idp.example.com/oauth2/default",
+        jitDefaultRole: "Owner",
+        jitEnabled: true,
+        jitEmailDomains: ["example.com"]
+      }).success
+    ).toBe(false);
+    expect(
+      TenantSsoConfigSchema.safeParse({
+        authorizationEndpoint: "https://idp.example.com/oauth2/authorize",
+        clientId: "periscan-client",
+        clientSecretSet: true,
+        createdAt: now,
+        emailDomainAllowlist: ["example.com"],
+        enforced: false,
+        issuerUrl: "https://idp.example.com/oauth2/default",
+        jitDefaultRole: "Owner",
+        jitEnabled: true,
+        jitEmailDomains: ["example.com"],
+        providerType: "OIDC",
+        redirectUri: "https://app.periscan.example/auth/callback",
+        scopes: ["openid", "email"],
+        status: "Enabled",
+        tenantId,
+        tokenEndpoint: "https://idp.example.com/oauth2/token",
+        updatedAt: now
+      }).success
+    ).toBe(false);
+
     expect(
       TenantSsoAuthorizationUrlInputSchema.parse({
         nonce: "nonce-value",
@@ -592,7 +657,7 @@ describe("Periscan domain schemas", () => {
             "Validation findings, attack paths, and remediation records",
             "Evidence metadata and redacted artifacts",
             "Integration configuration (credentials encrypted at rest when keys are set)",
-            "Security audit events",
+            "Security audit events"
           ],
           dataSubjectRequestProcess:
             "Data subject access, export, and deletion requests are sales-assisted until a published DPA is linked.",
@@ -607,7 +672,6 @@ describe("Periscan domain schemas", () => {
           subprocessorsHonesty:
             "Empty list means subprocessor disclosure is NotConfigured — not that Periscan has zero subprocessors.",
           subprocessorsStatus: "NotConfigured"
-
         },
         evidenceRetention: {
           artifactStorage: "S3-compatible object storage",
@@ -640,9 +704,9 @@ describe("Periscan domain schemas", () => {
           },
           jitProvisioning: {
             defaultRoleIfEnabled: "Viewer",
-            detail: "JIT membership on first SSO is NotConfigured.",
+            detail: "JIT membership on first SSO is Optional.",
             requiresDomainAllowlist: true,
-            status: "NotConfigured"
+            status: "Optional"
           },
           scimInbound: {
             discoveryPath: "/api/v1/scim/v2/ServiceProviderConfig",
@@ -777,7 +841,7 @@ describe("Periscan domain schemas", () => {
             "Validation findings, attack paths, and remediation records",
             "Evidence metadata and redacted artifacts",
             "Integration configuration (credentials encrypted at rest when keys are set)",
-            "Security audit events",
+            "Security audit events"
           ],
           dataSubjectRequestProcess:
             "Data subject access, export, and deletion requests are sales-assisted until a published DPA is linked.",
@@ -792,7 +856,6 @@ describe("Periscan domain schemas", () => {
           subprocessorsHonesty:
             "Empty list means subprocessor disclosure is NotConfigured — not that Periscan has zero subprocessors.",
           subprocessorsStatus: "NotConfigured"
-
         },
         evidenceRetention: {
           artifactStorage: "S3-compatible object storage",
@@ -825,9 +888,9 @@ describe("Periscan domain schemas", () => {
           },
           jitProvisioning: {
             defaultRoleIfEnabled: "Viewer",
-            detail: "JIT membership on first SSO is NotConfigured.",
+            detail: "JIT membership on first SSO is Optional.",
             requiresDomainAllowlist: true,
-            status: "NotConfigured"
+            status: "Optional"
           },
           scimInbound: {
             discoveryPath: "/api/v1/scim/v2/ServiceProviderConfig",
@@ -915,7 +978,7 @@ describe("Periscan domain schemas", () => {
 
   it("exposes honest inbound SCIM NotConfigured and baseline RBAC only", () => {
     const honesty = buildIdentityProvisioningHonesty();
-    // PERISCAN-30: plane is Partial; SCIM/JIT stay literal NotConfigured.
+    // PERISCAN-30: plane is Partial; SCIM stays literal NotConfigured.
     expect(honesty.planeStatus).toBe("Partial");
     expect(honesty.planeStatusDetail).toMatch(/Partial|NotConfigured/i);
     expect(honesty.orderFormDoc).toBe("docs/ENTERPRISE_IDENTITY_LIFECYCLE.md");
@@ -929,13 +992,19 @@ describe("Periscan domain schemas", () => {
     expect(honesty.advancedRbac.status).toBe("BaselineRolesOnly");
     expect(honesty.advancedRbac.customRolesSupported).toBe(false);
     expect(honesty.advancedRbac.availableRoles).toContain("Owner");
-    expect(honesty.scimInbound.detail).toMatch(/not shipped/i);
-    expect(honesty.scimInbound.detail).toMatch(/order form|501/i);
-    // P17-14: JIT is invite-gated / NotConfigured (no fake create-on-first-SSO).
-    expect(honesty.jitProvisioning.status).toBe("NotConfigured");
+    expect(honesty.scimInbound.detail).toMatch(/NotConfigured|inbound_scim_not_configured/i);
+    expect(honesty.scimInbound.detail).toMatch(/token|401/i);
+    expect(
+      buildIdentityProvisioningHonesty({ inboundScimConfigured: true }).scimInbound
+        .status
+    ).toBe("Ready");
+    expect(honesty.jitProvisioning.status).toBe("Optional");
     expect(honesty.jitProvisioning.defaultRoleIfEnabled).toBe("Viewer");
     expect(honesty.jitProvisioning.requiresDomainAllowlist).toBe(true);
-    expect(honesty.jitProvisioning.detail).toMatch(/NotConfigured|invite/i);
+    expect(honesty.jitProvisioning.detail).toMatch(
+      /domain allowlist|Viewer|user\.jit_provisioned/i
+    );
+    expect(honesty.jitProvisioning.detail).not.toMatch(/not shipped/i);
   });
 
   it("exposes enterprise commercial honesty without fake certifications", () => {
@@ -1037,9 +1106,9 @@ describe("Periscan domain schemas", () => {
       ["mission:run", "remediation:write"].sort()
     );
     expect([...expandApiKeyCapabilities(["read"])]).toEqual([]);
-    expect([
-      ...expandApiKeyCapabilities(["mission:run", "audit:read"])
-    ].sort()).toEqual(["audit:read", "mission:run"].sort());
+    expect(
+      [...expandApiKeyCapabilities(["mission:run", "audit:read"])].sort()
+    ).toEqual(["audit:read", "mission:run"].sort());
     for (const scope of [
       "read",
       "write",
@@ -1226,9 +1295,7 @@ describe("Periscan domain schemas", () => {
       }).pathBreakers
     ).toHaveLength(1);
 
-    expect(
-      PathEdgeValidationEligibilitySchema.options
-    ).toEqual(
+    expect(PathEdgeValidationEligibilitySchema.options).toEqual(
       expect.arrayContaining([
         "Eligible",
         "NeedsScope",
@@ -1584,7 +1651,8 @@ describe("Periscan domain schemas", () => {
       validationState: "Exploitable",
       fingerprint:
         "a1b2c3d4e5f6789012345678abcdef0123456789abcdef0123456789abcdef01",
-      groupKey: "path:repo-secret-cloud-role:assets:55555555-5555-4555-8555-555555555555",
+      groupKey:
+        "path:repo-secret-cloud-role:assets:55555555-5555-4555-8555-555555555555",
       rootCauseSummary:
         "Repository secret exposure on one asset family (repo-secret-cloud-role).",
       firstSeenAt: now,
@@ -1671,7 +1739,8 @@ describe("Periscan domain schemas", () => {
     ).toBe(assetId);
     expect(ValidatedFindingFilterSchema.parse({}).missionId).toBeUndefined();
     expect(
-      ValidatedFindingFilterSchema.safeParse({ missionId: "not-a-uuid" }).success
+      ValidatedFindingFilterSchema.safeParse({ missionId: "not-a-uuid" })
+        .success
     ).toBe(false);
     expect(
       TransitionFindingInputSchema.safeParse({
@@ -3227,9 +3296,9 @@ describe("AssetCoverageTag ontology (P11-12)", () => {
     expect(normalizeAssetCoverageTag("k8s")).toBe("K8s");
     expect(normalizeAssetCoverageTag("K8s")).toBe("K8s");
     expect(AssetCoverageTagSchema.options).not.toContain("Kubernetes");
-    expect(canonicalizeAssetCoverageTags(["Kubernetes", "K8s", "EASM", "nope"])).toEqual(
-      ["K8s", "EASM"]
-    );
+    expect(
+      canonicalizeAssetCoverageTags(["Kubernetes", "K8s", "EASM", "nope"])
+    ).toEqual(["K8s", "EASM"]);
   });
 
   it("binds lab inventory assetType to AssetTypeSchema", () => {

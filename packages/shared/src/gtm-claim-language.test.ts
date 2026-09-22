@@ -38,9 +38,9 @@ describe("gtm claim language (P19-20)", () => {
     expect(summary.denyListDoc).toContain("CLAIM_DENY_LIST");
   });
 
-  it("Wave J/K freeze: denies full BAS, auto-mitigate push, TEE host, Leading on Partial, Ray", () => {
+  it("denies unsupported shipped BAS coverage, auto-mitigate push, TEE host, Leading on Partial, Ray", () => {
     const denied = GTM_DENY_PHRASES.map((d) => d.denied).join(" | ");
-    expect(denied).toMatch(/full bas|multi-vector bas/i);
+    expect(denied).toMatch(/unsupported shipped BAS coverage/i);
     expect(denied).toMatch(/auto-mitigate/i);
     expect(denied).toMatch(/tee|enclave/i);
     expect(denied).toMatch(/leading on partial/i);

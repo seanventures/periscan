@@ -105,8 +105,10 @@ describe("OpenAPI operation-level coverage", () => {
 
       const operations: {
         method: string;
-        path: string;
         operationId?: string;
+        path: string;
+        summary?: string;
+        tags?: string[];
       }[] = [];
 
       for (const [path, methods] of Object.entries(paths)) {
@@ -118,16 +120,22 @@ describe("OpenAPI operation-level coverage", () => {
           operations.push({
             method: method.toUpperCase(),
             operationId: operation.operationId,
-            path
+            path,
+            summary: operation.summary,
+            tags: operation.tags
           });
         }
       }
 
-      // Every operation must carry a non-empty operationId.
+      // Every operation must carry a non-empty operationId, summary, and tags.
       const undocumented = operations.filter(
         (operation) =>
           typeof operation.operationId !== "string" ||
-          operation.operationId.trim().length === 0
+          operation.operationId.trim().length === 0 ||
+          typeof operation.summary !== "string" ||
+          operation.summary.trim().length === 0 ||
+          !Array.isArray(operation.tags) ||
+          operation.tags.length === 0
       );
 
       expect(

@@ -18,6 +18,16 @@ describe("estimateNextRunAt / estimateNextFireTimes", () => {
     ).toBe("2026-07-20T09:30:00.000Z");
   });
 
+  it("advances Hourly by one hour", () => {
+    expect(
+      estimateNextRunAt("Hourly", new Date("2026-09-17T14:00:00.000Z"), {
+        blackoutWindows: [],
+        runAtLocalTime: "09:00",
+        timeZone: "UTC"
+      }).toISOString()
+    ).toBe("2026-09-17T15:00:00.000Z");
+  });
+
   it("returns the next three daily fires", () => {
     const fires = estimateNextFireTimes(
       "Daily",

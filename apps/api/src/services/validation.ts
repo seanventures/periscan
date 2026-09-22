@@ -17,10 +17,12 @@ import {
   COMMUNITY_NUCLEI_MISSION_POLICY_PROFILE,
   COMMUNITY_NUCLEI_MODULE_ID,
   COMMUNITY_NUCLEI_SIBLING_WINDOW_MS,
+  COMMUNITY_PROWLER_AWS_POSTURE_MODULE_ID,
   communityFirstHourStartModuleIds,
   communityPolicyCoversStartSet,
   communityStartSetExecutionEnvironment,
   communityValidationSafetyLevel,
+  isExplicitProwlerFirstHourStart,
   communityValidationStartLane,
   isCommunityValidationModuleId,
   isCopyleftOptInModuleId,
@@ -1017,10 +1019,22 @@ export function createValidationServices(
         prisma,
         context.tenant.tenantId
       );
-      const resolvedTarget = stampUpstreamLicenses(
+      let resolvedTarget = stampUpstreamLicenses(
         resolvedTargetBase,
         licensedCopyleft
       );
+      if (
+        modules.some(
+          (module) => module.manifest.moduleId === "identity.cred_spray"
+        )
+      ) {
+        resolvedTarget = {
+          ...resolvedTarget,
+          auditRequired: true,
+          policyDecisionId: decision.policyDecisionId,
+          scopeVerified: scope.verificationStatus === "Verified"
+        };
+      }
       if (!devMode && targetIncludesFixtureHints(resolvedTarget)) {
         throw new AppServiceError(
           "Fixture mission targets are only available in dev mode.",
@@ -2308,7 +2322,8 @@ export function createValidationServices(
         runnerAvailable,
         scopeType: scope.scopeType
       });
-      if (available.length === 0) {
+      const prowlerRequested = isExplicitProwlerFirstHourStart(input.moduleIds);
+      if (available.length === 0 && !prowlerRequested) {
         throw new AppServiceError(
           `No Community edition engines apply to ${scope.scopeType} scopes yet. Enroll a runner or connect AWS if this scope needs those lanes.`,
           400,
@@ -2352,7 +2367,7 @@ export function createValidationServices(
         selected = [...available, ...copyleftForScope].filter((entry) =>
           input.moduleIds!.includes(entry.moduleId)
         );
-        if (selected.length === 0) {
+        if (selected.length === 0 && !prowlerRequested) {
           throw new AppServiceError(
             "None of the requested modules apply to this verified scope.",
             400,
@@ -2409,6 +2424,31 @@ export function createValidationServices(
           400,
           "community_environment_mismatch"
         );
+      }
+      const canQueueProwler =
+        cloudAwsAvailable &&
+        selected.some(
+          (entry) => entry.moduleId === COMMUNITY_PROWLER_AWS_POSTURE_MODULE_ID
+        );
+      if (prowlerRequested && !canQueueProwler) {
+        const mission = await this.createMission(context, {
+          missionType: "ValidationSnapshot",
+          policyDecisionId: input.policyDecisionId,
+          policyProfile: COMMUNITY_MISSION_POLICY_PROFILE,
+          safetyLevel: decision.safetyLevel,
+          scopeId: scope.scopeId
+        });
+        return {
+          editionId: COMMUNITY_EDITION_ID,
+          jobsQueued: 0,
+          mission: { ...mission, status: "DeniedByPolicy" },
+          moduleIds: [COMMUNITY_PROWLER_AWS_POSTURE_MODULE_ID],
+          nucleiMissionId: null,
+          nucleiSkipReason: null,
+          runs: [],
+          scopeType: scope.scopeType,
+          target: {}
+        };
       }
       const mission = await this.createMission(context, {
         missionType: "ValidationSnapshot",

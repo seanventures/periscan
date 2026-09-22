@@ -93,8 +93,8 @@ for the process.
 
 - **Denied never queues.** A `policy_denied` response is terminal. The client
   does not retry the mutation and does not enqueue work.
-- Live **Atomic**, **Caldera**, **SharpHound**, **sqlmap**, and **Metasploit**
-  stay off. Do not add start paths for them here.
+- Add BAS start paths as qualified adapters become available through the API.
+  Render per-scenario readiness and policy results; the TUI cannot grant eligibility.
 - Only validate verified, customer-authorized scope. No destructive actions.
 
 Screens are owned by other packages/agents; this captain package owns the CLI

@@ -1,0 +1,41 @@
+[
+  {
+    "hostname": "lab-node",
+    "output": "14:01:00.000000000: Notice Periscan benign marker observed (user=nobody command=echo periscan-r11111111-s22222222-whoami)",
+    "output_fields": {
+      "container.id": "host",
+      "proc.cmdline": "echo periscan-r11111111-s22222222-whoami",
+      "proc.name": "echo",
+      "user.name": "nobody"
+    },
+    "priority": "Notice",
+    "rule": "Periscan Benign Marker",
+    "source": "syscall",
+    "tags": ["periscan", "mitre_execution"],
+    "time": "2026-09-17T14:01:00.000Z"
+  },
+  {
+    "hostname": "lab-node",
+    "output": "14:02:00.000000000: Warning Sensitive file opened",
+    "output_fields": {
+      "fd.name": "config/demo.env",
+      "proc.cmdline": "cat config/demo.env",
+      "proc.name": "cat"
+    },
+    "output_fields_debug": {
+      "aws_key": "AKIAIOSFODNN7EXAMPLE",
+      "hashed_secret": "hashed_secret_should_not_leak",
+      "snippet": "-----BEGIN RSA PRIVATE KEY-----\nfixture\n-----END RSA PRIVATE KEY-----"
+    },
+    "priority": "Warning",
+    "rule": "Read sensitive file",
+    "source": "syscall",
+    "time": "2026-09-17T14:02:00.000Z"
+  },
+  {
+    "evt": { "type": "drop" },
+    "priority": "Informational",
+    "rule": "",
+    "time": "2026-09-17T14:03:00.000Z"
+  }
+]

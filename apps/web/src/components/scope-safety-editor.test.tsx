@@ -111,6 +111,14 @@ describe("ScopeSafetyEditor", () => {
     fireEvent.change(screen.getByLabelText("Scope Purdue level"), {
       target: { value: "Level2SupervisoryControl" }
     });
+    expect(screen.getByLabelText("Scope segment name")).toHaveAttribute(
+      "placeholder",
+      "prod-account-alias"
+    );
+    expect(screen.getByLabelText("Scope classification tags")).toHaveAttribute(
+      "placeholder",
+      "production, staging"
+    );
     fireEvent.change(screen.getByLabelText("Scope classification tags"), {
       target: { value: "scada, production" }
     });

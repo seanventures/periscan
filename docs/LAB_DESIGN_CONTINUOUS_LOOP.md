@@ -186,7 +186,7 @@ Minimal Node service (`mocksiem`):
 1. **DRV:** Controls → detection-marker-proof → allowlisted `periscan-*` process/HTTP emit to marker host → mock SIEM receives → observe correlates → `benign_marker_only`, `measured:true` only with both legs live.  
 2. **DNS canary:** emit canary label to CoreDNS log or HTTP sink → SIEM search → same honesty fields (`realDataExfiltrated:false`).
 
-**Never:** full ATT&CK library inject, Atomic live, real customer data.
+**Qualification:** select reviewed scenarios, use synthetic data and verify cleanup before expanding the lab pack.
 
 ---
 

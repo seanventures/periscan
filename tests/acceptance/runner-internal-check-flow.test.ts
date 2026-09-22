@@ -169,6 +169,28 @@ describe("Runner internal-check task acceptance workflow", () => {
       // DNS scope constraints carry no approved ports.
       expect(dns.json().envelope.scopeConstraints.approvedPorts).toEqual([]);
 
+      const portConnect = await createCheck({
+        module: "runner.port_connect_check",
+        port: 22,
+        scopeId,
+        targetHost: "jump-01.corp.internal"
+      });
+      expect(portConnect.statusCode).toBe(201);
+      expect(portConnect.json().envelope.moduleId).toBe(
+        "runner.port_connect_check"
+      );
+      expect(portConnect.json().task.taskType).toBe("port_connect");
+      expect(portConnect.json().envelope.inputs.port).toBe(22);
+
+      const ptr = await createCheck({
+        module: "runner.ptr_lookup_check",
+        scopeId,
+        targetHost: "ns-01.corp.internal"
+      });
+      expect(ptr.statusCode).toBe(201);
+      expect(ptr.json().task.taskType).toBe("ptr_lookup");
+      expect(ptr.json().envelope.scopeConstraints.approvedPorts).toEqual([]);
+
       // Out-of-scope target is rejected before any task is signed.
       const denied = await createCheck({
         module: "runner.tls_certificate_check",

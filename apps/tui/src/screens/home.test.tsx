@@ -73,6 +73,12 @@ describe("HomeScreen", () => {
     expect(frame).not.toMatch(/4 run Community/u);
     expect(frame).not.toMatch(/5 missions · 6 findings · 7 fix/u);
     expect(frame).not.toMatch(/\br runs\b/u);
+    expect(frame).toMatch(/authorized local path/i);
+    expect(frame).toMatch(/Gitleaks/i);
+    expect(frame).not.toMatch(/governed validation/i);
+    expect(frame).not.toMatch(/CTEM/u);
+    expect(frame).not.toMatch(/Automated Security Validation/iu);
+    expect(frame).not.toMatch(/High-danger/iu);
   });
 
   it("shows API health ok and the API URL", async () => {

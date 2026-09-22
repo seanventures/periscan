@@ -1,10 +1,21 @@
 import { describe, expect, it } from "vitest";
 
-import { reconcileMissionAggregateFromRuns } from "./services/runner.js";
+import { reconcileMissionAggregateFromRuns } from "./mission-run-aggregate.js";
 
 // Hybrid compile queues N runner tasks under one mission. A single task result
 // must not stamp the mission Completed/Failed or replace mission.evidenceIds.
 describe("reconcileMissionAggregateFromRuns", () => {
+  it("completes a 1-engine first-hour mission when the only run has evidence", () => {
+    const aggregate = reconcileMissionAggregateFromRuns([
+      { evidenceIds: ["ev-gitleaks"], status: "Running" }
+    ]);
+
+    expect(aggregate.status).toBe("Completed");
+    expect(aggregate.isTerminal).toBe(true);
+    expect(aggregate.completedAt).toBeInstanceOf(Date);
+    expect(aggregate.evidenceIds).toEqual(["ev-gitleaks"]);
+  });
+
   it("keeps the mission Running when only the first of N runs is Completed", () => {
     const aggregate = reconcileMissionAggregateFromRuns([
       { evidenceIds: ["e1"], status: "Completed" },
@@ -15,6 +26,17 @@ describe("reconcileMissionAggregateFromRuns", () => {
     expect(aggregate.isTerminal).toBe(false);
     expect(aggregate.completedAt).toBeNull();
     expect(aggregate.evidenceIds).toEqual(["e1"]);
+  });
+
+  it("keeps a hybrid pack Running when one sibling has evidence and another is still Queued", () => {
+    const aggregate = reconcileMissionAggregateFromRuns([
+      { evidenceIds: ["ev-gitleaks"], status: "Running" },
+      { evidenceIds: [], status: "Queued" }
+    ]);
+
+    expect(aggregate.status).toBe("Running");
+    expect(aggregate.isTerminal).toBe(false);
+    expect(aggregate.completedAt).toBeNull();
   });
 
   it("unions evidence across siblings and Completes only when every run Completed", () => {

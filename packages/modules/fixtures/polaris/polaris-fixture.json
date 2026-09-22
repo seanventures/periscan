@@ -1,0 +1,42 @@
+{
+  "PolarisOutputVersion": "1.0",
+  "Score": 99,
+  "Results": [
+    {
+      "Name": "fixture-web",
+      "Namespace": "default",
+      "Kind": "Deployment",
+      "PodResult": {
+        "ContainerResults": [
+          {
+            "Name": "web",
+            "Results": {
+              "cpuLimitsMissing": {
+                "ID": "cpuLimitsMissing",
+                "Message": "CPU limits should be set",
+                "Severity": "warning",
+                "Success": false,
+                "Details": ["AKIAIOSFODNN7EXAMPLE"]
+              },
+              "privilegeEscalationAllowed": {
+                "ID": "privilegeEscalationAllowed",
+                "Message": "Privilege escalation should not be allowed",
+                "Severity": "danger",
+                "Success": false,
+                "Details": [
+                  "-----BEGIN RSA PRIVATE KEY-----\nfixture\n-----END RSA PRIVATE KEY-----"
+                ]
+              },
+              "livenessProbeMissing": {
+                "ID": "livenessProbeMissing",
+                "Message": "hashed_secret=fixture-passed",
+                "Severity": "warning",
+                "Success": true
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

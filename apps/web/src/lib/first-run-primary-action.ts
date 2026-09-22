@@ -5,8 +5,11 @@ import {
   COMMUNITY_FIRST_RUN_REVIEW_LABEL,
   COMMUNITY_FIRST_RUN_START_LABEL,
   COMMUNITY_FIRST_RUN_WATCH_LABEL,
+  resolveOptionalAwsFirstHourCta,
   type ProductActivationState
 } from "@periscan/shared";
+
+export { resolveOptionalAwsFirstHourCta };
 
 /**
  * Single source for the first-run / activation primary CTA used by both
@@ -112,9 +115,66 @@ function isPostMeasureValidateTwin(
  * After the first Community finding, Home/Monday has one verb: Review findings,
  * or Verify when open remediations exist. Never Connect or Validate.
  */
+/**
+ * `/findings` first-hour already owns one verb (Create remediations /
+ * Review remediations). The filled rail CTA "Route the smallest fix" — and
+ * later remediations / re-verify CTAs — must not compete on that page.
+ * Home and setup CTAs (Authorize / Watch / Run) stay.
+ */
+export function railPrimaryCompetesWithFindingsFirstHour(
+  pathname: string | null | undefined,
+  action: { href?: string; label?: string } | null | undefined
+): boolean {
+  const path = (pathname ?? "").split("?")[0] ?? "";
+  if (path !== "/findings") {
+    return false;
+  }
+  const href = action?.href ?? "";
+  const label = action?.label ?? "";
+  if (/route the smallest fix/i.test(label)) {
+    return true;
+  }
+  if (/run fresh verification/i.test(label)) {
+    return true;
+  }
+  return href === "/remediation" || href.startsWith("/remediation/");
+}
+
+const MISSION_DETAIL_HREF = /^\/missions\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
+
+/** Prefer MeasuredResult `/missions/:id`; else latest snapshot missionId. */
+export function resolveCommunityReviewFindingsMissionId(input: {
+  measuredResultHref?: string | null;
+  snapshots?: readonly {
+    createdAt?: string | null;
+    missionId?: string | null;
+  }[] | null;
+}): string | null {
+  const fromHref = MISSION_DETAIL_HREF.exec(
+    input.measuredResultHref?.trim() ?? ""
+  )?.[1];
+  if (fromHref) {
+    return fromHref;
+  }
+  const ordered = [...(input.snapshots ?? [])].sort((left, right) =>
+    (right.createdAt ?? "").localeCompare(left.createdAt ?? "")
+  );
+  for (const snapshot of ordered) {
+    const missionId = snapshot.missionId?.trim() ?? "";
+    if (missionId) {
+      return missionId;
+    }
+  }
+  return null;
+}
+
 export function resolvePostFindingPrimaryAction(input: {
   findingsCount: number;
   openRemediationCount: number;
+  /** Remediations with status Fixed/Mitigated and a verification event. */
+  measuredFixedCount?: number;
+  /** Community mission that produced the evidence. Scopes Review findings. */
+  missionId?: string | null;
 }): FirstRunPrimaryAction | null {
   if (input.findingsCount <= 0) {
     return null;
@@ -128,13 +188,76 @@ export function resolvePostFindingPrimaryAction(input: {
       setupIncomplete: false
     };
   }
+  if ((input.measuredFixedCount ?? 0) > 0) {
+    return {
+      href: "/schedules",
+      label: "Keep on a cadence",
+      reason:
+        "Measured Fixed is on the board. Keep Gitleaks-class on a cadence.",
+      setupIncomplete: false
+    };
+  }
+  const missionId = input.missionId?.trim() ?? "";
   return {
-    href: "/findings",
+    href: missionId
+      ? `/findings?missionId=${encodeURIComponent(missionId)}`
+      : "/findings",
     label: "Review findings",
     reason:
       "A measured Community result is persisted. Review findings. Fixed only via verification.",
     setupIncomplete: false
   };
+}
+
+const SETTLED_REMEDIATION_STATUSES = new Set(["Fixed", "Mitigated"]);
+
+type HomeSettledRemediation = {
+  latestVerification?: unknown;
+  relatedFindingFingerprint?: string | null;
+  status: string;
+};
+
+function settledFindingFingerprints(
+  remediations: ReadonlyArray<HomeSettledRemediation>
+): Set<string> {
+  return new Set(
+    remediations
+      .filter(
+        (task) =>
+          SETTLED_REMEDIATION_STATUSES.has(task.status) &&
+          Boolean(task.latestVerification) &&
+          Boolean(task.relatedFindingFingerprint)
+      )
+      .map((task) => task.relatedFindingFingerprint as string)
+  );
+}
+
+export function homeTopFindingIsSettled<
+  T extends { fingerprint?: string | null }
+>(
+  finding: T | null | undefined,
+  remediations: ReadonlyArray<HomeSettledRemediation>
+): boolean {
+  const fingerprint = finding?.fingerprint?.trim() ?? "";
+  if (!fingerprint) {
+    return false;
+  }
+  return settledFindingFingerprints(remediations).has(fingerprint);
+}
+
+/** Prefer an unsettled finding. If every row is measured Fixed, keep it visible. */
+export function selectHomeTopFinding<
+  T extends { fingerprint?: string | null }
+>(
+  findings: readonly T[],
+  remediations: ReadonlyArray<HomeSettledRemediation>
+): T | null {
+  const settledFingerprints = settledFindingFingerprints(remediations);
+  const unsettled = findings.find((finding) => {
+    const fingerprint = finding.fingerprint?.trim() ?? "";
+    return !fingerprint || !settledFingerprints.has(fingerprint);
+  });
+  return unsettled ?? findings[0] ?? null;
 }
 
 export function resolveFirstRunPrimaryAction(

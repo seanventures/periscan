@@ -352,7 +352,7 @@ describe("ToolGovernanceMarketplace", () => {
     });
   });
 
-  it("labels Community engines separately from legal-review and catalog theater", async () => {
+  it("labels Community engines separately from legal-review and qualification-pending catalog", async () => {
     const fetchImpl = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
 

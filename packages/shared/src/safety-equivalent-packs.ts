@@ -16,6 +16,7 @@ export const SafetyPackClaimClassSchema = z.enum([
   "benign_marker_only",
   "plan_only",
   "exposure_only",
+  "danger_section",
   "forever_refuse"
 ]);
 export type SafetyPackClaimClass = z.infer<typeof SafetyPackClaimClassSchema>;
@@ -41,6 +42,7 @@ export const SafetyEquivalentPackSchema = z.object({
     "Partial",
     "Scaffold",
     "Missing",
+    "DangerSection",
     "ForeverRefuse"
   ]),
   claimClass: SafetyPackClaimClassSchema,
@@ -137,26 +139,25 @@ export const SAFETY_EQUIVALENT_PACKS: readonly SafetyEquivalentPack[] = [
     scorecardId: 21,
     requirement: "Ransomware Emulation",
     scorecardVerdict: "Scaffold/gated",
-    honestSubstituteVerdict: "ForeverRefuse",
-    claimClass: "forever_refuse",
+    honestSubstituteVerdict: "DangerSection",
+    claimClass: "danger_section",
     gate: "SafetyEquivalent",
     safeModules: [
-      // Detection-class substitutes only — never impact encryption modules.
       "periscan.endpoint_benign_marker_emit",
-      "periscan.detection_marker_emit_observe"
+      "periscan.detection_marker_emit_observe",
+      "exploitation.impact_t1486"
     ],
     foreverRefuse: [
-      "Live ransomware encryption",
-      "Mass file lock / shadow-copy delete",
-      "Encryption simulation packs that claim ransomware emulation"
+      "Unmarked Community default-start ransomware",
+      "T1486 without High-danger acknowledgement"
     ],
     canElevateSubstituteToPartial: false,
     elevateCriteria:
-      "Do not elevate row 21 to Partial/Strong as ransomware emulation. Optional Partial language is only for *detection canary class* (endpoint/process marker), never impact (T1486).",
+      "Row 21 lives in the High-danger section. Extra acknowledgement + qualification + tenant authorization. Not Community default start.",
     neverElevateReason:
-      "T1486 Impact (ransomware) is permanently Forbidden in SAFE_STAGE_PLAYBOOKS (safeLiveModuleId null). Safety floor forever.",
+      "Do not promote T1486 to unmarked Community Validate. High-danger section only.",
     safetyNote:
-      "Impact stage is a permanent safety-floor null. No live crypto, mass lock, or shadow-copy delete. Detection canary path only when qualified — never sold as ransomware emulation."
+      "Impact-class T1486 is productized in High danger. Not hidden, not default start. Start still never queues without danger ack."
   },
   {
     scorecardId: 22,
@@ -172,18 +173,16 @@ export const SAFETY_EQUIVALENT_PACKS: readonly SafetyEquivalentPack[] = [
       "bloodhound.identity_pathing"
     ],
     foreverRefuse: [
-      "Live credential spray / brute force",
-      "Token theft / credential dumping",
-      "Privilege abuse live modules",
-      "SharpHound collector in product"
+      "Unmarked Community default-start spray or harvest",
+      "Identity abuse without High-danger acknowledgement"
     ],
     canElevateSubstituteToPartial: true,
     elevateCriteria:
-      "Partial substitute = secrets exposure (gitleaks) + dry-run/fixture identity modules with liveSupported:false and measured:false on non-live paths. Never elevate via live spray or harvest.",
+      "Partial substitute = Gitleaks exposure plus owned-account password-policy tests on verified-scope identities. Unscoped spray/harvest live in High danger with extra acknowledgement + qualification + tenant authorization.",
     neverElevateReason:
-      "identity.cred_spray and related modules stay liveSupported:false; live authentication attempts hard-disabled.",
+      "Do not present spray/harvest as Community default start. High-danger section only.",
     safetyNote:
-      "Synthetic / fixture identity exposure checks only. No credential harvesting, token theft, or privilege abuse live modules."
+      "Default identity path is secrets exposure. Owned-account spray is the default spray path. Unscoped spray and harvest are High-danger catalog entries, not hidden and not unmarked."
   },
   {
     scorecardId: 26,
@@ -297,8 +296,8 @@ export const SafetyEquivalentPacksResponseSchema = z.object({
   /** SafetyEquivalent gate only — 16, 19, 21, 22. */
   safetyEquivalentScorecardIds: z.array(z.number().int().positive()),
   /**
-   * Scaffold core for Slice D honesty — APT plan-only, ransomware forever refuse,
-   * identity exposure-only (16 / 21 / 22).
+   * Scaffold core for Slice D honesty — APT plan-only, ransomware High-danger,
+   * identity exposure-only plus High-danger spray/harvest (16 / 21 / 22).
    */
   scaffoldCoreScorecardIds: z.array(z.number().int().positive()),
   note: z.string().min(1)
@@ -318,6 +317,6 @@ export function buildSafetyEquivalentPacksResponse(): SafetyEquivalentPacksRespo
       .filter((p) => p.gate === "SafetyEquivalent")
       .map((p) => p.scorecardId),
     scaffoldCoreScorecardIds: [...SAFETY_SCAFFOLD_CORE_SCORECARD_IDS],
-    note: "Safety-equivalent + partner-gated inventory. Scorecard Scaffold/gated rows stay gated until blind rescore. Canary/plan/exposure substitutes never authorize live ransomware, credential theft, SharpHound, Caldera, or Atomic live inject. Scaffold core 16=plan_only APT, 21=forever_refuse ransomware impact, 22=exposure_only identity. Partner rows (2/26/28) stay NotConfigured ExternallyGated without contracted feeds/labs."
+    note: "Safety-equivalent + partner-gated inventory. Scorecard Scaffold/gated rows stay gated until blind rescore. Canary/plan/exposure substitutes do not authorize execution. BAS adapters require scenario qualification. T1486, unscoped spray, credential harvest, and kill-chain impact live in the High-danger section (extra acknowledgement) — not Community default start, not hidden. Scaffold core 16=plan_only APT, 21=danger_section ransomware impact, 22=exposure_only identity plus High-danger spray/harvest. Partner rows (2/26/28) stay NotConfigured ExternallyGated without contracted feeds/labs."
   };
 }

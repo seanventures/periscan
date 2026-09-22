@@ -502,6 +502,23 @@ func TestRunnerLocalLabInternalChecksE2E(t *testing.T) {
 		}
 	}()
 
+	portPresentListener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("port-present listen: %v", err)
+	}
+	defer portPresentListener.Close()
+	go func() {
+		for {
+			conn, acceptErr := portPresentListener.Accept()
+			if acceptErr != nil {
+				return
+			}
+			if conn != nil {
+				_ = conn.Close()
+			}
+		}
+	}()
+
 	// Dedicated banner listener that emits a greeting (for tcp_banner_check lab test)
 	bannerListener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -560,6 +577,7 @@ func TestRunnerLocalLabInternalChecksE2E(t *testing.T) {
 	}
 
 	reachabilityPort := listener.Addr().(*net.TCPAddr).Port
+	portPresentPort := portPresentListener.Addr().(*net.TCPAddr).Port
 	bannerPort := bannerListener.Addr().(*net.TCPAddr).Port
 	httpPort := httpServer.Listener.Addr().(*net.TCPAddr).Port
 	tlsPort := tlsServer.Listener.Addr().(*net.TCPAddr).Port
@@ -728,6 +746,25 @@ func TestRunnerLocalLabInternalChecksE2E(t *testing.T) {
 			expectedOutcome: "tls_handshake_ok",
 			expectedFile:    "tls-info-result",
 		},
+		{
+			moduleID:    portConnectModuleID,
+			safetyLevel: "PassiveReadOnly",
+			taskID:      "66666666-6666-4666-8666-666666666669",
+			inputs: map[string]interface{}{
+				"port":           float64(portPresentPort),
+				"timeoutSeconds": float64(2),
+			},
+			target: map[string]interface{}{
+				"hostname": "127.0.0.1",
+			},
+			scope: scopeConstraints{
+				ApprovedCIDRs:        []string{"127.0.0.0/8"},
+				ApprovedPorts:        []int{portPresentPort},
+				ForbidInternetEgress: true,
+			},
+			expectedOutcome: "present",
+			expectedFile:    "port-connect-result",
+		},
 	}
 
 	for _, labTask := range labTasks {
@@ -764,6 +801,45 @@ func TestRunnerLocalLabInternalChecksE2E(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run(ptrLookupModuleID, func(t *testing.T) {
+		task := signedTask(t, privateKey, map[string]interface{}{
+			"timeoutSeconds": float64(2),
+		}, map[string]interface{}{
+			"hostname": "127.0.0.1",
+		}, scopeConstraints{
+			ApprovedCIDRs:        []string{"127.0.0.0/8"},
+			ForbidInternetEgress: true,
+		})
+		task.ArtifactUpload["artifactUploadUrl"] = uploadServer.URL
+		task.ModuleID = ptrLookupModuleID
+		task.SafetyLevel = "PassiveReadOnly"
+		task.TaskID = "66666666-6666-4666-8666-666666666670"
+		task = resignTask(t, task, privateKey)
+
+		processed := processTaskWithEvidence(task, runnerCfg)
+		result := uploadTaskEvidence(
+			uploadServer.Client(),
+			runnerConfig{authToken: "runner-token"},
+			task,
+			processed,
+		)
+		if result.Status != "Completed" {
+			t.Fatalf("expected completed PTR lab result, got %s: %v", result.Status, result.ErrorSummary)
+		}
+		if result.Outcome == nil || (*result.Outcome != "resolved" && *result.Outcome != "unresolved") {
+			t.Fatalf("expected resolved or unresolved PTR outcome, got %v", result.Outcome)
+		}
+		if result.LocalAuditSHA256 == "" {
+			t.Fatal("expected signed PTR local audit hash")
+		}
+		if len(result.EvidenceManifest) != 1 || result.EvidenceManifest[0].EvidenceID == "" {
+			t.Fatalf("expected uploaded PTR evidence manifest, got %+v", result.EvidenceManifest)
+		}
+		if uploadsByFilename["ptr-lookup-result"] != 1 {
+			t.Fatalf("expected one PTR upload, got %d", uploadsByFilename["ptr-lookup-result"])
+		}
+	})
 }
 
 func TestProcessTaskRejectsReplayedNonce(t *testing.T) {
@@ -956,6 +1032,136 @@ func TestPollCycleAcknowledgesKillSwitchOnHost(t *testing.T) {
 	}
 	if processed != 0 || !acknowledged {
 		t.Fatalf("expected host acknowledgement and no work, processed=%d acknowledged=%v", processed, acknowledged)
+	}
+}
+
+func TestProcessTaskPortConnectSignedInScopeProducesAuditHash(t *testing.T) {
+	privateKey, publicKeyPEM := testSigningKey(t)
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("listen: %v", err)
+	}
+	defer listener.Close()
+	go func() {
+		conn, _ := listener.Accept()
+		if conn != nil {
+			_ = conn.Close()
+		}
+	}()
+	port := listener.Addr().(*net.TCPAddr).Port
+
+	task := signedTask(t, privateKey, map[string]interface{}{
+		"port":           float64(port),
+		"timeoutSeconds": float64(2),
+	}, map[string]interface{}{
+		"hostname": "127.0.0.1",
+	}, scopeConstraints{
+		ApprovedCIDRs:        []string{"127.0.0.0/8"},
+		ApprovedPorts:        []int{port},
+		ForbidInternetEgress: true,
+	})
+	task.ModuleID = portConnectModuleID
+	task.SafetyLevel = "PassiveReadOnly"
+	task = resignTask(t, task, privateKey)
+
+	result := processTask(task, runnerConfig{
+		runnerID:         task.RunnerID,
+		signingKeyID:     "test-key",
+		signingPublicKey: publicKeyPEM,
+		tenantID:         task.TenantID,
+	})
+	if result.Status != "Completed" {
+		t.Fatalf("expected completed port-connect result, got %s: %v", result.Status, result.ErrorSummary)
+	}
+	if result.Outcome == nil || *result.Outcome != "present" {
+		t.Fatalf("expected present outcome, got %v", result.Outcome)
+	}
+	if result.LocalAuditSHA256 == "" {
+		t.Fatal("expected local audit hash on signed result")
+	}
+
+	publicKeyPEMResult, privateKeyPEM, err := generateResultSigningKey()
+	if err != nil {
+		t.Fatalf("result signing key: %v", err)
+	}
+	signed, err := signResult(privateKeyPEM, result)
+	if err != nil {
+		t.Fatalf("sign result: %v", err)
+	}
+	if signed.ResultSignature == "" {
+		t.Fatal("expected result signature")
+	}
+	pub, err := parseEd25519PublicKey(publicKeyPEMResult)
+	if err != nil {
+		t.Fatalf("parse result public key: %v", err)
+	}
+	sig, err := base64.StdEncoding.DecodeString(signed.ResultSignature)
+	if err != nil {
+		t.Fatalf("decode result signature: %v", err)
+	}
+	if !ed25519.Verify(pub, []byte(result.LocalAuditSHA256), sig) {
+		t.Fatal("port-connect result signature failed verification")
+	}
+}
+
+func TestProcessTaskPortConnectRejectsOutOfCIDRBeforeDial(t *testing.T) {
+	privateKey, publicKeyPEM := testSigningKey(t)
+	task := signedTask(t, privateKey, map[string]interface{}{
+		"port":           float64(443),
+		"timeoutSeconds": float64(1),
+	}, map[string]interface{}{
+		"hostname": "10.0.0.1",
+	}, scopeConstraints{
+		ApprovedCIDRs:        []string{"127.0.0.0/8"},
+		ApprovedPorts:        []int{443},
+		ForbidInternetEgress: true,
+	})
+	task.ModuleID = portConnectModuleID
+	task.SafetyLevel = "PassiveReadOnly"
+	task = resignTask(t, task, privateKey)
+
+	result := processTask(task, runnerConfig{
+		runnerID:         task.RunnerID,
+		signingKeyID:     "test-key",
+		signingPublicKey: publicKeyPEM,
+		tenantID:         task.TenantID,
+	})
+	if result.Status != "Failed" {
+		t.Fatalf("expected failed out-of-CIDR port-connect, got %s", result.Status)
+	}
+	if result.ErrorSummary == nil || !strings.Contains(*result.ErrorSummary, "outside approved runner scope") {
+		t.Fatalf("expected scope error, got %v", result.ErrorSummary)
+	}
+}
+
+func TestProcessTaskPTRLookupSignedInScope(t *testing.T) {
+	privateKey, publicKeyPEM := testSigningKey(t)
+	task := signedTask(t, privateKey, map[string]interface{}{
+		"timeoutSeconds": float64(2),
+	}, map[string]interface{}{
+		"hostname": "127.0.0.1",
+	}, scopeConstraints{
+		ApprovedCIDRs:        []string{"127.0.0.0/8"},
+		ForbidInternetEgress: true,
+	})
+	task.ModuleID = ptrLookupModuleID
+	task.SafetyLevel = "PassiveReadOnly"
+	task = resignTask(t, task, privateKey)
+
+	result := processTask(task, runnerConfig{
+		runnerID:         task.RunnerID,
+		signingKeyID:     "test-key",
+		signingPublicKey: publicKeyPEM,
+		tenantID:         task.TenantID,
+	})
+	if result.Status != "Completed" {
+		t.Fatalf("expected completed PTR result, got %s: %v", result.Status, result.ErrorSummary)
+	}
+	if result.LocalAuditSHA256 == "" {
+		t.Fatal("expected local audit hash on signed PTR result")
+	}
+	if result.Outcome == nil || (*result.Outcome != "resolved" && *result.Outcome != "unresolved") {
+		t.Fatalf("expected resolved or unresolved PTR outcome, got %v", result.Outcome)
 	}
 }
 

@@ -178,6 +178,6 @@ design — see `agent-tasks/open-source-tools/17-customer-agent.md`.
 6. Regenerate notices: `pnpm licenses:write`.
 7. Document the workstream in `agent-tasks/open-source-tools/` or follow root
    `CONTRIBUTING.md`.
-8. Do not enable live execution for BASLite+ tools without an approved runner path.
+8. Build BAS adapters under `docs/BAS_AEV_PROGRAM.md`, qualifying the runner path and scenarios before customer execution.
 9. Attribute the engine in customer-visible methodology copy; never present the
    module as if Periscan authored the upstream binary.

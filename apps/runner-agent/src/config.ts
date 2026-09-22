@@ -38,6 +38,7 @@ export interface RunnerAgentConfig {
 // PERISCAN_RUNNER_ALLOWLISTED_MODULES plus a matching safety-level policy.
 export const DEFAULT_ALLOWLISTED_MODULE_IDS = [
   "runner.reachability_check",
+  "connector.siem.sync",
   "runner.dns_resolution_check",
   "runner.tls_certificate_check",
   "runner.http_health_check",
@@ -85,8 +86,11 @@ export const DEFAULT_ALLOWLISTED_MODULE_IDS = [
   "slsa_verifier.provenance",
   "katana.web_crawl",
   "cloudlist.cloud_assets",
+  "assetfinder.passive_enum",
+  "gau.known_urls",
   "lynis.host_audit",
-  "rustscan.port_inventory"
+  "rustscan.port_inventory",
+  "atomic.control_validation_safe"
   // ot_ics.safe_baseline excluded: no live runner payload yet (fixture scaffold).
 ];
 

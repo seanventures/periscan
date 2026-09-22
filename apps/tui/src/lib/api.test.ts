@@ -348,6 +348,96 @@ describe("PeriscanApi", () => {
     await api.login({ email: "op@periscan.test", password: "secret-password" });
     await expect(api.listScopes()).resolves.toEqual([{ value: "lab.local" }]);
   });
+
+  it("sends Bearer psk_ API keys without CSRF on mutating calls", async () => {
+    const calls: Array<{ init?: RequestInit; url: string }> = [];
+    const api = new PeriscanApi("http://control.example", {
+      fetchImpl: async (input, init) => {
+        calls.push({ init, url: String(input) });
+        return jsonResponse(200, { items: [] });
+      }
+    });
+    api.applyLabAuth("psk_live_operator_key");
+
+    await api.listScopes();
+    await api.qualifyBasPack({
+      labReceiptHash: "ab".repeat(32),
+      pack: "atomic",
+      pinIds: ["atomic.t1082"]
+    });
+
+    expect(header(calls[0]?.init, "authorization")).toBe(
+      "Bearer psk_live_operator_key"
+    );
+    expect(header(calls[0]?.init, CSRF_HEADER_NAME)).toBeNull();
+    expect(header(calls[1]?.init, "authorization")).toBe(
+      "Bearer psk_live_operator_key"
+    );
+    expect(header(calls[1]?.init, CSRF_HEADER_NAME)).toBeNull();
+    expect(calls[1]?.url).toBe("http://control.example/api/v1/bas/packs/qualify");
+    expect(calls[1]?.init?.method).toBe("POST");
+  });
+
+  it("calls qualify, authorize, danger-catalog, and campaign compile/start/cancel", async () => {
+    const { calls, fetchImpl } = loggedInFetch((url) => {
+      if (url.includes("/bas/danger-catalog")) {
+        return jsonResponse(200, {
+          available: true,
+          items: [],
+          qualified: false,
+          tenantAuthorized: false
+        });
+      }
+      if (url.includes("/bas/packs/authorize")) {
+        return jsonResponse(200, { created: true });
+      }
+      if (url.includes("/bas/campaigns/compile")) {
+        return jsonResponse(200, {
+          jobsQueued: 0,
+          plan: { compiledDigest: "cd".repeat(32), startable: false },
+          queued: false
+        });
+      }
+      if (url.includes("/bas/campaigns/start")) {
+        return jsonResponse(200, { jobsQueued: 0, outcome: "Denied" });
+      }
+      if (url.includes("/bas/campaigns/cancel")) {
+        return jsonResponse(200, { cancelled: true });
+      }
+      return jsonResponse(200, { created: true });
+    });
+    const api = new PeriscanApi("http://control.example", { fetchImpl });
+    await api.login({ email: "op@periscan.test", password: "secret-password" });
+
+    await api.getBasDangerOperatorGate();
+    await api.authorizeBasPack({
+      expiresAt: "2027-01-01T00:00:00.000Z",
+      pack: "atomic",
+      scopeId: "22222222-2222-4222-8222-222222222222"
+    });
+    await api.compileBasCampaign({
+      scenarioPins: [
+        { provider: "ControlPlane", typedInputs: {}, upstreamId: "control.detection.benign-marker" }
+      ],
+      scopeId: "22222222-2222-4222-8222-222222222222"
+    });
+    await api.startBasCampaign({ compiledDigest: "cd".repeat(32) });
+    await api.cancelBasCampaign({
+      cleanupReceipts: [],
+      compiledDigest: "cd".repeat(32)
+    });
+
+    expect(calls.map((call) => call.url)).toEqual(
+      expect.arrayContaining([
+        "http://control.example/api/v1/auth/login",
+        "http://control.example/api/v1/bas/danger-catalog",
+        "http://control.example/api/v1/bas/packs/authorize",
+        "http://control.example/api/v1/bas/campaigns/compile",
+        "http://control.example/api/v1/bas/campaigns/start",
+        "http://control.example/api/v1/bas/campaigns/cancel"
+      ])
+    );
+  });
 });
 
 describe("isDeniedNeverQueued", () => {

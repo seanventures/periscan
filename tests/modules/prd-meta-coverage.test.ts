@@ -90,18 +90,22 @@ describe("PRD preamble product identity coverage", () => {
 
     expect(packageMetadata.name).toBe("periscan");
     expect(rootPrd).toContain(
-      "Periscan is a self-service Automated Security Validation platform."
+      "Periscan is a self-service Automated Security Validation platform"
     );
-    expect(readme).toContain(
-      "Periscan is a self-service Automated Security Validation platform."
-    );
+    expect(readme).toContain("Full BAS/AEV is the");
     expect(rootPrd).toContain(
       "Find the path. Validate the risk. Prove it's fixed."
     );
     expect(readme).toContain(
-      "Find the path. Validate the risk. Prove it's fixed."
+      "Prove authorized exposures are real — and only mark them Fixed when a retest says so."
     );
-    expect(publicIdentityEvidence).toContain(
+    expect(readme).not.toMatch(
+      /self-service Automated Security Validation platform/i
+    );
+    expect(appLayout).toContain(
+      "Prove authorized exposures are real — and only mark them Fixed when a retest says so."
+    );
+    expect(rootPrd).toContain(
       "Periscan validates exposure, controls, attack paths, AI applications, and fixes"
     );
     expect(publicIdentityEvidence).toContain("turns the results into proof");

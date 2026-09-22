@@ -1,5 +1,7 @@
 # Product copy rules (no fake case studies)
 
+> **BAS/AEV program:** [../BAS_AEV_PROGRAM.md](../BAS_AEV_PROGRAM.md) — qualified open-source simulation, emulation and evidence-backed validation (PERISCAN-583).
+
 Status: **canonical**  
 Related: real-first rule, P08-9 / #183, reference pack, moat defense  
 Applies to: web UI, reports, decks, README, website, analyst questionnaires, sales email
@@ -17,7 +19,7 @@ Applies to: web UI, reports, decks, README, website, analyst questionnaires, sal
 6. **No anonymized composite stories** that imply a real engagement (“a global
    bank reduced risk 40%”) without a real consented engagement behind them.
 7. **No refused claim phrases** from the productized deny-list
-   (`packages/shared/src/claim-deny-list.ts` refuse bucket) — including full BAS
+   (`packages/shared/src/claim-deny-list.ts` refuse bucket) — including unsupported shipped BAS parity
    peer, live ransomware/kill-chain engine, CNAPP/RBVM replacement, or “we make
    you DORA/NIS2 certified.”
 

@@ -36,6 +36,11 @@ function sectionBetween(
   return source.slice(start, end);
 }
 
+function pdfContainsLiteral(pdf: string, text: string) {
+  const escaped = text.replace(/\\/g, "\\\\").replace(/[()]/g, "\\$&");
+  return pdf.includes(text) || pdf.includes(escaped);
+}
+
 function parseBulletsBetween(
   section: string,
   startLabel: string,
@@ -104,7 +109,8 @@ const PRD_AUDIENCE_VARIANTS: Array<{
   },
   {
     audience: "GRC",
-    label: "Periscan SOC 2 Support Pack",
+    // SETTLED: customer evidence support, not vendor SOC 2 attestation.
+    label: "Customer SOC 2 support evidence (not vendor attestation)",
     packType: "SOC2Support"
   },
   {
@@ -192,7 +198,7 @@ describe("PRD section 16 Reports coverage", () => {
       expect(html).toContain("Audience Guidance");
       expect(html).toContain("Primary use");
       expect(html).toContain("Redaction posture");
-      expect(pdf).toContain(label);
+      expect(pdfContainsLiteral(pdf, label)).toBe(true);
       expect(pdf).toContain(`Audience: ${audience}`);
     }
   });

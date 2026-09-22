@@ -2,15 +2,16 @@
  * Technique-mapped safe-stage playbooks (P05-17).
  *
  * Ethical kill-chain productization: every ATT&CK technique maps to a
- * *measurement class*, not an attack action. Forbidden classes never get a
- * default module. Allowed classes name one default safe module and honest
- * success criteria so purple-team checklists never impersonate live APT.
+ * *measurement class*, not an attack action. Danger-class techniques live in
+ * the High-danger catalog (extra acknowledgement). Forbidden remains only
+ * for techniques that are still unimplemented.
  */
 
 export const MEASUREMENT_CLASSES = [
   "Exposure",
   "Detection",
   "Config",
+  "Danger",
   "Forbidden"
 ] as const;
 
@@ -35,8 +36,8 @@ export interface SafeStagePlaybook {
   /** What kind of proof Periscan may produce for this technique. */
   measurementClass: MeasurementClass;
   /**
-   * Default safe module when measurementClass is not Forbidden.
-   * Null for Forbidden (human red-team handoff only).
+   * Default module. Danger-class ids are High-danger catalog entries
+   * (extra acknowledgement). Null only when unimplemented.
    */
   defaultModuleId: string | null;
   /** Short operator-facing playbook title. */
@@ -64,7 +65,7 @@ export const SAFE_STAGE_PLAYBOOKS: readonly SafeStagePlaybook[] = [
       "Scan authorized repositories for leaked secrets. Does not simulate credential dumping or password spraying.",
     successCriteria: ["Validated", "Inconclusive", "Missed"],
     refusalNote:
-      "T1110 attack actions (spray, brute force, hash dump) are Forbidden. Schedule human RT for live credential abuse."
+      "T1110 spray / harvest live in the High-danger section (extra acknowledgement). Default path is repo exposure via Gitleaks."
   },
   {
     techniqueId: "T1021",
@@ -113,14 +114,14 @@ export const SAFE_STAGE_PLAYBOOKS: readonly SafeStagePlaybook[] = [
   {
     techniqueId: "T1486",
     stage: "Impact (ransomware)",
-    measurementClass: "Forbidden",
-    defaultModuleId: null,
-    playbookTitle: "Ransomware impact — never implemented",
+    measurementClass: "Danger",
+    defaultModuleId: "exploitation.impact_t1486",
+    playbookTitle: "Ransomware / impact — High danger",
     playbookSummary:
-      "No ransomware encryption, encryption simulation, or impact pack.",
-    successCriteria: ["NotAttempted"],
+      "Impact-class validation in the High-danger section. Extra acknowledgement, qualification, and tenant authorization required. Not Community default start.",
+    successCriteria: ["Validated", "Blocked", "Missed", "Inconclusive"],
     refusalNote:
-      "Ransomware impact is permanently Forbidden. Detection canaries may exist separately; never claim ransomware emulation."
+      "Do not present T1486 as Community default start or unmarked. High-danger section only."
   },
   {
     techniqueId: "T1484",
@@ -207,12 +208,19 @@ export function getSafeStagePlaybook(
 
 export function listExecutableSafeStages(): SafeStagePlaybook[] {
   return SAFE_STAGE_PLAYBOOKS.filter(
-    (p) => p.measurementClass !== "Forbidden" && p.defaultModuleId !== null
+    (p) =>
+      p.measurementClass !== "Forbidden" &&
+      p.measurementClass !== "Danger" &&
+      p.defaultModuleId !== null
   );
 }
 
 export function listForbiddenSafeStages(): SafeStagePlaybook[] {
   return SAFE_STAGE_PLAYBOOKS.filter((p) => p.measurementClass === "Forbidden");
+}
+
+export function listDangerSafeStages(): SafeStagePlaybook[] {
+  return SAFE_STAGE_PLAYBOOKS.filter((p) => p.measurementClass === "Danger");
 }
 
 /** Human RT handoff summary for engagement reports. */
@@ -231,17 +239,25 @@ export function buildSafeStageHandoffSummary(input: {
   const notAttempted = SAFE_STAGE_PLAYBOOKS.filter(
     (p) =>
       !provedIds.has(p.techniqueId) &&
-      (p.measurementClass === "Forbidden" || p.defaultModuleId === null)
+      (p.measurementClass === "Forbidden" ||
+        p.measurementClass === "Danger" ||
+        p.defaultModuleId === null)
   );
   const target = input.targetLabel ?? "authorized scope";
+  const dangerCount = notAttempted.filter(
+    (p) => p.measurementClass === "Danger"
+  ).length;
   const summary = [
     `Safe-stage coverage for ${target}:`,
     proved.length
       ? `we measured ${proved.length} technique(s) with exposure/detection/config modules`
       : "no techniques marked measured yet",
-    notAttempted.length
-      ? `we did not attempt ${notAttempted.length} Forbidden/unimplemented technique(s) — schedule human RT`
-      : "no Forbidden residual stages in this table"
+    dangerCount
+      ? `${dangerCount} High-danger technique(s) need extra acknowledgement`
+      : "no High-danger residual in this table",
+    notAttempted.length - dangerCount
+      ? `${notAttempted.length - dangerCount} unimplemented technique(s) remain`
+      : "no unimplemented residual stages"
   ].join("; ");
   return { proved, notAttempted, summary };
 }

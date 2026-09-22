@@ -3,7 +3,10 @@ import { promisify } from "node:util";
 import { z } from "zod";
 
 import type { OpenSourceToolId } from "@periscan/shared";
-import { targetHasUpstreamLicense } from "@periscan/shared";
+import {
+  planInfectionMonkeyDiscoverStart,
+  targetHasUpstreamLicense
+} from "@periscan/shared";
 
 import { resolveOpenSourceToolRuntime } from "./toolchain.js";
 import type {
@@ -810,6 +813,147 @@ export function buildCopyleftOptInModules(
           errors: []
         };
       }
+    ),
+    createModule(
+      {
+        approvalRequired: true,
+        canExfiltrateData: false,
+        canExecuteCode: false,
+        canModifyTarget: false,
+        capabilityName: "Infection Monkey Discover Crawl",
+        customerVisibleDescription:
+          "Engine Lab GPL-3.0 plan for Infection Monkey discover/crawl of verified-scope hosts as promote-to-scope candidates. Propagation, Mimikatz, Zerologon, and ransomware stay default-deny. Island C2 reports import as hypotheses. Not in the Community default pack or image.",
+        evidenceTypes: ["NormalizedEvidence"],
+        executionMode: "InternalRunner",
+        fixtureSupported: true,
+        license: "GPL-3.0",
+        licenseRisk: "RequiresLegalReview",
+        liveSupported: false,
+        moduleId: "infection-monkey.discover",
+        name: "Infection Monkey Discover",
+        outputSchema: "periscan.module-output.v1",
+        parser: "periscan.infection-monkey.discover.v1",
+        requiredInputs: ["verifiedScopeHosts"],
+        requiredPermissions: ["network:discover"],
+        requiredScopes: ["InternalNetwork", "IPRange"],
+        resourceLimits: { diskMb: 128, memoryMb: 256 },
+        safetyLevel: "ActiveNonInvasive",
+        supportedMissionTypes: [
+          "ValidationSnapshot",
+          "ExposureValidation",
+          "ContinuousValidation"
+        ],
+        timeoutSeconds: 90,
+        toolIds: ["infection-monkey"],
+        toolName: "infection-monkey",
+        version: "0.1.0",
+        writesToTarget: false
+      },
+      InfectionMonkeyTargetSchema,
+      async (context) => {
+        const target = InfectionMonkeyTargetSchema.parse(context.target);
+        const verifiedScopeHosts =
+          target.verifiedScopeHosts ??
+          compactHosts([
+            target.hostname,
+            target.host,
+            target.targetHost,
+            target.cidr
+          ]);
+        const planned = planInfectionMonkeyDiscoverStart({
+          copyleftOptIn: targetHasUpstreamLicense(target, "infection-monkey"),
+          dangerAckDigest: target.dangerAckDigest,
+          dangerAcknowledged: target.dangerAcknowledged,
+          hopReceipts: target.hopReceipts,
+          islandReport: target.islandReport,
+          plugins: target.plugins,
+          qualified: target.qualified === true,
+          startable: target.startable !== false,
+          tenantAuthorized: target.tenantAuthorized === true,
+          verifiedScopeHosts
+        });
+        if (!planned.queued) {
+          return {
+            outcome: planned.denyCode ?? "infection_monkey_discover_denied",
+            summary:
+              planned.denyReason ??
+              "Infection Monkey discover was denied and no job was queued.",
+            validationState: "Inconclusive",
+            signals: [],
+            evidence: [
+              {
+                artifactType: "NormalizedEvidence",
+                attributes: {
+                  autoAddedToScope: false,
+                  importedGraphIsHypothesis: planned.importedGraphIsHypothesis,
+                  jobsQueued: 0,
+                  liveSupported: false,
+                  measured: false,
+                  simulated: false,
+                  toolId: "infection-monkey"
+                },
+                description:
+                  "Infection Monkey discover denied. Denied tasks are never queued.",
+                redactionStatus: "Redacted",
+                sensitivityLevel: "High"
+              }
+            ],
+            errors: planned.denyReason ? [planned.denyReason] : []
+          };
+        }
+        return {
+          outcome: "infection_monkey_discover_plan_recorded",
+          summary:
+            "Recorded an Engine Lab Infection Monkey discover plan for verified-scope hosts as promote-to-scope candidates. Crawl is not live execution.",
+          validationState: "Inconclusive",
+          signals: [],
+          evidence: [
+            {
+              artifactType: "NormalizedEvidence",
+              attributes: {
+                autoAddedToScope: false,
+                candidates: planned.candidates,
+                importedGraphIsHypothesis: planned.importedGraphIsHypothesis,
+                jobsQueued: planned.jobsQueued,
+                liveSupported: false,
+                measured: false,
+                promotion: "promote-to-scope",
+                simulated: false,
+                toolId: "infection-monkey"
+              },
+              description:
+                "Infection Monkey discover plan recorded. Island C2 edges remain hypotheses until independent hop receipts.",
+              redactionStatus: "Redacted",
+              sensitivityLevel: "Moderate"
+            }
+          ],
+          errors: []
+        };
+      }
     )
   ];
+}
+
+const InfectionMonkeyTargetSchema = z
+  .object({
+    cidr: z.string().min(1).optional(),
+    dangerAckDigest: z.string().min(16).optional(),
+    dangerAcknowledged: z.boolean().optional(),
+    dryRun: z.boolean().optional(),
+    fixtureMode: z.boolean().optional(),
+    host: z.string().min(1).optional(),
+    hostname: z.string().min(1).optional(),
+    hopReceipts: z.array(z.unknown()).optional(),
+    islandReport: z.unknown().optional(),
+    plugins: z.array(z.string().min(1)).optional(),
+    qualified: z.boolean().optional(),
+    startable: z.boolean().optional(),
+    targetHost: z.string().min(1).optional(),
+    tenantAuthorized: z.boolean().optional(),
+    verifiedScopeHosts: z.array(z.string().min(1)).optional()
+  })
+  .passthrough();
+
+function compactHosts(values: Array<string | undefined>): string[] {
+  return values.filter((value): value is string => typeof value === "string");
 }

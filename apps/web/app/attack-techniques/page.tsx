@@ -14,7 +14,7 @@ export default async function AttackTechniquesPage({
       <PageHeader
         eyebrow="Reference"
         title="ATT&CK reference & tenant coverage."
-        description="A curated safe-example subset from Periscan's authenticated ATT&CK reference API, overlaid with this tenant's persisted control-validation coverage. This is not the complete MITRE catalog."
+        description="A curated safe-example subset from Periscan's authenticated ATT&CK reference API, overlaid with this tenant's persisted control-validation coverage. This is not the complete MITRE catalog, not 100% ATT&CK, and scenario execution requires qualification."
         actions={
           <>
             <Link

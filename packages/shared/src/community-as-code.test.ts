@@ -131,13 +131,14 @@ describe("Community-as-code document", () => {
     expect(communityAsCodeIsRuntimeBound()).toBe(false);
   });
 
-  it("documents that runtime still uses API and policy, Apache-2.0, not full BAS", () => {
+  it("documents API policy and qualified BAS/AEV adapter contracts", () => {
     const docs = readFileSync(join(REPO_ROOT, "docs/PERISCAN_YAML.md"), "utf8");
     expect(docs).toMatch(/does not load/i);
     expect(docs).toMatch(/\/api\/v1\/community\/validation-runs/);
     expect(docs).toMatch(/policy/i);
     expect(docs).toMatch(/Apache-2\.0/i);
-    expect(docs).toMatch(/not full BAS/i);
+    expect(docs).toContain("BAS_AEV_PROGRAM.md");
+    expect(docs).toMatch(/qualified adapter contracts/i);
     expect(docs).toContain(COMMUNITY_AS_CODE_EXAMPLE_FILENAME);
   });
 });

@@ -25,7 +25,7 @@ Do **not** duplicate `packages/modules/src/index.ts`. Copy a `PopularOssSpec`
 ## Do not
 
 - Edit `LICENSE` or claim the product is open source.
-- Put Semgrep / Atomic / sqlmap on Community start.
+- Put an unqualified or license-unreviewed adapter on Community start.
 - Emit `Fixed` from an empty fixture as a substitute for a parser.
 - Open a PR that only calls intake APIs or the extension runbook.
 

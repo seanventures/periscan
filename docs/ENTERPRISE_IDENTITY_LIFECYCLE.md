@@ -1,6 +1,6 @@
 # Enterprise identity lifecycle (honest status)
 
-Last reviewed: 2026-07-31  
+Last reviewed: 2026-09-17  
 Tickets: P04-4 (#111), P17-1, P17-3, P17-14 (JIT honesty), U-19, **PERISCAN-30**
 
 Residual memo (SCIM / Type II / pen-test): [`docs/ops/ENTERPRISE_TRUST_RESIDUAL_2026-07-31.md`](./ops/ENTERPRISE_TRUST_RESIDUAL_2026-07-31.md)
@@ -14,10 +14,10 @@ Residual memo (SCIM / Type II / pen-test): [`docs/ops/ENTERPRISE_TRUST_RESIDUAL_
 | Force-MFA for password humans | Ready | Env `PERISCAN_REQUIRE_MFA=true` **or** tenant `requireMfa` via `PUT /api/v1/tenants/current/security-settings/require-mfa` |
 | Per-user MFA enroll/verify/recovery | Ready | `/api/v1/auth/mfa/*` |
 | CyberArk SCIM **connector** (inventory) | Ready (read-only) | Integration connector — users/groups/MFA posture for *customer* identity attack-path context |
-| Inbound SCIM 2.0 for **Periscan** users | **NotConfigured** | `/api/v1/scim/v2/*` honest **501** stubs (not silent 404). No membership provider. |
-| JIT create-on-first-SSO | **NotConfigured** (P17-14) | SSO requires pre-provisioned Active membership. Product honesty: `identityProvisioning.jitProvisioning.status = NotConfigured`. If shipped later: domain allowlist + default Viewer + audit `user.jit_provisioned`. |
+| Inbound SCIM 2.0 for **Periscan** users | **Ready** when a tenant SCIM token is issued; otherwise **NotConfigured** | `/api/v1/scim/v2/*` Users/Groups with hashed tenant bearer token. Unauthenticated **401**. Deprovision sets membership Inactive (evidence retained). Login remains SSO or password. |
+| JIT create-on-first-SSO | **Optional** (P17-14) | Tenant opt-in: `jitEnabled` + `jitEmailDomains[]` + `jitDefaultRole` (Viewer default, never Owner). First verified SSO for an unknown email creates an Active membership and audits `user.jit_provisioned`. Disabled tenants still fail with `sso_user_not_provisioned`. Prefer inbound SCIM for disable/delete. Product honesty: `identityProvisioning.jitProvisioning.status = Optional`. |
 | IdP group → Periscan role mapping | Partial (ships; not full lifecycle) | OIDC/SAML claim rules map groups/roles for pre-provisioned members. Not a SCIM/JIT substitute. |
-| **IdP plane overall** | **Partial** | API: `identityProvisioning.planeStatus = Partial`. SCIM/JIT remain literal NotConfigured. |
+| **IdP plane overall** | **Partial** | API: `identityProvisioning.planeStatus = Partial`. Optional JIT ships as tenant opt-in. Inbound SCIM is Ready after a tenant token is issued. |
 
 ## Force-MFA policy (closed portion of P04-4 / P03-7 / P17-3)
 
@@ -50,11 +50,12 @@ General privileged-action step-up policy remains roadmap. Force-MFA for password
 Do **not** equate these:
 
 - **CyberArk Identity SCIM connector** — pulls authorized customer identity inventory into Periscan signals. Not Periscan account provisioning.
-- **Inbound SCIM for Periscan** — would create/update/deprovision tenant members and roles from the customer IdP. **Does not exist.**
+- **Inbound SCIM for Periscan** — creates/updates/deprovisions tenant members and roles from the customer IdP via `/api/v1/scim/v2`. Requires a tenant SCIM bearer token (hashed at rest). Not Okta/Azure certified. JIT create-on-first-SSO remains NotConfigured.
 
-Until inbound SCIM/JIT ships, enterprise sales must use the interim SLA below and
-**paste it into every enterprise order form / DPA annex** (not only this engineering
-doc). Trust & Safety and Admin surfaces CTA to this path.
+JIT remains NotConfigured. Until a tenant SCIM token is issued, treat inbound
+SCIM as NotConfigured and use the interim SLA below. Paste the SLA into
+enterprise order forms / DPA annexes when SCIM is not yet configured for that
+tenant.
 
 ### Sales-assisted provisioning SLA (interim — order-form annex)
 
@@ -67,9 +68,9 @@ doc). Trust & Safety and Admin surfaces CTA to this path.
 
 RFP language:
 
-> Periscan supports SSO (OIDC/SAML) for pre-provisioned users and optional force-MFA for password users. Inbound SCIM 2.0 user lifecycle is on the roadmap; current enterprise onboarding is sales-assisted invite + quarterly access certification. CyberArk SCIM in the catalog is a read-only identity inventory connector, not Periscan user provisioning.
+> Periscan supports SSO (OIDC/SAML) for pre-provisioned users, optional force-MFA for password users, and inbound SCIM 2.0 Users/Groups provisioning with a tenant bearer token (not Okta/Azure certified; JIT create-on-first-SSO is NotConfigured). CyberArk SCIM in the catalog is a read-only identity inventory connector, not Periscan user provisioning.
 
 ## Safety / real-first
 
-- No fabricated “SCIM ready” product badge for Periscan membership APIs.
-- Phase 8 / PRD mentions of SCIM must be read as **planned or connector-inventory**, not proven inbound lifecycle, until acceptance tests exercise a real membership SCIM path.
+- Do not claim Okta/Azure SCIM certification, JIT, or a full IdP joiner/mover/leaver plane.
+- Phase 8 / PRD mentions of SCIM must distinguish inbound membership SCIM (`/api/v1/scim/v2`) from CyberArk connector inventory SCIM.

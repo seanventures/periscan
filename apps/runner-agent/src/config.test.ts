@@ -55,7 +55,7 @@ describe("loadRunnerAgentConfig", () => {
     );
     expect(
       config.allowlistedModuleIds.has("atomic.control_validation_safe")
-    ).toBe(false);
+    ).toBe(true);
     expect(
       config.allowlistedModuleIds.has("caldera.advanced_adversarial")
     ).toBe(false);

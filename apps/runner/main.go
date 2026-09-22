@@ -44,6 +44,7 @@ const certExpiryModuleID = "runner.cert_expiry_check"   // Phase 3 expansion: pa
 const tcpBannerModuleID = "runner.tcp_banner_check"     // Passive TCP banner grab for service fingerprinting / internal exposure signals (first bytes or greeting line, read-only, bounded read).
 const tlsInfoModuleID = "runner.tls_info_check"         // Extended TLS handshake info (version, cipher, chain length) for internal cert + protocol signals.
 const portConnectModuleID = "runner.port_connect_check" // Bounded TCP connect (no banner read beyond SYN/ACK) for internal reachability segmentation signals. Passive + scope-enforced.
+const ptrLookupModuleID = "runner.ptr_lookup_check"     // Reverse-DNS PTR for a single in-scope CIDR IP. Passive, no connect, no CIDR sweep.
 
 // allowlistedModules is the local module allowlist. Only modules listed here may
 // execute on the Go runner, and every listed module has a real passive or
@@ -63,6 +64,7 @@ var allowlistedModules = map[string]bool{
 	tcpBannerModuleID:      true,
 	tlsInfoModuleID:        true,
 	portConnectModuleID:    true,
+	ptrLookupModuleID:      true,
 	// Control-plane measured aliases (hybrid compiler / measured dispatch).
 	"periscan.dns_resolution_check":  true,
 	"periscan.tls_certificate_check": true,
@@ -82,6 +84,7 @@ var implementedModules = map[string]bool{
 	tcpBannerModuleID:                true,
 	tlsInfoModuleID:                  true,
 	portConnectModuleID:              true,
+	ptrLookupModuleID:                true,
 	"periscan.dns_resolution_check":  true,
 	"periscan.tls_certificate_check": true,
 	"periscan.http_health_check":     true,
@@ -770,8 +773,9 @@ func executeModule(task taskEnvelope) (moduleExecution, error) {
 	case tlsInfoModuleID:
 		return executeTLSInfo(task)
 	case portConnectModuleID:
-		// Minimal passive connect: re-use reachability envelope but limited to connect probe only (no full read).
-		return executeReachability(task) // safe reuse for bounded connect; full impl would cap read 0 bytes post-connect
+		return executePortConnect(task)
+	case ptrLookupModuleID:
+		return executePTRLookup(task)
 	default:
 		return moduleExecution{}, fmt.Errorf("unsupported module: %s", task.ModuleID)
 	}
@@ -1069,6 +1073,93 @@ func tlsCipherString(c uint16) string {
 	return name
 }
 
+func executePortConnect(task taskEnvelope) (moduleExecution, error) {
+	host, timeoutSeconds, timeout, err := cidrScopedIPTimeout(task, 2, 5)
+	if err != nil {
+		return moduleExecution{}, err
+	}
+	port, err := singlePortInput(task)
+	if err != nil {
+		return moduleExecution{}, err
+	}
+	if !portAllowed(task.ScopeConstraints.ApprovedPorts, port) {
+		return moduleExecution{}, fmt.Errorf("target port is outside approved runner scope: %d", port)
+	}
+
+	address := net.JoinHostPort(host, strconv.Itoa(port))
+	started := time.Now()
+	conn, dialErr := net.DialTimeout("tcp", address, timeout)
+	connectMs := time.Since(started).Milliseconds()
+	present := false
+	if dialErr == nil {
+		present = true
+		_ = conn.Close()
+	}
+
+	now := time.Now().UTC()
+	evidence := map[string]any{
+		"connectMs":      connectMs,
+		"generatedAt":    now.Format(time.RFC3339Nano),
+		"moduleId":       portConnectModuleID,
+		"present":        present,
+		"runnerId":       task.RunnerID,
+		"targetHost":     host,
+		"targetPort":     port,
+		"taskId":         task.TaskID,
+		"timeoutSeconds": timeoutSeconds,
+	}
+	payload, _ := json.Marshal(evidence)
+	outcome := "absent"
+	validationState := "Inconclusive"
+	if present {
+		outcome = "present"
+		validationState = "Reachable"
+	}
+	return moduleExecution{
+		EvidencePayload: payload,
+		Filename:        "port-connect-result",
+		Outcome:         outcome,
+		ValidationState: validationState,
+	}, nil
+}
+
+func executePTRLookup(task taskEnvelope) (moduleExecution, error) {
+	host, _, timeout, err := cidrScopedIPTimeout(task, 2, 5)
+	if err != nil {
+		return moduleExecution{}, err
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	names, lookupErr := (&net.Resolver{}).LookupAddr(ctx, host)
+	sort.Strings(names)
+	resolved := lookupErr == nil && len(names) > 0
+
+	now := time.Now().UTC()
+	evidence := map[string]any{
+		"generatedAt": now.Format(time.RFC3339Nano),
+		"moduleId":    ptrLookupModuleID,
+		"names":       names,
+		"resolved":    resolved,
+		"runnerId":    task.RunnerID,
+		"targetHost":  host,
+		"taskId":      task.TaskID,
+	}
+	payload, _ := json.Marshal(evidence)
+	outcome := "unresolved"
+	validationState := "Inconclusive"
+	if resolved {
+		outcome = "resolved"
+		validationState = "Reachable"
+	}
+	return moduleExecution{
+		EvidencePayload: payload,
+		Filename:        "ptr-lookup-result",
+		Outcome:         outcome,
+		ValidationState: validationState,
+	}, nil
+}
+
 func executeReachability(task taskEnvelope) (moduleExecution, error) {
 	host, ports, timeout, err := reachabilityInput(task)
 	if err != nil {
@@ -1350,6 +1441,63 @@ func hostTimeoutInput(task taskEnvelope) (string, time.Duration, error) {
 }
 
 // hostPortInput extracts a target host + single port + bounded timeout.
+func cidrScopedIPTimeout(task taskEnvelope, defaultSeconds, maxSeconds int) (string, int, time.Duration, error) {
+	host := firstString(task.Target, "hostname", "host", "targetHost")
+	if host == "" {
+		host = firstString(task.Inputs, "hostname", "host", "targetHost")
+	}
+	if host == "" {
+		return "", 0, 0, errors.New("target host is required")
+	}
+	timeoutSeconds := intValue(task.Inputs["timeoutSeconds"], defaultSeconds)
+	if timeoutSeconds < 1 || timeoutSeconds > maxSeconds {
+		return "", 0, 0, fmt.Errorf("timeoutSeconds must be between 1 and %d", maxSeconds)
+	}
+	if err := enforceCIDRScopedIP(task.ScopeConstraints, host); err != nil {
+		return "", 0, 0, err
+	}
+	return host, timeoutSeconds, time.Duration(timeoutSeconds) * time.Second, nil
+}
+
+func enforceCIDRScopedIP(scope scopeConstraints, host string) error {
+	ip := net.ParseIP(host)
+	if ip == nil {
+		return fmt.Errorf("target host must be an IP in an approved CIDR: %s", host)
+	}
+	if len(scope.ApprovedCIDRs) == 0 {
+		return fmt.Errorf("target host is outside approved runner scope: %s", host)
+	}
+	if scope.ForbidInternetEgress && isPublicIP(ip) {
+		return fmt.Errorf("target host is outside approved runner scope: %s", host)
+	}
+	for _, cidr := range scope.ApprovedCIDRs {
+		_, network, err := net.ParseCIDR(cidr)
+		if err == nil && network.Contains(ip) {
+			return nil
+		}
+	}
+	return fmt.Errorf("target host is outside approved runner scope: %s", host)
+}
+
+func singlePortInput(task taskEnvelope) (int, error) {
+	portsFromInputs, _ := intList(task.Inputs["ports"])
+	portsFromTarget, _ := intList(task.Target["ports"])
+	if len(portsFromInputs) > 1 || len(portsFromTarget) > 1 {
+		return 0, errors.New("port_connect_check allows a single port only")
+	}
+	port := intValue(task.Inputs["port"], 0)
+	if port == 0 && len(portsFromInputs) == 1 {
+		port = portsFromInputs[0]
+	}
+	if port == 0 && len(portsFromTarget) == 1 {
+		port = portsFromTarget[0]
+	}
+	if port < 1 || port > 65535 {
+		return 0, errors.New("a single target port (1-65535) is required")
+	}
+	return port, nil
+}
+
 func hostPortInput(task taskEnvelope) (string, int, time.Duration, error) {
 	host, timeout, err := hostTimeoutInput(task)
 	if err != nil {

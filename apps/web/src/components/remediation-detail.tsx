@@ -22,7 +22,8 @@ import {
 import {
   REMEDIATION_STATUS_TONE,
   VERIFICATION_OUTCOME_TONE,
-  relTime
+  relTime,
+  remediationRowTitle
 } from "./remediation-lib";
 import { ProofLoopContext } from "./proof-loop-context";
 import { GovernedRemediationAction } from "./governed-remediation-action";
@@ -39,6 +40,7 @@ export function RemediationDetail({ id }: { id: string }) {
   );
   const events = useApiResource(() => api.listVerificationEvents(id), [id]);
   const integrations = useApiResource(() => api.listIntegrations(), []);
+  const findings = useApiResource(() => api.listFindings(), []);
 
   const [busy, setBusy] = useState<
     | "ready"
@@ -179,7 +181,9 @@ export function RemediationDetail({ id }: { id: string }) {
     try {
       const plan = await api.getPrescriptivePlan(id);
       setPrescriptivePlan(plan);
-      setFlash("Prescriptive plan loaded (operator templates — not control push).");
+      setFlash(
+        "Prescriptive plan loaded (operator templates — not control push)."
+      );
     } catch (caught) {
       setActionError(
         caught instanceof Error
@@ -230,9 +234,7 @@ export function RemediationDetail({ id }: { id: string }) {
       );
     } catch (caught) {
       setActionError(
-        caught instanceof Error
-          ? caught.message
-          : "Auto-revalidate failed."
+        caught instanceof Error ? caught.message : "Auto-revalidate failed."
       );
     } finally {
       setBusy(null);
@@ -267,6 +269,14 @@ export function RemediationDetail({ id }: { id: string }) {
   const canMarkReady =
     remediation.status === "Open" || remediation.status === "InProgress";
   const latest = timeline[0];
+  const relatedFinding =
+    (findings.data ?? []).find(
+      (finding) =>
+        (remediation.relatedFindingFingerprint &&
+          finding.fingerprint === remediation.relatedFindingFingerprint) ||
+        finding.relatedRemediationIds?.includes(remediation.remediationId)
+    ) ?? null;
+  const title = remediationRowTitle(remediation, relatedFinding);
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-5 px-5 py-6">
@@ -274,8 +284,11 @@ export function RemediationDetail({ id }: { id: string }) {
         <BackLink />
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
-            <h1 className="font-display text-xl font-semibold tracking-tight text-ink">
-              {remediation.recommendedAction}
+            <h1
+              className="font-display text-xl font-semibold tracking-tight text-ink"
+              data-testid="remediation-detail-title"
+            >
+              {title}
             </h1>
             <p className="mt-1 font-mono text-[11px] text-subtle">
               {remediation.owner ? `${remediation.owner} · ` : ""}
@@ -308,435 +321,470 @@ export function RemediationDetail({ id }: { id: string }) {
         </div>
       </div>
 
-      <ProofLoopContext
-        entityLabel="Remediation"
-        stage={
-          ["Fixed", "Mitigated", "PartiallyFixed"].includes(remediation.status)
-            ? "Repeat"
-            : remediation.status === "VerificationPending" || latest
-              ? "Verify"
-              : "Act"
-        }
-        evidenceBasis={
-          latest?.measuredRevalidation
-            ? "Measured re-validation"
-            : (remediation.relatedPathEvidenceBasis ??
-              "Pending fresh verification")
-        }
-        owner={remediation.owner}
-        freshness={relTime(latest?.verifiedAt ?? remediation.updatedAt)}
-        status={remediation.status}
-        nextAction={
-          remediation.status === "VerificationPending"
-            ? { href: `#fix-verification`, label: "Run fresh verification" }
-            : remediation.relatedPathId
-              ? {
-                  href: `/attack-paths/${remediation.relatedPathId}`,
-                  label: "Review source path"
-                }
-              : { href: "/reports", label: "Open proof delivery" }
-        }
-      />
+      <div className="flex flex-col gap-5" data-testid="remediation-first-hour">
+        {/* Fix plan */}
+        <Panel id="fix-verification">
+          <PanelHeader title="Fix plan" />
+          <div className="p-4">
+            {remediation.technicalSteps.length ? (
+              <ol className="flex flex-col gap-2 text-[13px] text-muted">
+                {remediation.technicalSteps.map((step, i) => (
+                  <li key={i} className="flex gap-2.5">
+                    <span className="font-mono text-subtle">{i + 1}.</span>
+                    <span>{step}</span>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p className="text-sm text-subtle">
+                No technical steps recorded.
+              </p>
+            )}
+          </div>
+        </Panel>
 
-      {remediation.ticketId ? (
+        {/* Verification */}
         <Panel>
           <PanelHeader
-            title="External ticket state"
+            title={
+              <span className="inline-flex items-center gap-2">
+                Fix verification
+                <InfoPopover label="fix verification">
+                  Mark ready records that implementation is complete. Only a
+                  fresh successful targeted re-test can move the risk to Fixed;
+                  a failed re-test preserves or reopens the exposure.
+                </InfoPopover>
+              </span>
+            }
             actions={
-              <button
-                type="button"
-                onClick={syncTicket}
-                disabled={busy !== null || !remediation.ticketIntegrationId}
-                className={buttonClassName({
-                  size: "sm",
-                  variant: "secondary"
-                })}
-              >
-                {busy === "sync-ticket"
-                  ? "Synchronizing…"
-                  : "Synchronize state"}
-              </button>
+              remediation.relatedPathEvidenceBasis ? (
+                <span className="flex items-center gap-1.5 text-[11px] text-subtle">
+                  exposure basis
+                  <EvidenceBasisBadge
+                    basis={remediation.relatedPathEvidenceBasis}
+                    dot={false}
+                  />
+                </span>
+              ) : null
             }
           />
-          <div className="flex flex-wrap items-center gap-2 p-4">
-            <StateBadge
-              tone={
-                remediation.ticketState === "Closed"
-                  ? "inconclusive"
-                  : remediation.ticketState === "InProgress"
-                    ? "approval"
-                    : "neutral"
-              }
-            >
-              {remediation.ticketStateLabel ??
-                remediation.ticketState ??
-                "Not synchronized"}
-            </StateBadge>
-            <span className="font-mono text-[11px] text-subtle">
-              {remediation.ticketSystem ?? "Ticket"}·{remediation.ticketId}
-              {remediation.ticketSyncedAt
-                ? ` · checked ${relTime(remediation.ticketSyncedAt)}`
-                : ""}
-            </span>
-            <p className="basis-full text-[12px] text-subtle">
-              Ticket closure is workflow context, not proof. Periscan records a
-              closure without evidence and keeps the risk out of Fixed until a
-              fresh targeted re-test succeeds.
-            </p>
-            {!remediation.ticketIntegrationId ? (
-              <p className="basis-full text-[12px] text-missed">
-                This ticket predates integration tracking. Re-route it with an
-                explicit integration before automatic state synchronization.
+          <div className="flex flex-col gap-3 p-4">
+            <div className="flex flex-wrap items-center gap-2">
+              {canMarkReady ? (
+                <button
+                  type="button"
+                  onClick={markReady}
+                  disabled={busy !== null}
+                  className={buttonClassName({
+                    size: "sm",
+                    variant: "secondary"
+                  })}
+                >
+                  {busy === "ready" ? "…" : "Mark ready for verification"}
+                </button>
+              ) : null}
+              {remediation.verificationRequired ? (
+                <button
+                  type="button"
+                  onClick={verify}
+                  disabled={busy !== null}
+                  data-testid="remediation-first-hour-primary"
+                  className={buttonClassName({
+                    variant: "primary",
+                    size: "sm"
+                  })}
+                >
+                  {busy === "verify" ? "Re-testing…" : "Re-verify"}
+                </button>
+              ) : null}
+              <span className="text-[12px] text-subtle">
+                A &quot;Fixed&quot; only lands when a real re-test confirms the
+                exposure is gone.
+              </span>
+            </div>
+
+            {flash ? (
+              <p className="text-sm text-fixed" role="status">
+                {flash}
+              </p>
+            ) : null}
+            {actionError ? (
+              <p role="alert" className="text-sm text-missed">
+                {actionError}
+              </p>
+            ) : null}
+
+            {/* Before / after from the latest event */}
+            {latest ? <BeforeAfter event={latest} /> : null}
+
+            {remediation.nextVerificationAt ? (
+              <p className="text-[12px] text-subtle">
+                Continuous re-check due{" "}
+                {relTime(remediation.nextVerificationAt)}.
               </p>
             ) : null}
           </div>
         </Panel>
-      ) : (
+
+        {/* Timeline */}
         <Panel>
-          <PanelHeader title="External ticket" />
-          <div className="p-4">
-            {integrations.loading && !integrations.data ? (
-              <LoadingSkeleton rows={2} />
-            ) : ticketingDestinations.length > 0 ? (
-              <div className="flex flex-col gap-3">
-                <p className="text-[12px] text-subtle">
-                  Route this remediation into a connected PSA/RMM or ticketing
-                  system. Ticket creation is workflow context, not proof of fix.
-                </p>
-                <div className="flex flex-wrap items-center gap-2">
-                  <label
-                    htmlFor={`ticket-dest-${remediation.remediationId}`}
-                    className="text-xs text-muted"
-                  >
-                    Destination:
-                  </label>
-                  <select
-                    className={selectClassName}
-                    id={`ticket-dest-${remediation.remediationId}`}
-                    value={selectedDestinationId}
-                    onChange={(e) => setSelectedTicketDest(e.target.value)}
-                    aria-label="Select PSA/RMM destination for this remediation"
-                    disabled={busy !== null}
-                  >
-                    {ticketingDestinations.map((dest) => (
-                      <option
-                        key={dest.integrationId}
-                        value={dest.integrationId}
+          <PanelHeader title="Verification timeline" />
+          {events.loading ? (
+            <LoadingSkeleton rows={3} />
+          ) : events.error ? (
+            <ErrorState message={events.error} onRetry={events.refetch} />
+          ) : timeline.length === 0 ? (
+            <p className="px-4 py-6 text-sm text-subtle">
+              No verification events yet — Re-verify above after the leak is
+              gone.
+            </p>
+          ) : (
+            <ul>
+              {timeline.map((event) => (
+                <li
+                  key={event.verificationId}
+                  className="flex gap-3 border-b border-line px-4 py-3 last:border-b-0"
+                >
+                  <span
+                    aria-hidden
+                    className="mt-1 size-2 shrink-0 rounded-full"
+                    style={{
+                      background: `var(--color-${VERIFICATION_OUTCOME_TONE[event.outcome] ?? "neutral"})`
+                    }}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <StateBadge
+                        tone={
+                          VERIFICATION_OUTCOME_TONE[event.outcome] ?? "neutral"
+                        }
+                        dot={false}
                       >
-                        {dest.product} ({dest.vendor})
-                      </option>
-                    ))}
-                  </select>
+                        {event.outcome}
+                      </StateBadge>
+                      {event.measuredRevalidation ? (
+                        <StateBadge tone="validated" dot={false}>
+                          Measured re-test
+                        </StateBadge>
+                      ) : (
+                        <StateBadge tone="inconclusive" dot={false}>
+                          Module re-test
+                        </StateBadge>
+                      )}
+                      <span className="font-mono text-[11px] text-subtle">
+                        {relTime(event.verifiedAt)}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-[12.5px] text-muted">
+                      {event.previousState ? (
+                        <>
+                          <ValidationStateBadge
+                            state={event.previousState}
+                            dot={false}
+                          />{" "}
+                          <span className="text-subtle">→</span>{" "}
+                        </>
+                      ) : null}
+                      <ValidationStateBadge
+                        state={event.newState}
+                        dot={false}
+                      />
+                    </p>
+                    <p className="mt-1 font-mono text-[11px] text-subtle">
+                      {event.retestMethod ? `${event.retestMethod} · ` : ""}
+                      {event.reSyncedConnectorKeys.length
+                        ? `${event.reSyncedConnectorKeys.length} connectors re-synced · `
+                        : ""}
+                      {event.selectedModuleIds.length
+                        ? `${event.selectedModuleIds.length} modules · `
+                        : ""}
+                      {event.exposureReCorrelated != null
+                        ? event.exposureReCorrelated
+                          ? "exposure re-correlated"
+                          : "exposure gone"
+                        : ""}
+                      {event.evidenceIds.length
+                        ? ` · ${event.evidenceIds.length} evidence`
+                        : ""}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Panel>
+      </div>
+
+      <details
+        className="rounded-card border border-line bg-surface"
+        data-testid="remediation-more-actions"
+      >
+        <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-ink">
+          More
+        </summary>
+        <div className="flex flex-col gap-5 border-t border-line px-4 py-4">
+          <ProofLoopContext
+            entityLabel="Remediation"
+            stage={
+              ["Fixed", "Mitigated", "PartiallyFixed"].includes(
+                remediation.status
+              )
+                ? "Repeat"
+                : remediation.status === "VerificationPending" || latest
+                  ? "Verify"
+                  : "Act"
+            }
+            evidenceBasis={
+              latest?.measuredRevalidation
+                ? "Measured re-validation"
+                : (remediation.relatedPathEvidenceBasis ??
+                  "Pending fresh verification")
+            }
+            owner={remediation.owner}
+            freshness={relTime(latest?.verifiedAt ?? remediation.updatedAt)}
+            status={remediation.status}
+            nextAction={
+              remediation.status === "VerificationPending"
+                ? { href: `#fix-verification`, label: "Re-verify" }
+                : remediation.relatedPathId
+                  ? {
+                      href: `/attack-paths/${remediation.relatedPathId}`,
+                      label: "Review source path"
+                    }
+                  : { href: "/reports", label: "Open proof delivery" }
+            }
+          />
+
+          {remediation.ticketId ? (
+            <Panel>
+              <PanelHeader
+                title="External ticket state"
+                actions={
                   <button
                     type="button"
-                    onClick={createTicket}
-                    disabled={busy !== null || !selectedDestinationId}
+                    onClick={syncTicket}
+                    disabled={busy !== null || !remediation.ticketIntegrationId}
                     className={buttonClassName({
                       size: "sm",
                       variant: "secondary"
                     })}
                   >
-                    {busy === "create-ticket" ? "Creating…" : "Create ticket"}
+                    {busy === "sync-ticket"
+                      ? "Synchronizing…"
+                      : "Synchronize state"}
+                  </button>
+                }
+              />
+              <div className="flex flex-wrap items-center gap-2 p-4">
+                <StateBadge
+                  tone={
+                    remediation.ticketState === "Closed"
+                      ? "inconclusive"
+                      : remediation.ticketState === "InProgress"
+                        ? "approval"
+                        : "neutral"
+                  }
+                >
+                  {remediation.ticketStateLabel ??
+                    remediation.ticketState ??
+                    "Not synchronized"}
+                </StateBadge>
+                <span className="font-mono text-[11px] text-subtle">
+                  {remediation.ticketSystem ?? "Ticket"}·{remediation.ticketId}
+                  {remediation.ticketSyncedAt
+                    ? ` · checked ${relTime(remediation.ticketSyncedAt)}`
+                    : ""}
+                </span>
+                <p className="basis-full text-[12px] text-subtle">
+                  Ticket closure is workflow context, not proof. Periscan
+                  records a closure without evidence and keeps the risk out of
+                  Fixed until a fresh targeted re-test succeeds.
+                </p>
+                {!remediation.ticketIntegrationId ? (
+                  <p className="basis-full text-[12px] text-missed">
+                    This ticket predates integration tracking. Re-route it with
+                    an explicit integration before automatic state
+                    synchronization.
+                  </p>
+                ) : null}
+              </div>
+            </Panel>
+          ) : (
+            <Panel>
+              <PanelHeader title="External ticket" />
+              <div className="p-4">
+                {integrations.loading && !integrations.data ? (
+                  <LoadingSkeleton rows={2} />
+                ) : ticketingDestinations.length > 0 ? (
+                  <div className="flex flex-col gap-3">
+                    <p className="text-[12px] text-subtle">
+                      Route this remediation into a connected PSA/RMM or
+                      ticketing system. Ticket creation is workflow context, not
+                      proof of fix.
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <label
+                        htmlFor={`ticket-dest-${remediation.remediationId}`}
+                        className="text-xs text-muted"
+                      >
+                        Destination:
+                      </label>
+                      <select
+                        className={selectClassName}
+                        id={`ticket-dest-${remediation.remediationId}`}
+                        value={selectedDestinationId}
+                        onChange={(e) => setSelectedTicketDest(e.target.value)}
+                        aria-label="Select PSA/RMM destination for this remediation"
+                        disabled={busy !== null}
+                      >
+                        {ticketingDestinations.map((dest) => (
+                          <option
+                            key={dest.integrationId}
+                            value={dest.integrationId}
+                          >
+                            {dest.product} ({dest.vendor})
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={createTicket}
+                        disabled={busy !== null || !selectedDestinationId}
+                        className={buttonClassName({
+                          size: "sm",
+                          variant: "secondary"
+                        })}
+                      >
+                        {busy === "create-ticket"
+                          ? "Creating…"
+                          : "Create ticket"}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <NotConfigured
+                    title="No ticketing destination connected"
+                    message="Connect a PSA/RMM (Syncro, HaloPSA, Autotask, ConnectWise, Jira, ServiceNow, etc.) to create remediation tickets from this page."
+                    action={{
+                      href: "/integrations",
+                      label: "Open integrations"
+                    }}
+                  />
+                )}
+              </div>
+            </Panel>
+          )}
+
+          <Panel aria-label="Auto-revalidate closed loop">
+            <PanelHeader
+              title={
+                <span className="inline-flex items-center gap-2">
+                  Auto-revalidate
+                  <InfoPopover label="auto-revalidate honesty">
+                    Builds a prescriptive plan, marks ready, and runs a targeted
+                    re-test. Never pushes WAF, firewall, security-group, or IdP
+                    config — operators or IaC apply the change. actionApplied is
+                    always false. Fixed still needs measured verification
+                    success.
+                  </InfoPopover>
+                </span>
+              }
+              actions={
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => void loadPrescriptivePlan()}
+                    disabled={busy !== null}
+                    className={buttonClassName({
+                      size: "sm",
+                      variant: "secondary"
+                    })}
+                  >
+                    {busy === "plan" ? "Loading…" : "Load plan"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void runAutoRevalidate()}
+                    disabled={busy !== null}
+                    className={buttonClassName({
+                      size: "sm",
+                      variant: "secondary"
+                    })}
+                  >
+                    {busy === "revalidate"
+                      ? "Revalidating…"
+                      : "Run auto-revalidate"}
                   </button>
                 </div>
-              </div>
-            ) : (
-              <NotConfigured
-                title="No ticketing destination connected"
-                message="Connect a PSA/RMM (Syncro, HaloPSA, Autotask, ConnectWise, Jira, ServiceNow, etc.) to create remediation tickets from this page."
-                action={{ href: "/integrations", label: "Open integrations" }}
-              />
-            )}
-          </div>
-        </Panel>
-      )}
-
-      {/* Fix plan */}
-      <Panel id="fix-verification">
-        <PanelHeader title="Fix plan" />
-        <div className="p-4">
-          {remediation.technicalSteps.length ? (
-            <ol className="flex flex-col gap-2 text-[13px] text-muted">
-              {remediation.technicalSteps.map((step, i) => (
-                <li key={i} className="flex gap-2.5">
-                  <span className="font-mono text-subtle">{i + 1}.</span>
-                  <span>{step}</span>
-                </li>
-              ))}
-            </ol>
-          ) : (
-            <p className="text-sm text-subtle">No technical steps recorded.</p>
-          )}
-        </div>
-      </Panel>
-
-      <Panel aria-label="Auto-revalidate closed loop">
-        <PanelHeader
-          title={
-            <span className="inline-flex items-center gap-2">
-              Auto-revalidate
-              <InfoPopover label="auto-revalidate honesty">
-                Builds a prescriptive plan, marks ready, and runs a targeted
-                re-test. Never pushes WAF, firewall, security-group, or IdP
-                config — operators or IaC apply the change. actionApplied is
-                always false. Fixed still needs measured verification success.
-              </InfoPopover>
-            </span>
-          }
-          actions={
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => void loadPrescriptivePlan()}
-                disabled={busy !== null}
-                className={buttonClassName({
-                  size: "sm",
-                  variant: "secondary"
-                })}
-              >
-                {busy === "plan" ? "Loading…" : "Load plan"}
-              </button>
-              <button
-                type="button"
-                onClick={() => void runAutoRevalidate()}
-                disabled={busy !== null}
-                className={buttonClassName({
-                  size: "sm",
-                  variant: "primary"
-                })}
-              >
-                {busy === "revalidate" ? "Revalidating…" : "Run auto-revalidate"}
-              </button>
-            </div>
-          }
-        />
-        <div className="flex flex-col gap-3 p-4">
-          <p className="text-[12px] text-subtle">
-            Plan → mark ready → re-measure. Human or IaC applies the fix;
-            Periscan only revalidates. This is not a control-plane push.
-          </p>
-          {revalidateReceipt ? (
-            <div className="rounded-control border border-line bg-canvas/60 px-3 py-2 text-[12px] text-muted">
-              <p>
-                <span className="font-medium text-ink">Last run:</span>{" "}
-                actionApplied=
-                <span className="font-mono text-ink">false</span>
-                {revalidateReceipt.outcome
-                  ? ` · outcome ${revalidateReceipt.outcome}`
-                  : ""}
+              }
+            />
+            <div className="flex flex-col gap-3 p-4">
+              <p className="text-[12px] text-subtle">
+                Plan → mark ready → re-measure. Human or IaC applies the fix;
+                Periscan only revalidates. This is not a control-plane push.
               </p>
-              <p className="mt-1 font-mono text-[11px] text-subtle">
-                {revalidateReceipt.closedLoop}
-              </p>
-            </div>
-          ) : null}
-          {prescriptivePlan ? (
-            <div className="flex flex-col gap-2">
-              <p className="text-[13px] font-medium text-ink">
-                {prescriptivePlan.objective}
-              </p>
-              <ol className="flex flex-col gap-2 text-[13px] text-muted">
-                {prescriptivePlan.steps.map((step) => (
-                  <li key={step.order} className="flex flex-col gap-0.5">
-                    <span className="flex gap-2.5">
-                      <span className="font-mono text-subtle">{step.order}.</span>
-                      <span>
-                        <span className="text-ink">{step.title}</span>
-                        {step.action !== step.title ? (
-                          <span className="block text-[12px] text-subtle">
-                            {step.action}
-                          </span>
-                        ) : null}
-                      </span>
-                    </span>
-                    {step.iacHint ? (
-                      <span className="ml-6 font-mono text-[11px] text-subtle">
-                        IaC: {step.iacHint}
-                      </span>
-                    ) : null}
-                  </li>
-                ))}
-              </ol>
-            </div>
-          ) : (
-            <p className="text-sm text-subtle">
-              Load the prescriptive plan or run auto-revalidate to generate
-              stack-aware steps (AWS SG, K8s NetPol, Okta) plus a revalidation
-              step.
-            </p>
-          )}
-        </div>
-      </Panel>
-
-      <GovernedRemediationAction remediationId={remediation.remediationId} />
-
-      <IacRemediationWorkspace remediationId={remediation.remediationId} />
-
-      {/* Verification */}
-      <Panel>
-        <PanelHeader
-          title={
-            <span className="inline-flex items-center gap-2">
-              Fix verification
-              <InfoPopover label="fix verification">
-                Mark ready records that implementation is complete. Only a fresh
-                successful targeted re-test can move the risk to Fixed; a failed
-                re-test preserves or reopens the exposure.
-              </InfoPopover>
-            </span>
-          }
-          actions={
-            remediation.relatedPathEvidenceBasis ? (
-              <span className="flex items-center gap-1.5 text-[11px] text-subtle">
-                exposure basis
-                <EvidenceBasisBadge
-                  basis={remediation.relatedPathEvidenceBasis}
-                  dot={false}
-                />
-              </span>
-            ) : null
-          }
-        />
-        <div className="flex flex-col gap-3 p-4">
-          <div className="flex flex-wrap items-center gap-2">
-            {canMarkReady ? (
-              <button
-                type="button"
-                onClick={markReady}
-                disabled={busy !== null}
-                className={buttonClassName({
-                  size: "sm",
-                  variant: "secondary"
-                })}
-              >
-                {busy === "ready" ? "…" : "Mark ready for verification"}
-              </button>
-            ) : null}
-            {remediation.verificationRequired ? (
-              <button
-                type="button"
-                onClick={verify}
-                disabled={busy !== null}
-                className={buttonClassName({ variant: "primary", size: "sm" })}
-              >
-                {busy === "verify"
-                  ? "Re-testing…"
-                  : latest
-                    ? "Re-verify"
-                    : "Run targeted verification"}
-              </button>
-            ) : null}
-            <span className="text-[12px] text-subtle">
-              A &quot;Fixed&quot; only lands when a real re-test confirms the
-              exposure is gone.
-            </span>
-          </div>
-
-          {flash ? (
-            <p className="text-sm text-fixed" role="status">
-              {flash}
-            </p>
-          ) : null}
-          {actionError ? (
-            <p role="alert" className="text-sm text-missed">
-              {actionError}
-            </p>
-          ) : null}
-
-          {/* Before / after from the latest event */}
-          {latest ? <BeforeAfter event={latest} /> : null}
-
-          {remediation.nextVerificationAt ? (
-            <p className="text-[12px] text-subtle">
-              Continuous re-check due {relTime(remediation.nextVerificationAt)}.
-            </p>
-          ) : null}
-        </div>
-      </Panel>
-
-      {/* Timeline */}
-      <Panel>
-        <PanelHeader title="Verification timeline" />
-        {events.loading ? (
-          <LoadingSkeleton rows={3} />
-        ) : events.error ? (
-          <ErrorState message={events.error} onRetry={events.refetch} />
-        ) : timeline.length === 0 ? (
-          <p className="px-4 py-6 text-sm text-subtle">
-            No verification events yet — run a targeted verification above.
-          </p>
-        ) : (
-          <ul>
-            {timeline.map((event) => (
-              <li
-                key={event.verificationId}
-                className="flex gap-3 border-b border-line px-4 py-3 last:border-b-0"
-              >
-                <span
-                  aria-hidden
-                  className="mt-1 size-2 shrink-0 rounded-full"
-                  style={{
-                    background: `var(--color-${VERIFICATION_OUTCOME_TONE[event.outcome] ?? "neutral"})`
-                  }}
-                />
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <StateBadge
-                      tone={
-                        VERIFICATION_OUTCOME_TONE[event.outcome] ?? "neutral"
-                      }
-                      dot={false}
-                    >
-                      {event.outcome}
-                    </StateBadge>
-                    {event.measuredRevalidation ? (
-                      <StateBadge tone="validated" dot={false}>
-                        Measured re-test
-                      </StateBadge>
-                    ) : (
-                      <StateBadge tone="inconclusive" dot={false}>
-                        Module re-test
-                      </StateBadge>
-                    )}
-                    <span className="font-mono text-[11px] text-subtle">
-                      {relTime(event.verifiedAt)}
-                    </span>
-                  </div>
-                  <p className="mt-1 text-[12.5px] text-muted">
-                    {event.previousState ? (
-                      <>
-                        <ValidationStateBadge
-                          state={event.previousState}
-                          dot={false}
-                        />{" "}
-                        <span className="text-subtle">→</span>{" "}
-                      </>
-                    ) : null}
-                    <ValidationStateBadge state={event.newState} dot={false} />
+              {revalidateReceipt ? (
+                <div className="rounded-control border border-line bg-canvas/60 px-3 py-2 text-[12px] text-muted">
+                  <p>
+                    <span className="font-medium text-ink">Last run:</span>{" "}
+                    actionApplied=
+                    <span className="font-mono text-ink">false</span>
+                    {revalidateReceipt.outcome
+                      ? ` · outcome ${revalidateReceipt.outcome}`
+                      : ""}
                   </p>
                   <p className="mt-1 font-mono text-[11px] text-subtle">
-                    {event.retestMethod ? `${event.retestMethod} · ` : ""}
-                    {event.reSyncedConnectorKeys.length
-                      ? `${event.reSyncedConnectorKeys.length} connectors re-synced · `
-                      : ""}
-                    {event.selectedModuleIds.length
-                      ? `${event.selectedModuleIds.length} modules · `
-                      : ""}
-                    {event.exposureReCorrelated != null
-                      ? event.exposureReCorrelated
-                        ? "exposure re-correlated"
-                        : "exposure gone"
-                      : ""}
-                    {event.evidenceIds.length
-                      ? ` · ${event.evidenceIds.length} evidence`
-                      : ""}
+                    {revalidateReceipt.closedLoop}
                   </p>
                 </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Panel>
+              ) : null}
+              {prescriptivePlan ? (
+                <div className="flex flex-col gap-2">
+                  <p className="text-[13px] font-medium text-ink">
+                    {prescriptivePlan.objective}
+                  </p>
+                  <ol className="flex flex-col gap-2 text-[13px] text-muted">
+                    {prescriptivePlan.steps.map((step) => (
+                      <li key={step.order} className="flex flex-col gap-0.5">
+                        <span className="flex gap-2.5">
+                          <span className="font-mono text-subtle">
+                            {step.order}.
+                          </span>
+                          <span>
+                            <span className="text-ink">{step.title}</span>
+                            {step.action !== step.title ? (
+                              <span className="block text-[12px] text-subtle">
+                                {step.action}
+                              </span>
+                            ) : null}
+                          </span>
+                        </span>
+                        {step.iacHint ? (
+                          <span className="ml-6 font-mono text-[11px] text-subtle">
+                            IaC: {step.iacHint}
+                          </span>
+                        ) : null}
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              ) : (
+                <p className="text-sm text-subtle">
+                  Load the prescriptive plan or run auto-revalidate to generate
+                  stack-aware steps (AWS SG, K8s NetPol, Okta) plus a
+                  revalidation step.
+                </p>
+              )}
+            </div>
+          </Panel>
+
+          <GovernedRemediationAction
+            remediationId={remediation.remediationId}
+          />
+
+          <IacRemediationWorkspace remediationId={remediation.remediationId} />
+        </div>
+      </details>
     </div>
   );
 }
@@ -767,7 +815,9 @@ function BeforeAfter({ event }: { event: VerificationEvent }) {
           After
         </p>
         <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-          <ValidationStateBadge state={event.newState} dot={false} />
+          {event.newState.toLowerCase() !== event.outcome.toLowerCase() ? (
+            <ValidationStateBadge state={event.newState} dot={false} />
+          ) : null}
           <StateBadge
             tone={VERIFICATION_OUTCOME_TONE[event.outcome] ?? "neutral"}
             dot={false}

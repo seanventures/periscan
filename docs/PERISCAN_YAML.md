@@ -1,10 +1,12 @@
 # Community-as-code (`.periscan.yaml`)
 
+> **BAS/AEV program:** [BAS_AEV_PROGRAM.md](BAS_AEV_PROGRAM.md) — qualified open-source simulation, emulation and evidence-backed validation (PERISCAN-583).
+
 GitHub users can copy [`.periscan.example.yaml`](../.periscan.example.yaml) to
 `.periscan.yaml` in a project they **own** to declare Community pack intent in
 reviewable form.
 
-Product source is Apache-2.0. It is not full BAS.
+Product source is Apache-2.0. BAS/AEV authoring and execution follow qualified adapter contracts.
 
 ## Runtime still uses the API and policy
 
@@ -24,7 +26,7 @@ YAML cannot:
 - Replace Domain DNS TXT, repository `.periscan-authorization`, Connected AWS
   match, or Owner/Admin CIDR attestation
 - Queue work the policy engine would deny
-- Enable Atomic, Caldera, SharpHound, sqlmap, Metasploit, or live ransomware
+- Enable an unqualified adapter or bypass scenario authorization
 - Mark a finding **Fixed** (Fixed still requires a verification event)
 
 A parser in `packages/shared/src/community-as-code.ts` validates the document

@@ -1,0 +1,45 @@
+{
+  "Controls": [
+    {
+      "id": "1",
+      "version": "cis-1.9",
+      "detected_version": "1.28",
+      "text": "Control Plane Security Configuration",
+      "node_type": "master",
+      "tests": [
+        {
+          "section": "1.1",
+          "pass": 1,
+          "fail": 2,
+          "warn": 0,
+          "info": 0,
+          "desc": "Master Node Configuration Files",
+          "results": [
+            {
+              "test_number": "1.1.1",
+              "test_desc": "Ensure that the API server pod specification file permissions are set to 600 or more restrictive (Automated)",
+              "remediation": "chmod 600 /etc/kubernetes/manifests/kube-apiserver.yaml",
+              "status": "FAIL",
+              "scored": true,
+              "reason": "-----BEGIN RSA PRIVATE KEY-----\nfixture\n-----END RSA PRIVATE KEY-----"
+            },
+            {
+              "test_number": "1.1.2",
+              "test_desc": "Ensure that the API server pod specification file ownership is set to root:root (Automated)",
+              "status": "PASS",
+              "scored": true,
+              "reason": ""
+            },
+            {
+              "test_number": "1.1.12",
+              "test_desc": "Ensure that the etcd data directory permissions are set to 700 or more restrictive (Automated)",
+              "status": "FAIL",
+              "scored": true,
+              "reason": "token=AKIAIOSFODNN7EXAMPLE hashed_secret=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -45,6 +45,7 @@ import {
   AssetStatusSchema,
   AssetTypeSchema,
   BusinessCriticalitySchema,
+  IdentityCandidateSchema,
   IntegrationCategorySchema,
   IntegrationHealthStatusSchema,
   MissionTypeSchema,
@@ -52,8 +53,20 @@ import {
   SensitivityLevelSchema,
   SignalCategorySchema,
   SignalEnvelopeSchema,
+  emptyFindingsOnVendorAuthFailure,
+  vendorAuthFailureHealthStatus,
+  mapEntraIdentityInventory,
+  mapJumpCloudIdentityInventory,
+  mapOktaIdentityInventory,
   type SignalEnvelope
 } from "@periscan/shared";
+
+import {
+  connectorOAuthGrantFromConfig,
+  refreshConnectorOAuthGrant,
+  type ConnectorOAuthGrantConfigInput,
+  type ConnectorOAuthRefreshFailure
+} from "./connector-oauth-grant.js";
 
 export const SetupComplexitySchema = z.enum(["Low", "Medium", "High"]);
 export const ConnectorAvailabilitySchema = z.enum([
@@ -203,6 +216,7 @@ export const ConnectorExecutionContextSchema = z.object({
 export const ConnectorSyncResultSchema = z.object({
   assets: z.array(ConnectorAssetInputSchema).default([]),
   health: ConnectorHealthSchema,
+  identityCandidates: z.array(IdentityCandidateSchema).optional(),
   signals: z.array(SignalEnvelopeSchema)
 });
 
@@ -523,16 +537,37 @@ function normalizeMicrosoftDefenderXdrOutcome(value: unknown) {
   }
 }
 
-const SplunkApiTokenConfigSchema = z.object({
+const SplunkSearchConfigSchema = z.object({
   baseUrl: z.url(),
   earliestTime: z.string().min(1).optional(),
   index: z.string().min(1).optional(),
   latestTime: z.string().min(1).optional(),
-  searchQuery: z.string().min(1).optional(),
+  searchQuery: z.string().min(1).optional()
+});
+
+type SplunkSearchConfig = z.infer<typeof SplunkSearchConfigSchema>;
+
+const SplunkApiTokenConfigSchema = SplunkSearchConfigSchema.extend({
   token: z.string().min(1)
 });
 
-type SplunkApiTokenConfig = z.infer<typeof SplunkApiTokenConfigSchema>;
+const SplunkOAuthConfigSchema = SplunkSearchConfigSchema.extend({
+  clientId: z.string().min(1),
+  clientSecret: z.string().min(1),
+  lastRotatedAt: z.string().datetime().nullable().optional(),
+  scopes: z.union([z.array(z.string().min(1)), z.string().min(1)]).optional(),
+  tokenUrl: z.url()
+});
+
+class SplunkVendorAuthError extends Error {
+  readonly status: number;
+
+  constructor(status: number) {
+    super(`Splunk search returned status ${status}.`);
+    this.name = "SplunkVendorAuthError";
+    this.status = status;
+  }
+}
 
 const SPLUNK_CONNECTOR_MANIFEST = ConnectorManifestSchema.parse({
   authMethods: [
@@ -587,6 +622,75 @@ const SPLUNK_CONNECTOR_MANIFEST = ConnectorManifestSchema.parse({
       kind: "apiToken",
       label: "Splunk API Token",
       mockSupported: false
+    },
+    {
+      description:
+        "Use an OAuth2 client_credentials grant (OIDC app registration) so Periscan can authenticate TO Splunk. This is not operator SSO.",
+      fields: [
+        {
+          key: "baseUrl",
+          label: "Splunk REST Base URL",
+          required: true,
+          secret: false
+        },
+        {
+          key: "tokenUrl",
+          label: "OAuth Token URL",
+          required: true,
+          secret: false
+        },
+        {
+          key: "clientId",
+          label: "OAuth Client ID",
+          required: true,
+          secret: false
+        },
+        {
+          key: "clientSecret",
+          label: "OAuth Client Secret",
+          required: true,
+          secret: true
+        },
+        {
+          key: "scopes",
+          label: "OAuth Scopes",
+          required: false,
+          secret: false
+        },
+        {
+          key: "lastRotatedAt",
+          label: "Client Secret Last Rotated At",
+          required: false,
+          secret: false
+        },
+        {
+          key: "index",
+          label: "Default Index",
+          required: false,
+          secret: false
+        },
+        {
+          key: "searchQuery",
+          label: "Read-Only Search Query",
+          required: false,
+          secret: false
+        },
+        {
+          key: "earliestTime",
+          label: "Earliest Time",
+          required: false,
+          secret: false
+        },
+        {
+          key: "latestTime",
+          label: "Latest Time",
+          required: false,
+          secret: false
+        }
+      ],
+      kind: "oauth2ClientCredentials",
+      label: "OAuth2 Client Credentials",
+      mockSupported: false
     }
   ],
   availability: "Beta",
@@ -611,7 +715,10 @@ const SPLUNK_CONNECTOR_MANIFEST = ConnectorManifestSchema.parse({
   workflowCapabilities: []
 });
 
-function splunkApiUrl(config: SplunkApiTokenConfig, pathName: string) {
+function splunkApiUrl(
+  config: Pick<SplunkSearchConfig, "baseUrl">,
+  pathName: string
+) {
   return new URL(pathName, config.baseUrl).toString();
 }
 
@@ -619,8 +726,64 @@ function splunkErrorDetail(error: unknown) {
   return error instanceof Error ? error.message : "Unknown Splunk API error.";
 }
 
+function splunkDegradedHealth(
+  failure: ConnectorOAuthRefreshFailure | { status: number; detail: string }
+) {
+  if ("health" in failure) {
+    return ConnectorHealthSchema.parse(failure.health);
+  }
+
+  return ConnectorHealthSchema.parse({
+    authorizationVerified: false,
+    checkedAt: new Date().toISOString(),
+    detail: failure.detail,
+    latencyMs: null,
+    status: vendorAuthFailureHealthStatus(failure.status) ?? "Unhealthy"
+  });
+}
+
+async function resolveSplunkAuth(
+  context: ConnectorExecutionContext
+): Promise<
+  | { bearerToken: string; ok: true; search: SplunkSearchConfig }
+  | ConnectorOAuthRefreshFailure
+> {
+  if (context.authType === "oauth2ClientCredentials") {
+    const config = SplunkOAuthConfigSchema.parse(context.config);
+    const refreshed = await refreshConnectorOAuthGrant(
+      connectorOAuthGrantFromConfig({
+        clientId: config.clientId,
+        clientSecret: config.clientSecret,
+        connectorId: context.integrationId,
+        lastRotatedAt: config.lastRotatedAt ?? null,
+        scopes: config.scopes,
+        tenantId: context.tenantId,
+        tokenUrl: config.tokenUrl
+      })
+    );
+
+    if (!refreshed.ok) {
+      return refreshed;
+    }
+
+    return {
+      bearerToken: refreshed.token.accessToken,
+      ok: true,
+      search: config
+    };
+  }
+
+  const config = SplunkApiTokenConfigSchema.parse(context.config);
+
+  return {
+    bearerToken: config.token,
+    ok: true,
+    search: config
+  };
+}
+
 function buildSplunkSearch(
-  config: SplunkApiTokenConfig,
+  config: SplunkSearchConfig,
   context: ConnectorExecutionContext
 ) {
   const techniqueId =
@@ -648,23 +811,34 @@ function buildSplunkSearch(
 }
 
 async function observeSplunkControl(context: ConnectorExecutionContext) {
-  const config = SplunkApiTokenConfigSchema.parse(context.config);
-  const body = new URLSearchParams({
-    earliest_time: config.earliestTime ?? "-24h",
-    latest_time: config.latestTime ?? "now",
-    output_mode: "json",
-    search: buildSplunkSearch(config, context)
-  });
   const startedAt = Date.now();
+  const auth = await resolveSplunkAuth(context);
+
+  if (!auth.ok) {
+    return {
+      confidence: 0.2,
+      detail: auth.health.detail,
+      latencyMs: Date.now() - startedAt,
+      outcome: "NoEvidence",
+      sourceType: "splunk.search.observer"
+    };
+  }
+
+  const body = new URLSearchParams({
+    earliest_time: auth.search.earliestTime ?? "-24h",
+    latest_time: auth.search.latestTime ?? "now",
+    output_mode: "json",
+    search: buildSplunkSearch(auth.search, context)
+  });
   let response: Response;
 
   try {
     response = await connectorFetch(
-      splunkApiUrl(config, "/services/search/jobs/export"),
+      splunkApiUrl(auth.search, "/services/search/jobs/export"),
       {
         body,
         headers: {
-          authorization: `Bearer ${config.token}`,
+          authorization: `Bearer ${auth.bearerToken}`,
           "content-type": "application/x-www-form-urlencoded"
         },
         method: "POST"
@@ -754,7 +928,8 @@ function parseSplunkExportResults(
 // (collectSignals / sync), reusing the same export endpoint and bounded search
 // the observer uses. Returns the parsed result records for normalization.
 async function fetchSplunkResults(
-  config: SplunkApiTokenConfig,
+  config: SplunkSearchConfig,
+  bearerToken: string,
   context: ConnectorExecutionContext
 ): Promise<Array<Record<string, unknown>>> {
   const body = new URLSearchParams({
@@ -769,13 +944,17 @@ async function fetchSplunkResults(
     {
       body,
       headers: {
-        authorization: `Bearer ${config.token}`,
+        authorization: `Bearer ${bearerToken}`,
         "content-type": "application/x-www-form-urlencoded"
       },
       method: "POST"
     }
   );
   if (!response.ok) {
+    if (vendorAuthFailureHealthStatus(response.status)) {
+      throw new SplunkVendorAuthError(response.status);
+    }
+
     throw new Error(`Splunk search returned status ${response.status}.`);
   }
 
@@ -11292,16 +11471,30 @@ function createGitHubContainerRegistryConnector(): Connector {
   };
 }
 
-const MicrosoftEntraOAuthConfigSchema = z.object({
+const MicrosoftEntraGraphConfigSchema = z.object({
   authorityHost: z.url().default("https://login.microsoftonline.com"),
   clientId: z.string().min(1),
-  clientSecret: z.string().min(1),
   graphBaseUrl: z.url().default("https://graph.microsoft.com/v1.0"),
   includeApplications: z.boolean().default(true),
   includeGroups: z.boolean().default(true),
   includeRoles: z.boolean().default(true),
   tenantId: z.string().min(1)
 });
+
+const MicrosoftEntraOAuthConfigSchema = MicrosoftEntraGraphConfigSchema.extend({
+  clientSecret: z.string().min(1)
+});
+
+const MicrosoftEntraCertificateConfigSchema =
+  MicrosoftEntraGraphConfigSchema.extend({
+    certificateThumbprint: z.string().min(1),
+    privateKeyPem: z.string().min(1)
+  });
+
+const MicrosoftEntraFederatedConfigSchema =
+  MicrosoftEntraGraphConfigSchema.extend({
+    clientAssertion: z.string().min(1)
+  });
 
 const MicrosoftGraphUserSchema = z.object({
   accountEnabled: z.boolean().nullable().optional(),
@@ -11354,6 +11547,9 @@ const MicrosoftGraphTokenSchema = z.object({
   access_token: z.string().min(1)
 });
 
+type MicrosoftEntraGraphConfig = z.infer<
+  typeof MicrosoftEntraGraphConfigSchema
+>;
 type MicrosoftEntraOAuthConfig = z.infer<
   typeof MicrosoftEntraOAuthConfigSchema
 >;
@@ -11464,6 +11660,90 @@ const MICROSOFT_ENTRA_CONNECTOR_MANIFEST = ConnectorManifestSchema.parse({
       kind: "oauth2ClientCredentials",
       label: "Microsoft Graph OAuth2",
       mockSupported: false
+    },
+    {
+      description:
+        "Use a Microsoft Entra app certificate credential (thumbprint + private key) for read-only Graph inventory. No client secret. This is not operator SSO.",
+      fields: [
+        {
+          key: "tenantId",
+          label: "Tenant ID",
+          required: true,
+          secret: false
+        },
+        {
+          key: "clientId",
+          label: "Client ID",
+          required: true,
+          secret: false
+        },
+        {
+          key: "certificateThumbprint",
+          label: "Certificate Thumbprint",
+          required: true,
+          secret: false
+        },
+        {
+          key: "privateKeyPem",
+          label: "Certificate Private Key (PEM)",
+          required: true,
+          secret: true
+        },
+        {
+          key: "authorityHost",
+          label: "Authority Host",
+          required: false,
+          secret: false
+        },
+        {
+          key: "graphBaseUrl",
+          label: "Graph Base URL",
+          required: false,
+          secret: false
+        }
+      ],
+      kind: "certificate",
+      label: "Microsoft Graph certificate credential",
+      mockSupported: false
+    },
+    {
+      description:
+        "Use a federated workload-identity client assertion for read-only Graph inventory. No client secret. This is not operator SSO.",
+      fields: [
+        {
+          key: "tenantId",
+          label: "Tenant ID",
+          required: true,
+          secret: false
+        },
+        {
+          key: "clientId",
+          label: "Client ID",
+          required: true,
+          secret: false
+        },
+        {
+          key: "clientAssertion",
+          label: "Federated Client Assertion",
+          required: true,
+          secret: true
+        },
+        {
+          key: "authorityHost",
+          label: "Authority Host",
+          required: false,
+          secret: false
+        },
+        {
+          key: "graphBaseUrl",
+          label: "Graph Base URL",
+          required: false,
+          secret: false
+        }
+      ],
+      kind: "federated",
+      label: "Microsoft Graph federated credential",
+      mockSupported: false
     }
   ],
   availability: "Beta",
@@ -11515,7 +11795,7 @@ function normalizeMicrosoftUrl(value: string) {
 }
 
 function microsoftGraphUrl(
-  config: MicrosoftEntraOAuthConfig,
+  config: Pick<MicrosoftEntraGraphConfig, "graphBaseUrl">,
   pathName: string
 ) {
   if (pathName.startsWith("http://") || pathName.startsWith("https://")) {
@@ -11523,6 +11803,99 @@ function microsoftGraphUrl(
   }
 
   return `${normalizeMicrosoftUrl(config.graphBaseUrl)}${pathName}`;
+}
+
+function microsoftEntraTokenUrl(
+  config: Pick<MicrosoftEntraGraphConfig, "authorityHost" | "tenantId">
+) {
+  return `${normalizeMicrosoftUrl(config.authorityHost)}/${encodeURIComponent(
+    config.tenantId
+  )}/oauth2/v2.0/token`;
+}
+
+const MICROSOFT_GRAPH_DEFAULT_SCOPE = "https://graph.microsoft.com/.default";
+
+function parseMicrosoftEntraConnectorConfig(
+  context: ConnectorExecutionContext
+): {
+  config: MicrosoftEntraGraphConfig;
+  grantInput: ConnectorOAuthGrantConfigInput;
+} {
+  if (context.authType === "certificate") {
+    const config = MicrosoftEntraCertificateConfigSchema.parse(context.config);
+    return {
+      config,
+      grantInput: {
+        certificateThumbprint: config.certificateThumbprint,
+        clientId: config.clientId,
+        connectorId: context.integrationId,
+        grantType: "certificate",
+        privateKey: config.privateKeyPem,
+        scopes: [MICROSOFT_GRAPH_DEFAULT_SCOPE],
+        tenantId: context.tenantId,
+        tokenUrl: microsoftEntraTokenUrl(config)
+      }
+    };
+  }
+
+  if (context.authType === "federated") {
+    const config = MicrosoftEntraFederatedConfigSchema.parse(context.config);
+    return {
+      config,
+      grantInput: {
+        clientAssertion: config.clientAssertion,
+        clientId: config.clientId,
+        connectorId: context.integrationId,
+        grantType: "federated",
+        scopes: [MICROSOFT_GRAPH_DEFAULT_SCOPE],
+        tenantId: context.tenantId,
+        tokenUrl: microsoftEntraTokenUrl(config)
+      }
+    };
+  }
+
+  const config = MicrosoftEntraOAuthConfigSchema.parse(context.config);
+  return {
+    config,
+    grantInput: {
+      clientId: config.clientId,
+      clientSecret: config.clientSecret,
+      connectorId: context.integrationId,
+      grantType: "client_credentials",
+      scopes: [MICROSOFT_GRAPH_DEFAULT_SCOPE],
+      tenantId: context.tenantId,
+      tokenUrl: microsoftEntraTokenUrl(config)
+    }
+  };
+}
+
+function microsoftEntraAuthFailureHealth(
+  failure:
+    | ConnectorOAuthRefreshFailure
+    | { detail: string; latencyMs: number; status: number }
+): ConnectorHealth {
+  if ("health" in failure) {
+    return ConnectorHealthSchema.parse(failure.health);
+  }
+
+  return ConnectorHealthSchema.parse({
+    authorizationVerified: false,
+    checkedAt: new Date().toISOString(),
+    detail: failure.detail,
+    latencyMs: failure.latencyMs,
+    status: vendorAuthFailureHealthStatus(failure.status) ?? "Unhealthy"
+  });
+}
+
+function microsoftEntraEmptySync(health: ConnectorHealth): ConnectorSyncResult {
+  const empty = emptyFindingsOnVendorAuthFailure();
+
+  return ConnectorSyncResultSchema.parse({
+    assets: empty.assets,
+    health,
+    identityCandidates: [],
+    signals: empty.signals
+  });
 }
 
 async function getMicrosoftGraphAccessToken(config: MicrosoftEntraOAuthConfig) {
@@ -11554,7 +11927,7 @@ async function getMicrosoftGraphAccessToken(config: MicrosoftEntraOAuthConfig) {
 
 async function fetchMicrosoftGraphJson<T>(input: {
   accessToken: string;
-  config: MicrosoftEntraOAuthConfig;
+  config: Pick<MicrosoftEntraGraphConfig, "graphBaseUrl">;
   pathName: string;
 }) {
   const response = await connectorFetch(
@@ -11579,7 +11952,7 @@ async function fetchMicrosoftGraphJson<T>(input: {
 
 async function fetchMicrosoftGraphCollection<T>(input: {
   accessToken: string;
-  config: MicrosoftEntraOAuthConfig;
+  config: MicrosoftEntraGraphConfig;
   pathName: string;
   schema: z.ZodType<T>;
 }) {
@@ -11788,7 +12161,7 @@ function loadMicrosoftEntraFixtureInventory() {
 }
 
 async function loadMicrosoftEntraInventory(
-  config: MicrosoftEntraOAuthConfig,
+  config: MicrosoftEntraGraphConfig,
   accessToken: string
 ) {
   const [users, groups, applications, roles] = await Promise.all([
@@ -11836,33 +12209,95 @@ async function loadMicrosoftEntraInventory(
   };
 }
 
+async function refreshMicrosoftEntraGrant(context: ConnectorExecutionContext) {
+  const parsed = parseMicrosoftEntraConnectorConfig(context);
+  const refreshed = await refreshConnectorOAuthGrant(
+    connectorOAuthGrantFromConfig(parsed.grantInput)
+  );
+
+  return { config: parsed.config, refreshed };
+}
+
 async function getMicrosoftEntraHealth(context: ConnectorExecutionContext) {
   if (context.mockMode) {
     return createMockHealth(MICROSOFT_ENTRA_CONNECTOR_MANIFEST, context);
   }
 
   const startedAt = Date.now();
-  const config = MicrosoftEntraOAuthConfigSchema.parse(context.config);
-  const accessToken = await getMicrosoftGraphAccessToken(config);
-  const organization = MicrosoftGraphOrganizationSchema.parse(
-    await fetchMicrosoftGraphJson({
-      accessToken,
-      config,
-      pathName: "/organization?$select=id,displayName&$top=1"
-    })
-  );
-  const displayName =
-    organization.value[0]?.displayName ??
-    organization.value[0]?.id ??
-    config.tenantId;
+  const { config, refreshed } = await refreshMicrosoftEntraGrant(context);
+  if (!refreshed.ok) {
+    return microsoftEntraAuthFailureHealth(refreshed);
+  }
 
-  return ConnectorHealthSchema.parse({
-    authorizationVerified: true,
-    checkedAt: new Date().toISOString(),
-    detail: `Microsoft Graph read-only access verified for ${displayName}.`,
-    latencyMs: Date.now() - startedAt,
-    status: "Healthy"
-  });
+  try {
+    const organization = MicrosoftGraphOrganizationSchema.parse(
+      await fetchMicrosoftGraphJson({
+        accessToken: refreshed.token.accessToken,
+        config,
+        pathName: "/organization?$select=id,displayName&$top=1"
+      })
+    );
+    const displayName =
+      organization.value[0]?.displayName ??
+      organization.value[0]?.id ??
+      config.tenantId;
+
+    return ConnectorHealthSchema.parse({
+      authorizationVerified: true,
+      checkedAt: new Date().toISOString(),
+      detail: `Microsoft Graph read-only access verified for ${displayName}.`,
+      latencyMs: Date.now() - startedAt,
+      status: "Healthy"
+    });
+  } catch (error) {
+    if (error instanceof MicrosoftGraphHttpError) {
+      return microsoftEntraAuthFailureHealth({
+        detail: `Microsoft Graph request failed with status ${error.status}.`,
+        latencyMs: Date.now() - startedAt,
+        status: error.status
+      });
+    }
+
+    throw error;
+  }
+}
+
+async function loadMicrosoftEntraLiveOrDegraded(
+  context: ConnectorExecutionContext
+): Promise<
+  | {
+      config: MicrosoftEntraGraphConfig;
+      inventory: ReturnType<typeof loadMicrosoftEntraFixtureInventory>;
+      ok: true;
+    }
+  | { health: ConnectorHealth; ok: false }
+> {
+  const startedAt = Date.now();
+  const { config, refreshed } = await refreshMicrosoftEntraGrant(context);
+  if (!refreshed.ok) {
+    return { health: microsoftEntraAuthFailureHealth(refreshed), ok: false };
+  }
+
+  try {
+    const inventory = await loadMicrosoftEntraInventory(
+      config,
+      refreshed.token.accessToken
+    );
+    return { config, inventory, ok: true };
+  } catch (error) {
+    if (error instanceof MicrosoftGraphHttpError) {
+      return {
+        health: microsoftEntraAuthFailureHealth({
+          detail: `Microsoft Graph request failed with status ${error.status}.`,
+          latencyMs: Date.now() - startedAt,
+          status: error.status
+        }),
+        ok: false
+      };
+    }
+
+    throw error;
+  }
 }
 
 function createMicrosoftEntraConnector(): Connector {
@@ -11870,23 +12305,18 @@ function createMicrosoftEntraConnector(): Connector {
     manifest: MICROSOFT_ENTRA_CONNECTOR_MANIFEST,
     async collectSignals(context) {
       const parsedContext = ConnectorExecutionContextSchema.parse(context);
-      const config = MicrosoftEntraOAuthConfigSchema.parse(
-        parsedContext.mockMode
-          ? {
-              clientId: "mock",
-              clientSecret: "mock",
-              tenantId: "mock-tenant"
-            }
-          : parsedContext.config
-      );
-      const inventory = parsedContext.mockMode
-        ? loadMicrosoftEntraFixtureInventory()
-        : await loadMicrosoftEntraInventory(
-            config,
-            await getMicrosoftGraphAccessToken(config)
-          );
+      if (parsedContext.mockMode) {
+        return createMicrosoftEntraSignals(
+          loadMicrosoftEntraFixtureInventory()
+        );
+      }
 
-      return createMicrosoftEntraSignals(inventory);
+      const live = await loadMicrosoftEntraLiveOrDegraded(parsedContext);
+      if (!live.ok) {
+        return [];
+      }
+
+      return createMicrosoftEntraSignals(live.inventory);
     },
     async healthCheck(context) {
       const parsedContext = ConnectorExecutionContextSchema.parse(context);
@@ -11895,29 +12325,47 @@ function createMicrosoftEntraConnector(): Connector {
     },
     async sync(context) {
       const parsedContext = ConnectorExecutionContextSchema.parse(context);
-      const config = MicrosoftEntraOAuthConfigSchema.parse(
-        parsedContext.mockMode
-          ? {
-              clientId: "mock",
-              clientSecret: "mock",
-              tenantId: "mock-tenant"
-            }
-          : parsedContext.config
-      );
-      const inventory = parsedContext.mockMode
-        ? loadMicrosoftEntraFixtureInventory()
-        : await loadMicrosoftEntraInventory(
-            config,
-            await getMicrosoftGraphAccessToken(config)
-          );
+      if (parsedContext.mockMode) {
+        const inventory = loadMicrosoftEntraFixtureInventory();
+
+        return ConnectorSyncResultSchema.parse({
+          assets: createMicrosoftEntraAssets({
+            applications: inventory.applications,
+            tenantId: "mock-tenant"
+          }),
+          health: await getMicrosoftEntraHealth(parsedContext),
+          identityCandidates: mapEntraIdentityInventory({
+            applications: inventory.applications,
+            groups: inventory.groups,
+            users: inventory.users
+          }).candidates,
+          signals: createMicrosoftEntraSignals(inventory).map((signal) =>
+            createTimestampedSignal(
+              MICROSOFT_ENTRA_CONNECTOR_MANIFEST,
+              parsedContext,
+              signal
+            )
+          )
+        });
+      }
+
+      const live = await loadMicrosoftEntraLiveOrDegraded(parsedContext);
+      if (!live.ok) {
+        return microsoftEntraEmptySync(live.health);
+      }
 
       return ConnectorSyncResultSchema.parse({
         assets: createMicrosoftEntraAssets({
-          applications: inventory.applications,
-          tenantId: config.tenantId
+          applications: live.inventory.applications,
+          tenantId: live.config.tenantId
         }),
         health: await getMicrosoftEntraHealth(parsedContext),
-        signals: createMicrosoftEntraSignals(inventory).map((signal) =>
+        identityCandidates: mapEntraIdentityInventory({
+          applications: live.inventory.applications,
+          groups: live.inventory.groups,
+          users: live.inventory.users
+        }).candidates,
+        signals: createMicrosoftEntraSignals(live.inventory).map((signal) =>
           createTimestampedSignal(
             MICROSOFT_ENTRA_CONNECTOR_MANIFEST,
             parsedContext,
@@ -15737,13 +16185,31 @@ function createGoogleWorkspaceConnector(): Connector {
   };
 }
 
-const OktaApiTokenConfigSchema = z.object({
-  apiToken: z.string().min(1),
+const OktaInventoryConfigSchema = z.object({
   includeApps: z.boolean().default(true),
   includeFactors: z.boolean().default(true),
   includeGroups: z.boolean().default(true),
   orgUrl: z.url()
 });
+
+const OktaApiTokenConfigSchema = OktaInventoryConfigSchema.extend({
+  apiToken: z.string().min(1)
+});
+
+const OktaOAuthConfigSchema = OktaInventoryConfigSchema.extend({
+  clientId: z.string().min(1),
+  clientSecret: z.string().min(1),
+  lastRotatedAt: z.string().datetime().nullable().optional(),
+  scopes: z.union([z.array(z.string().min(1)), z.string().min(1)]).optional(),
+  tokenUrl: z.url().optional()
+});
+
+const OKTA_DEFAULT_SCOPES = [
+  "okta.users.read",
+  "okta.groups.read",
+  "okta.apps.read",
+  "okta.factors.read"
+];
 
 const OktaUserSchema = z.object({
   id: z.string().min(1),
@@ -15801,7 +16267,8 @@ const OktaMeSchema = z.object({
     .optional()
 });
 
-type OktaApiTokenConfig = z.infer<typeof OktaApiTokenConfigSchema>;
+type OktaInventoryConfig = z.infer<typeof OktaInventoryConfigSchema>;
+type OktaOAuthConfig = z.infer<typeof OktaOAuthConfigSchema>;
 type OktaUser = z.infer<typeof OktaUserSchema>;
 type OktaGroup = z.infer<typeof OktaGroupSchema>;
 type OktaApplication = z.infer<typeof OktaApplicationSchema>;
@@ -15923,6 +16390,69 @@ const OKTA_CONNECTOR_MANIFEST = ConnectorManifestSchema.parse({
       kind: "apiToken",
       label: "API Token",
       mockSupported: false
+    },
+    {
+      description:
+        "Use an OAuth2 client_credentials grant (Okta API service app) so Periscan can authenticate TO Okta. This is not operator SSO. SSWS API tokens remain supported for labs.",
+      fields: [
+        {
+          key: "orgUrl",
+          label: "Okta Organization URL",
+          required: true,
+          secret: false
+        },
+        {
+          key: "tokenUrl",
+          label: "OAuth Token URL",
+          required: false,
+          secret: false
+        },
+        {
+          key: "clientId",
+          label: "OAuth Client ID",
+          required: true,
+          secret: false
+        },
+        {
+          key: "clientSecret",
+          label: "OAuth Client Secret",
+          required: true,
+          secret: true
+        },
+        {
+          key: "scopes",
+          label: "OAuth Scopes",
+          required: false,
+          secret: false
+        },
+        {
+          key: "lastRotatedAt",
+          label: "Client Secret Last Rotated At",
+          required: false,
+          secret: false
+        },
+        {
+          key: "includeGroups",
+          label: "Include Groups",
+          required: false,
+          secret: false
+        },
+        {
+          key: "includeApps",
+          label: "Include Applications",
+          required: false,
+          secret: false
+        },
+        {
+          key: "includeFactors",
+          label: "Include MFA Factors",
+          required: false,
+          secret: false
+        }
+      ],
+      kind: "oauth2ClientCredentials",
+      label: "OAuth2 Client Credentials",
+      mockSupported: false
     }
   ],
   availability: "Beta",
@@ -15970,11 +16500,18 @@ class OktaHttpError extends Error {
   }
 }
 
-function normalizeOktaOrgUrl(config: OktaApiTokenConfig) {
+function normalizeOktaOrgUrl(config: Pick<OktaInventoryConfig, "orgUrl">) {
   return config.orgUrl.replace(/\/+$/u, "");
 }
 
-function oktaApiUrl(config: OktaApiTokenConfig, pathName: string) {
+function oktaDefaultTokenUrl(orgUrl: string) {
+  return `${orgUrl.replace(/\/+$/u, "")}/oauth2/v1/token`;
+}
+
+function oktaApiUrl(
+  config: Pick<OktaInventoryConfig, "orgUrl">,
+  pathName: string
+) {
   if (pathName.startsWith("http://") || pathName.startsWith("https://")) {
     return pathName;
   }
@@ -15982,11 +16519,84 @@ function oktaApiUrl(config: OktaApiTokenConfig, pathName: string) {
   return `${normalizeOktaOrgUrl(config)}${pathName}`;
 }
 
-async function fetchOktaJson<T>(config: OktaApiTokenConfig, pathName: string) {
+function oktaAuthFailureHealth(
+  failure:
+    | ConnectorOAuthRefreshFailure
+    | { detail: string; latencyMs: number; status: number }
+): ConnectorHealth {
+  if ("health" in failure) {
+    return ConnectorHealthSchema.parse(failure.health);
+  }
+
+  return ConnectorHealthSchema.parse({
+    authorizationVerified: false,
+    checkedAt: new Date().toISOString(),
+    detail: failure.detail,
+    latencyMs: failure.latencyMs,
+    status: vendorAuthFailureHealthStatus(failure.status) ?? "Unhealthy"
+  });
+}
+
+function oktaEmptySync(health: ConnectorHealth) {
+  const empty = emptyFindingsOnVendorAuthFailure();
+
+  return ConnectorSyncResultSchema.parse({
+    assets: empty.assets,
+    health,
+    identityCandidates: [],
+    signals: empty.signals
+  });
+}
+
+async function resolveOktaAuth(
+  context: ConnectorExecutionContext
+): Promise<
+  | { authorization: string; config: OktaInventoryConfig; ok: true }
+  | { health: ConnectorHealth; ok: false }
+> {
+  if (context.authType === "oauth2ClientCredentials") {
+    const config: OktaOAuthConfig = OktaOAuthConfigSchema.parse(context.config);
+    const refreshed = await refreshConnectorOAuthGrant(
+      connectorOAuthGrantFromConfig({
+        clientId: config.clientId,
+        clientSecret: config.clientSecret,
+        connectorId: context.integrationId,
+        lastRotatedAt: config.lastRotatedAt ?? null,
+        scopes: config.scopes ?? OKTA_DEFAULT_SCOPES,
+        tenantId: context.tenantId,
+        tokenUrl: config.tokenUrl ?? oktaDefaultTokenUrl(config.orgUrl)
+      })
+    );
+
+    if (!refreshed.ok) {
+      return { health: oktaAuthFailureHealth(refreshed), ok: false };
+    }
+
+    return {
+      authorization: `Bearer ${refreshed.token.accessToken}`,
+      config,
+      ok: true
+    };
+  }
+
+  const config = OktaApiTokenConfigSchema.parse(context.config);
+
+  return {
+    authorization: `SSWS ${config.apiToken}`,
+    config,
+    ok: true
+  };
+}
+
+async function fetchOktaJson<T>(
+  config: Pick<OktaInventoryConfig, "orgUrl">,
+  authorization: string,
+  pathName: string
+) {
   const response = await connectorFetch(oktaApiUrl(config, pathName), {
     headers: {
       accept: "application/json",
-      authorization: `SSWS ${config.apiToken}`
+      authorization
     }
   });
 
@@ -16020,7 +16630,8 @@ function getOktaNextLink(headers: Headers) {
 }
 
 async function fetchOktaArray<T>(
-  config: OktaApiTokenConfig,
+  config: Pick<OktaInventoryConfig, "orgUrl">,
+  authorization: string,
   pathName: string,
   schema: z.ZodType<T>
 ) {
@@ -16029,7 +16640,11 @@ async function fetchOktaArray<T>(
   let pageCount = 0;
 
   while (nextPath && pageCount < 10) {
-    const result = await fetchOktaJson<unknown[]>(config, nextPath);
+    const result = await fetchOktaJson<unknown[]>(
+      config,
+      authorization,
+      nextPath
+    );
 
     rows.push(...result.body.map((row) => schema.parse(row)));
     nextPath = getOktaNextLink(result.headers);
@@ -16040,7 +16655,8 @@ async function fetchOktaArray<T>(
 }
 
 async function fetchOktaFactors(
-  config: OktaApiTokenConfig,
+  config: OktaInventoryConfig,
+  authorization: string,
   userId: string
 ): Promise<OktaFactor[]> {
   if (!config.includeFactors) {
@@ -16050,6 +16666,7 @@ async function fetchOktaFactors(
   try {
     return fetchOktaArray(
       config,
+      authorization,
       `/api/v1/users/${encodeURIComponent(userId)}/factors`,
       OktaFactorSchema
     );
@@ -16255,20 +16872,41 @@ function createOktaSignals(input: {
   return signals;
 }
 
-async function loadOktaInventory(config: OktaApiTokenConfig) {
+async function loadOktaInventory(
+  config: OktaInventoryConfig,
+  authorization: string
+) {
   const [users, groups, apps] = await Promise.all([
-    fetchOktaArray(config, "/api/v1/users?limit=200", OktaUserSchema),
+    fetchOktaArray(
+      config,
+      authorization,
+      "/api/v1/users?limit=200",
+      OktaUserSchema
+    ),
     config.includeGroups
-      ? fetchOktaArray(config, "/api/v1/groups?limit=200", OktaGroupSchema)
+      ? fetchOktaArray(
+          config,
+          authorization,
+          "/api/v1/groups?limit=200",
+          OktaGroupSchema
+        )
       : Promise.resolve([]),
     config.includeApps
-      ? fetchOktaArray(config, "/api/v1/apps?limit=200", OktaApplicationSchema)
+      ? fetchOktaArray(
+          config,
+          authorization,
+          "/api/v1/apps?limit=200",
+          OktaApplicationSchema
+        )
       : Promise.resolve([])
   ]);
   const factorsByUserId = new Map<string, OktaFactor[]>();
 
   for (const user of users) {
-    factorsByUserId.set(user.id, await fetchOktaFactors(config, user.id));
+    factorsByUserId.set(
+      user.id,
+      await fetchOktaFactors(config, authorization, user.id)
+    );
   }
 
   return {
@@ -16294,18 +16932,73 @@ async function getOktaHealth(context: ConnectorExecutionContext) {
   }
 
   const startedAt = Date.now();
-  const config = OktaApiTokenConfigSchema.parse(context.config);
-  const result = await fetchOktaJson<unknown>(config, "/api/v1/users/me");
-  const me = OktaMeSchema.parse(result.body);
-  const login = me.profile?.login ?? me.id ?? "authorized Okta token";
+  const auth = await resolveOktaAuth(context);
+  if (!auth.ok) {
+    return auth.health;
+  }
 
-  return ConnectorHealthSchema.parse({
-    authorizationVerified: true,
-    checkedAt: new Date().toISOString(),
-    detail: `Okta API token verified for ${login}.`,
-    latencyMs: Date.now() - startedAt,
-    status: "Healthy"
-  });
+  try {
+    const result = await fetchOktaJson<unknown>(
+      auth.config,
+      auth.authorization,
+      "/api/v1/users/me"
+    );
+    const me = OktaMeSchema.parse(result.body);
+    const login = me.profile?.login ?? me.id ?? "authorized Okta credential";
+
+    return ConnectorHealthSchema.parse({
+      authorizationVerified: true,
+      checkedAt: new Date().toISOString(),
+      detail: `Okta API access verified for ${login}.`,
+      latencyMs: Date.now() - startedAt,
+      status: "Healthy"
+    });
+  } catch (error) {
+    if (error instanceof OktaHttpError) {
+      return oktaAuthFailureHealth({
+        detail: `Okta API request failed with status ${error.status}.`,
+        latencyMs: Date.now() - startedAt,
+        status: error.status
+      });
+    }
+
+    throw error;
+  }
+}
+
+async function loadOktaLiveOrDegraded(
+  context: ConnectorExecutionContext
+): Promise<
+  | {
+      config: OktaInventoryConfig;
+      inventory: ReturnType<typeof loadOktaFixtureInventory>;
+      ok: true;
+    }
+  | { health: ConnectorHealth; ok: false }
+> {
+  const startedAt = Date.now();
+  const auth = await resolveOktaAuth(context);
+  if (!auth.ok) {
+    return { health: auth.health, ok: false };
+  }
+
+  try {
+    const inventory = await loadOktaInventory(auth.config, auth.authorization);
+    return { config: auth.config, inventory, ok: true };
+  } catch (error) {
+    if (error instanceof OktaHttpError) {
+      return {
+        health: oktaAuthFailureHealth({
+          detail: `Okta API request failed with status ${error.status}.`,
+          latencyMs: Date.now() - startedAt,
+          status: error.status
+        }),
+        ok: false
+      };
+    }
+
+    throw error;
+  }
 }
 
 function createOktaConnector(): Connector {
@@ -16313,21 +17006,21 @@ function createOktaConnector(): Connector {
     manifest: OKTA_CONNECTOR_MANIFEST,
     async collectSignals(context) {
       const parsedContext = ConnectorExecutionContextSchema.parse(context);
-      const config = OktaApiTokenConfigSchema.parse(
-        parsedContext.mockMode
-          ? {
-              apiToken: "mock",
-              orgUrl: "https://periscan.okta.test"
-            }
-          : parsedContext.config
-      );
-      const inventory = parsedContext.mockMode
-        ? loadOktaFixtureInventory()
-        : await loadOktaInventory(config);
+      if (parsedContext.mockMode) {
+        return createOktaSignals({
+          ...loadOktaFixtureInventory(),
+          orgUrl: "https://periscan.okta.test"
+        });
+      }
+
+      const live = await loadOktaLiveOrDegraded(parsedContext);
+      if (!live.ok) {
+        return [];
+      }
 
       return createOktaSignals({
-        ...inventory,
-        orgUrl: config.orgUrl
+        ...live.inventory,
+        orgUrl: live.config.orgUrl
       });
     },
     async healthCheck(context) {
@@ -16337,27 +17030,53 @@ function createOktaConnector(): Connector {
     },
     async sync(context) {
       const parsedContext = ConnectorExecutionContextSchema.parse(context);
-      const config = OktaApiTokenConfigSchema.parse(
-        parsedContext.mockMode
-          ? {
-              apiToken: "mock",
-              orgUrl: "https://periscan.okta.test"
-            }
-          : parsedContext.config
-      );
-      const inventory = parsedContext.mockMode
-        ? loadOktaFixtureInventory()
-        : await loadOktaInventory(config);
+      if (parsedContext.mockMode) {
+        const inventory = loadOktaFixtureInventory();
+        const orgUrl = "https://periscan.okta.test";
+
+        return ConnectorSyncResultSchema.parse({
+          assets: createOktaAssets({
+            apps: inventory.apps,
+            orgUrl
+          }),
+          health: await getOktaHealth(parsedContext),
+          identityCandidates: mapOktaIdentityInventory({
+            apps: inventory.apps,
+            groups: inventory.groups,
+            users: inventory.users
+          }).candidates,
+          signals: createOktaSignals({
+            ...inventory,
+            orgUrl
+          }).map((signal) =>
+            createTimestampedSignal(
+              OKTA_CONNECTOR_MANIFEST,
+              parsedContext,
+              signal
+            )
+          )
+        });
+      }
+
+      const live = await loadOktaLiveOrDegraded(parsedContext);
+      if (!live.ok) {
+        return oktaEmptySync(live.health);
+      }
 
       return ConnectorSyncResultSchema.parse({
         assets: createOktaAssets({
-          apps: inventory.apps,
-          orgUrl: config.orgUrl
+          apps: live.inventory.apps,
+          orgUrl: live.config.orgUrl
         }),
         health: await getOktaHealth(parsedContext),
+        identityCandidates: mapOktaIdentityInventory({
+          apps: live.inventory.apps,
+          groups: live.inventory.groups,
+          users: live.inventory.users
+        }).candidates,
         signals: createOktaSignals({
-          ...inventory,
-          orgUrl: config.orgUrl
+          ...live.inventory,
+          orgUrl: live.config.orgUrl
         }).map((signal) =>
           createTimestampedSignal(
             OKTA_CONNECTOR_MANIFEST,
@@ -20174,6 +20893,11 @@ function createJumpCloudConnector(): Connector {
         health: parsedContext.mockMode
           ? createMockHealth(JUMPCLOUD_CONNECTOR_MANIFEST, parsedContext)
           : createJumpCloudHealthyStatus(config, startedAt),
+        identityCandidates: mapJumpCloudIdentityInventory({
+          applications: inventory.applications,
+          groups: inventory.groups,
+          users: inventory.users
+        }).candidates,
         signals: createJumpCloudSignals(inventory).map((signal) =>
           createTimestampedSignal(
             JUMPCLOUD_CONNECTOR_MANIFEST,
@@ -30043,14 +30767,33 @@ function createSplunkConnector(): Connector {
     manifest: SPLUNK_CONNECTOR_MANIFEST,
     async collectSignals(context) {
       const parsedContext = ConnectorExecutionContextSchema.parse(context);
-      const results = parsedContext.mockMode
-        ? loadSplunkFixtureResults(parsedContext.config)
-        : await fetchSplunkResults(
-            SplunkApiTokenConfigSchema.parse(parsedContext.config),
-            parsedContext
-          );
 
-      return createSplunkSignals({ results });
+      if (parsedContext.mockMode) {
+        return createSplunkSignals({
+          results: loadSplunkFixtureResults(parsedContext.config)
+        });
+      }
+
+      const auth = await resolveSplunkAuth(parsedContext);
+      if (!auth.ok) {
+        return [];
+      }
+
+      try {
+        const results = await fetchSplunkResults(
+          auth.search,
+          auth.bearerToken,
+          parsedContext
+        );
+
+        return createSplunkSignals({ results });
+      } catch (error) {
+        if (error instanceof SplunkVendorAuthError) {
+          return [];
+        }
+
+        throw error;
+      }
     },
     async healthCheck(context) {
       const parsedContext = ConnectorExecutionContextSchema.parse(context);
@@ -30059,16 +30802,20 @@ function createSplunkConnector(): Connector {
         return createMockHealth(SPLUNK_CONNECTOR_MANIFEST, parsedContext);
       }
 
-      const config = SplunkApiTokenConfigSchema.parse(parsedContext.config);
       const startedAt = Date.now();
+      const auth = await resolveSplunkAuth(parsedContext);
+      if (!auth.ok) {
+        return splunkDegradedHealth(auth);
+      }
+
       let response: Response;
 
       try {
         response = await connectorFetch(
-          splunkApiUrl(config, "/services/server/info?output_mode=json"),
+          splunkApiUrl(auth.search, "/services/server/info?output_mode=json"),
           {
             headers: {
-              authorization: `Bearer ${config.token}`
+              authorization: `Bearer ${auth.bearerToken}`
             }
           }
         );
@@ -30082,46 +30829,85 @@ function createSplunkConnector(): Connector {
         });
       }
 
+      const authFailure = vendorAuthFailureHealthStatus(response.status);
+
       return ConnectorHealthSchema.parse({
         authorizationVerified: response.ok,
         checkedAt: new Date().toISOString(),
         detail: response.ok
-          ? "Splunk API token verified for read-only observer access."
+          ? "Splunk credentials verified for read-only observer access."
           : `Splunk health check returned status ${response.status}.`,
         latencyMs: Date.now() - startedAt,
-        status: response.ok ? "Healthy" : "Unhealthy"
+        status: response.ok ? "Healthy" : (authFailure ?? "Unhealthy")
       });
     },
     async sync(context) {
       const parsedContext = ConnectorExecutionContextSchema.parse(context);
       const startedAt = Date.now();
-      const results = parsedContext.mockMode
-        ? loadSplunkFixtureResults(parsedContext.config)
-        : await fetchSplunkResults(
-            SplunkApiTokenConfigSchema.parse(parsedContext.config),
-            parsedContext
-          );
-      const health = parsedContext.mockMode
-        ? await this.healthCheck(parsedContext)
-        : ConnectorHealthSchema.parse({
+
+      if (parsedContext.mockMode) {
+        const results = loadSplunkFixtureResults(parsedContext.config);
+
+        return ConnectorSyncResultSchema.parse({
+          assets: [],
+          health: await this.healthCheck(parsedContext),
+          signals: createSplunkSignals({ results }).map((signal) =>
+            createTimestampedSignal(
+              SPLUNK_CONNECTOR_MANIFEST,
+              parsedContext,
+              signal
+            )
+          )
+        });
+      }
+
+      const auth = await resolveSplunkAuth(parsedContext);
+      if (!auth.ok) {
+        return ConnectorSyncResultSchema.parse({
+          assets: [],
+          health: splunkDegradedHealth(auth),
+          signals: []
+        });
+      }
+
+      try {
+        const results = await fetchSplunkResults(
+          auth.search,
+          auth.bearerToken,
+          parsedContext
+        );
+
+        return ConnectorSyncResultSchema.parse({
+          assets: [],
+          health: ConnectorHealthSchema.parse({
             authorizationVerified: true,
             checkedAt: new Date().toISOString(),
             detail: `Splunk read-only search returned ${results.length} result row(s).`,
             latencyMs: Date.now() - startedAt,
             status: "Healthy"
-          });
-
-      return ConnectorSyncResultSchema.parse({
-        assets: [],
-        health,
-        signals: createSplunkSignals({ results }).map((signal) =>
-          createTimestampedSignal(
-            SPLUNK_CONNECTOR_MANIFEST,
-            parsedContext,
-            signal
+          }),
+          signals: createSplunkSignals({ results }).map((signal) =>
+            createTimestampedSignal(
+              SPLUNK_CONNECTOR_MANIFEST,
+              parsedContext,
+              signal
+            )
           )
-        )
-      });
+        });
+      } catch (error) {
+        if (error instanceof SplunkVendorAuthError) {
+          return ConnectorSyncResultSchema.parse({
+            assets: [],
+            health: splunkDegradedHealth({
+              detail: error.message,
+              status: error.status
+            }),
+            signals: []
+          });
+        }
+
+        throw error;
+      }
     },
     async observeControl(context) {
       const parsedContext = ConnectorExecutionContextSchema.parse(context);
@@ -66389,6 +67175,16 @@ export function normalizeExternalFindingToFabricSeeds(
 }
 
 export { connectorFetch, ConnectorHttpError } from "./http.js";
+export {
+  connectorOAuthGrantFromConfig,
+  redactConnectorOAuthSecrets,
+  refreshConnectorOAuthGrant,
+  type ConnectorOAuthAccessToken,
+  type ConnectorOAuthGrantConfigInput,
+  type ConnectorOAuthRefreshFailure,
+  type ConnectorOAuthRefreshResult,
+  type ConnectorOAuthRefreshSuccess
+} from "./connector-oauth-grant.js";
 export * from "./scan-importers.js";
 export {
   decryptIntegrationConfig,

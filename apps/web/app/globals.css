@@ -24,6 +24,8 @@
   --border-input: #23386b;
   --signal-blue: #3c96ff;
   --deep-blue: #2563d4;
+  /* White on --deep-blue / brand-fill (rgb(37, 99, 212)) is WCAG 2.2 AA. */
+  --on-brand-fill: #ffffff;
   --clear-teal: #2fe0b0;
   --risk-high: #ff5065;
   --risk-medium: #ffcf4d;
@@ -64,8 +66,9 @@ body.soc-dark-cockpit {
   background-image: none;
 }
 
-/* Off-canvas until keyboard focus so the chip never paints over the rail wordmark.
-   On :focus it re-enters normal flow as a top banner and pushes AppShell down. */
+/* Off-canvas until focus so the 554 fixed overlay never covers the rail wordmark.
+   Keyboard-first: clipped at rest. :focus (scripted or Tab) re-enters as an
+   in-flow banner — not position:fixed + translateY(0) over the brand. */
 .skip-link {
   position: absolute;
   width: 1px;
@@ -85,7 +88,21 @@ body.soc-dark-cockpit {
   z-index: 100;
 }
 
-.skip-link:focus,
+.skip-link:focus {
+  position: static;
+  display: block;
+  width: auto;
+  height: auto;
+  margin: 0;
+  padding: 0.7rem 1rem;
+  overflow: visible;
+  clip: rect(auto, auto, auto, auto);
+  clip-path: none;
+  white-space: normal;
+  border-radius: 5px;
+  text-align: center;
+}
+
 .skip-link:focus-visible {
   position: static;
   display: block;
@@ -170,6 +187,16 @@ main.product-main {
 .periscan-app-shell[data-density="compact"] main.product-main .lg\:px-6 {
   padding-left: 0.875rem;
   padding-right: 0.875rem;
+}
+
+/* Account menu mnemonic letter. Fill stays --deep-blue; ink is AA on that fill.
+   Do not restyle .skip-link here — in-flow :focus already ships. */
+.account-menu-trigger {
+  background-color: var(--deep-blue);
+  color: var(--on-brand-fill);
+}
+.account-menu-glyph {
+  color: var(--on-brand-fill);
 }
 
 .hero {
@@ -1077,6 +1104,36 @@ main.product-main {
   }
 }
 
+/* Loop 14: 390 Findings filter chips wrap or scroll; never overlay the
+   VALIDATED path · rule row (More stays order-last, chips stay static). */
+.findings-filter-chips {
+  position: static;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.findings-filter-chips-rail {
+  flex-wrap: wrap;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+
+@media (max-width: 390px) {
+  .findings-filter-chips,
+  .findings-filter-chips-rail,
+  .findings-filters-body {
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  .findings-filter-chips {
+    position: static;
+  }
+}
+
 .app-breadcrumb ol {
   align-items: center;
   color: var(--subtle);
@@ -1227,7 +1284,13 @@ main.product-main {
   background: var(--surface-void);
 }
 
-.skip-link:focus,
+.skip-link:focus {
+  border: 1px solid #4d9bff;
+  border-radius: 5px;
+  background: var(--signal-blue, #3c96ff);
+  color: #04120d;
+}
+
 .skip-link:focus-visible {
   border: 1px solid #4d9bff;
   border-radius: 5px;

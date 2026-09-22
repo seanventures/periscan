@@ -41,6 +41,78 @@ export function statusRank(status: string): number {
   return STATUS_RANK[status] ?? 5;
 }
 
+const GENERIC_REMEDIATION_TITLE =
+  /^(Own and remediate this validated finding|Review the validated evidence)/i;
+
+function shortFingerprint(fingerprint: string, max = 12): string {
+  return fingerprint.length > max ? fingerprint.slice(0, max) : fingerprint;
+}
+
+function findingFileName(location: string): string {
+  const trimmed = location.trim();
+  const parts = trimmed.split(/[\\/]/);
+  return parts[parts.length - 1] || trimmed;
+}
+
+function findingLocatorLabel(finding?: {
+  location?: string | null;
+  ruleId?: string | null;
+} | null): string | null {
+  const location = finding?.location?.trim() || null;
+  const ruleId = finding?.ruleId?.trim() || null;
+  if (!location && !ruleId) {
+    return null;
+  }
+  const file = location ? findingFileName(location) : null;
+  const label = [file, ruleId].filter(Boolean).join(" · ");
+  return label || null;
+}
+
+function locatorFromTechnicalSteps(
+  technicalSteps: readonly string[]
+): string | null {
+  for (const step of technicalSteps) {
+    const file = step.match(
+      /(?:^|[\s/`'(])((?:[A-Za-z0-9._-]+\/)*[A-Za-z0-9._-]+\.(?:js|ts|tsx|jsx|env|py|json|yml|yaml|tf|go))\b/
+    );
+    const rule = step.match(/\(([A-Za-z0-9._-]+)\)/);
+    if (file?.[1]) {
+      return rule?.[1] ? `${file[1]} · ${rule[1]}` : file[1];
+    }
+  }
+  return null;
+}
+
+/** Open-row / detail H1: CLI-shaped path · rule when the stored action is generic. */
+export function remediationRowTitle(
+  remediation: {
+    recommendedAction: string;
+    relatedFindingFingerprint?: string | null;
+    technicalSteps: readonly string[];
+  },
+  finding?: {
+    location?: string | null;
+    ruleId?: string | null;
+  } | null
+): string {
+  const action = remediation.recommendedAction.trim();
+  if (!GENERIC_REMEDIATION_TITLE.test(action)) {
+    return action;
+  }
+  const fromFinding = findingLocatorLabel(finding);
+  if (fromFinding) {
+    return fromFinding;
+  }
+  const fromSteps = locatorFromTechnicalSteps(remediation.technicalSteps);
+  if (fromSteps) {
+    return fromSteps;
+  }
+  if (remediation.relatedFindingFingerprint) {
+    return `${action.replace(/[.\s]+$/u, "")} · fp·${shortFingerprint(remediation.relatedFindingFingerprint)}`;
+  }
+  return action;
+}
+
 export function relTime(iso?: string | null): string {
   if (!iso) return "";
   const then = new Date(iso).getTime();

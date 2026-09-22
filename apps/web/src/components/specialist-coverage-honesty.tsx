@@ -36,7 +36,7 @@ function packToScaffoldRow(pack: SafetyEquivalentPack): SpecialistScaffoldRow {
     ? pack.elevateCriteria
     : [
         pack.scorecardId === 21
-          ? "Forever refuse ransomware impact."
+          ? "High-danger extra acknowledgement for T1486. Not Community default start."
           : "Forever refuse peer capability.",
         pack.neverElevateReason ?? pack.elevateCriteria
       ].join(" ");
@@ -85,7 +85,7 @@ export function SpecialistCoverageHonesty({
         <p className="text-sm text-muted">
           Scorecard rows 2, 16, 21, 22, 26, and 28 stay{" "}
           <strong className="font-semibold text-ink">Scaffold/gated</strong>.
-          They are not Available, not Validated, and not sold as full BAS peers.
+          They are not Available, not Validated, and awaiting scenario qualification.
           Partner-gated rows{" "}
           <strong className="font-semibold text-ink">#2 dark web</strong>,{" "}
           <strong className="font-semibold text-ink">#26 OT/ICS</strong>, and{" "}
@@ -122,10 +122,10 @@ export function SpecialistCoverageHonesty({
           Safety scaffold core (Slice D):{" "}
           <strong className="font-semibold text-ink">#16 plan_only</strong> APT
           planner (never live agentless APT),{" "}
-          <strong className="font-semibold text-ink">#21 forever_refuse</strong>{" "}
-          ransomware impact (T1486),{" "}
+          <strong className="font-semibold text-ink">#21 danger_section</strong>{" "}
+          ransomware impact (T1486 High-danger extra-ack),{" "}
           <strong className="font-semibold text-ink">#22 exposure_only</strong>{" "}
-          identity (no live spray/harvest). Inventory fields:{" "}
+          identity (unscoped spray/harvest stay High-danger). Inventory fields:{" "}
           <code className="font-mono text-[11px]">
             scaffoldCoreScorecardIds: [16, 21, 22]
           </code>
@@ -214,8 +214,8 @@ export function SpecialistCoverageHonesty({
             <code className="font-mono text-[11px]">
               GET /api/v1/safety-equivalent-packs
             </code>
-            . Do not enable SharpHound, Caldera live, Atomic live inject, or
-            other legally sensitive capabilities from this list.
+            . Execution readiness is tracked per adapter and scenario. This inventory
+            does not grant runtime authorization.
           </p>
         ) : null}
       </div>

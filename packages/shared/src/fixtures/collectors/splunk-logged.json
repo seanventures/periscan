@@ -1,0 +1,15 @@
+{
+  "preview": false,
+  "init_offset": 0,
+  "results": [
+    {
+      "_time": "2026-09-17T14:01:00.000Z",
+      "src_ip": "10.0.0.21",
+      "host": "lab-siem-01",
+      "event_type": "log",
+      "sourcetype": "syslog",
+      "severity": "informational",
+      "_raw": "info process observed marker=periscan-r-aaaa-s-bbbb-nonce1"
+    }
+  ]
+}

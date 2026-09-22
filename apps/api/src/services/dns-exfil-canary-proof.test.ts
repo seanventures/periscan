@@ -5,7 +5,8 @@ import { executeModuleById } from "@periscan/modules";
 import {
   DnsExfilCanaryProofInputSchema,
   DnsExfilCanaryProofResultSchema,
-  buildSafetyEquivalentPacksResponse
+  buildSafetyEquivalentPacksResponse,
+  classifyCanaryMarker
 } from "@periscan/shared";
 
 // Mirror apps/api product-path honesty without bootstrapping Prisma.
@@ -140,7 +141,7 @@ describe("Phase C DNS exfil canary proof (API contracts + module path)", () => {
     expect(response.scaffoldCoreScorecardIds).toEqual([16, 21, 22]);
     const ransomware = response.packs.find((p) => p.scorecardId === 21);
     expect(ransomware?.canElevateSubstituteToPartial).toBe(false);
-    expect(ransomware?.claimClass).toBe("forever_refuse");
+    expect(ransomware?.claimClass).toBe("danger_section");
     const dns = response.packs.find((p) => p.scorecardId === 19);
     expect(dns?.claimClass).toBe("benign_marker_only");
     expect(dns?.safeModules).toContain("periscan.dns_exfil_canary");
@@ -162,5 +163,30 @@ describe("Phase C DNS exfil canary proof (API contracts + module path)", () => {
     ]) {
       expect(() => MarkerOnly.parse({ markerId: bad })).toThrow();
     }
+  });
+
+  it("rejects bulk and customer-data labels while keeping allowlisted markers", () => {
+    expect(classifyCanaryMarker("periscan-dns-exfil-1").ok).toBe(true);
+    expect(classifyCanaryMarker("periscan-email-delivery-1").ok).toBe(true);
+
+    for (const bad of [
+      "periscan-bulk-tunnel",
+      "periscan-customer-data",
+      "periscan-customer-ssn-dump",
+      "exfil-payload.bin"
+    ]) {
+      expect(classifyCanaryMarker(bad).ok).toBe(false);
+    }
+
+    expect(
+      DnsExfilCanaryProofResultSchema.pick({
+        realDataExfiltrated: true
+      }).parse({ realDataExfiltrated: false }).realDataExfiltrated
+    ).toBe(false);
+    expect(() =>
+      DnsExfilCanaryProofResultSchema.pick({
+        realDataExfiltrated: true
+      }).parse({ realDataExfiltrated: true })
+    ).toThrow();
   });
 });

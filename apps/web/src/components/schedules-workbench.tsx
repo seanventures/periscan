@@ -6,10 +6,17 @@ import { useEffect, useMemo, useState } from "react";
 import type {
   MissionSchedule,
   ScheduleBlackoutWindow,
+  ScheduleFrequency,
   ScheduleTiming,
   Scope
 } from "@periscan/shared";
 
+import {
+  API_SCHEDULE_FREQUENCIES,
+  HOURLY_CADENCE_UNAVAILABLE_NOTE,
+  honestApiEmpty,
+  scheduleCadencesForUi
+} from "../lib/continuous-external-operator";
 import { browserPeriscanApiClient as api } from "../lib/periscan-api-client";
 import {
   estimateNextFireTimes,
@@ -32,7 +39,8 @@ import {
 } from "../ui";
 import { ContinuousHealthStrip } from "./continuous-health-strip";
 
-const FREQUENCIES = ["Daily", "Weekly", "Monthly"] as const;
+const SCHEDULE_CADENCES = scheduleCadencesForUi(API_SCHEDULE_FREQUENCIES);
+const FREQUENCIES = SCHEDULE_CADENCES.frequencies as ScheduleFrequency[];
 const MISSION_TYPES = [
   "ValidationSnapshot",
   "ContinuousValidation",
@@ -106,7 +114,9 @@ export function SchedulesWorkbench() {
   const schedules = useApiResource(() => api.listSchedules(), []);
   const scopes = useApiResource(() => api.listScopes(), []);
 
-  const [frequency, setFrequency] = useState<(typeof FREQUENCIES)[number]>("Weekly");
+  const [frequency, setFrequency] = useState<ScheduleFrequency>(
+    FREQUENCIES.includes("Weekly") ? "Weekly" : (FREQUENCIES[0] ?? "Weekly")
+  );
   const [missionType, setMissionType] =
     useState<(typeof MISSION_TYPES)[number]>("ValidationSnapshot");
   const [scopeIds, setScopeIds] = useState<Set<string>>(new Set());
@@ -234,7 +244,7 @@ export function SchedulesWorkbench() {
       <PageHeader
         eyebrow="Operate"
         title="Schedules"
-        description="Keep validation continuous on verified scope. ContinuousValidation queues allowlisted safe external/recon modules and diffs the prior snapshot for path/risk change — not an autonomous living map. Imported scan fabric stays Imported ≠ Measured."
+        description="Continuous validation is a policy-approved cadence (Hourly, Daily, Weekly, Monthly, or drift-triggered Continuous) on verified scope. Quota and maintenance windows apply; denied fires queue nothing. Not always-on BAS and not an autonomous living map. Imported scan fabric stays Imported ≠ Measured."
         meta={
           <button
             type="button"
@@ -254,11 +264,27 @@ export function SchedulesWorkbench() {
       {/* ICP-P1-7: continuous health on schedules header + /continuous deep-link */}
       <ContinuousHealthStrip />
 
+      {SCHEDULE_CADENCES.hourlyHonesty ? (
+        <p
+          className="text-xs leading-5 text-muted"
+          data-testid="schedules-hourly-honesty"
+        >
+          {HOURLY_CADENCE_UNAVAILABLE_NOTE}
+        </p>
+      ) : null}
+
       {/* ICP-P2-1: list-first program health */}
       <Panel data-testid="schedules-list">
         <PanelHeader title={`Schedules (${items.length})`} />
         {schedules.loading ? (
           <LoadingSkeleton rows={4} />
+        ) : honestApiEmpty(schedules.errorStatus) ? (
+          <div className="p-4" data-testid="schedules-api-empty">
+            <EmptyState
+              title="No schedules from the API"
+              description="Schedules are not available from the API."
+            />
+          </div>
         ) : schedules.error ? (
           <ErrorState message={schedules.error} onRetry={schedules.refetch} />
         ) : items.length === 0 ? (
@@ -345,8 +371,9 @@ export function SchedulesWorkbench() {
               <label className="flex flex-col gap-1">
                 <SmallLabel>Frequency</SmallLabel>
                 <select
+                  aria-label="Schedule frequency"
                   value={frequency}
-                  onChange={(e) => setFrequency(e.target.value as typeof frequency)}
+                  onChange={(e) => setFrequency(e.target.value as ScheduleFrequency)}
                   className="rounded-control border border-line bg-surface px-3 py-1.5 text-sm text-ink outline-none focus:border-line-strong"
                 >
                   {FREQUENCIES.map((f) => (

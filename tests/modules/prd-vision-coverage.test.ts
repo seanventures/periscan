@@ -71,10 +71,8 @@ describe("PRD section 1 Product Vision coverage", () => {
     expect(section).toContain(
       "continuously validating exposure, controls, attack paths, AI applications, and remediation outcomes"
     );
-    expect(section).toContain("not a scanner dashboard");
-    expect(section).toContain("not a traditional pentest");
-    expect(section).toContain("not a generic BAS tool");
-    expect(section).toContain("evidence-backed validation system");
+    expect(section).toContain("The product combines BAS, adversary emulation, exposure validation and fix verification");
+    expect(section).toContain("evidence-backed system");
     for (const thirdPartyGate of [
       "reviewed catalog metadata",
       "module/capability implementation",

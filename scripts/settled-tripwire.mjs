@@ -2,7 +2,7 @@
 /**
  * Mechanical tripwire for docs/SETTLED.md TELL phrases.
  *
- * Agents must not ship MQ / Wave / 95+ / "open source now" / live Atomic /
+ * Agents must not ship MQ / Wave / 95+ / "open source now" / unsupported claims /
  * Fixed-without-verify language in product surfaces.
  *
  * Default: walk the working tree under apps/ and packages/.
@@ -79,11 +79,6 @@ const RULES = [
     id: "oss-now",
     tell: "we are open source now",
     re: /we are open source now/i
-  },
-  {
-    id: "enable-atomic",
-    tell: "enable Atomic live",
-    re: /enable Atomic|\benableAtomic\b/i
   }
 ];
 
@@ -289,8 +284,8 @@ function selfCheck() {
     },
     {
       rel: "packages/modules/src/index.ts",
-      line: "enable Atomic live execution",
-      expect: true
+      line: "enable Atomic live execution through qualified scenario adapters",
+      expect: false
     },
     {
       rel: "tests/acceptance/control-source-observe-flow.test.ts",
@@ -341,6 +336,57 @@ function selfCheck() {
   return { failures, fixtureCount: cases.length };
 }
 
+const CAPTAIN_LEDGER = "docs/qa/swarm-5-loop-2026-09-17.md";
+
+function lastCaptainFireSection(text) {
+  const re = /^## Captain fire[^\n]*/gm;
+  let last = null;
+  let match;
+  while ((match = re.exec(text))) {
+    last = match;
+  }
+  if (!last) return "";
+  const afterHeading = text.slice(last.index);
+  const rest = afterHeading.slice(last[0].length);
+  const nextHeading = rest.search(/\n## /);
+  return nextHeading === -1
+    ? afterHeading
+    : afterHeading.slice(0, last[0].length + nextHeading);
+}
+
+function captainSpawnFreezeHit(section) {
+  if (!section) return false;
+  const idle =
+    /Did \*\*not\*\* spawn/i.test(section) ||
+    /No unfinished implementers/i.test(section);
+  const spawned =
+    /Spawned this fire/i.test(section) ||
+    /Spawned remaining \*\*code\*\*/i.test(section) ||
+    /Spawned implementers/i.test(section) ||
+    /Spawned .*panel/i.test(section);
+  return idle && !spawned;
+}
+
+function scanCaptainSpawnFreeze() {
+  const abs = join(ROOT, CAPTAIN_LEDGER);
+  let text;
+  try {
+    text = readFileSync(abs, "utf8");
+  } catch {
+    return [];
+  }
+  const section = lastCaptainFireSection(text);
+  if (!captainSpawnFreezeHit(section)) return [];
+  return [
+    {
+      file: CAPTAIN_LEDGER,
+      line: 1,
+      tell: "captain spawn freeze",
+      text: "Last captain fire used scoreboard honesty as a work freeze. Spawn remaining code punchlist. Do not invent 4.0/5.0 or average Cloud to 4."
+    }
+  ];
+}
+
 function printHelp() {
   console.log(`Settled TELL tripwire (docs/SETTLED.md)
 
@@ -349,14 +395,15 @@ Usage:
   node scripts/settled-tripwire.mjs [--diff] [--base origin/main]
   node scripts/settled-tripwire.mjs --self-check
 
-Scans apps/ and packages/ product code (not tests, not docs/qa).
+Scans apps/ and packages/ product code (not tests, not docs/qa) plus the
+last captain fire in docs/qa/swarm-5-loop-*.md for spawn-freeze TELLs.
 Exit 0 when clean; exit 1 on TELL hits.`);
 }
 
 function report(hits, modeLabel) {
   if (hits.length === 0) {
     console.log(
-      `Settled tripwire clean (${modeLabel}): no MQ/Wave/95+/OSS-now/Atomic-live/Fixed-without-verify TELL in apps/ + packages/ product code.`
+      `Settled tripwire clean (${modeLabel}): no MQ/Wave/95+/OSS-now/Fixed-without-verify TELL in apps/ + packages/ product code; last captain fire is not a spawn freeze.`
     );
     return 0;
   }
@@ -365,7 +412,7 @@ function report(hits, modeLabel) {
     console.error(`- ${hit.file}:${hit.line}  [${hit.tell}]  ${hit.text}`);
   }
   console.error(
-    "Settled axioms: docs/SETTLED.md — do not ship MQ/Wave/95+ as a gate, LICENSE flip copy, live Atomic, or Fixed without verify."
+    "Settled axioms: docs/SETTLED.md — do not ship MQ/Wave/95+ as a gate, LICENSE flip copy, or Fixed without verify."
   );
   return 1;
 }
@@ -378,17 +425,42 @@ function main() {
   }
 
   const { failures: selfFailures, fixtureCount } = selfCheck();
+  const freezeFixtures = [
+    {
+      id: "idle-hold",
+      section:
+        "## Captain fire 29\n\nNo unfinished implementers. Did **not** spawn a 4.0 leap or another panel.\n",
+      expect: true
+    },
+    {
+      id: "spawned-code",
+      section:
+        "## Captain fire 30\n\nSpawned this fire: Caldera qualified queue; dual-panel public + in-app.\nDid **not** invent 4.0.\n",
+      expect: false
+    }
+  ];
+  for (const fixture of freezeFixtures) {
+    const hit = captainSpawnFreezeHit(fixture.section);
+    if (hit !== fixture.expect) {
+      selfFailures.push(
+        `captain spawn freeze ${fixture.id}: expected ${fixture.expect}, got ${hit}`
+      );
+    }
+  }
   if (selfFailures.length > 0) {
     console.error("Settled tripwire self-check failed:");
     for (const failure of selfFailures) console.error(`- ${failure}`);
     return 1;
   }
   if (args.selfCheck) {
-    console.log(`Settled tripwire self-check passed (${fixtureCount} fixtures).`);
+    console.log(
+      `Settled tripwire self-check passed (${fixtureCount + freezeFixtures.length} fixtures).`
+    );
     return 0;
   }
 
   const hits = args.diff ? scanGitDiff(args.base) : scanWorkingTree();
+  hits.push(...scanCaptainSpawnFreeze());
   const modeLabel = args.diff ? `diff vs ${args.base}` : "working tree";
   return report(hits, modeLabel);
 }

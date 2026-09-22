@@ -8,7 +8,7 @@ Three paths. Pick **one**. Mixing them is how you lie to the room.
 | **Lab hops** | `pnpm lab:demo-up` | `*.lab.range.test` | Hop receipts + mocksiem. **Not** Community pack. |
 | **Community** | `POST /api/v1/community/validation-runs` | A **verified** authorized scope | Permissive OSS pack + evidence. **Not** a LICENSE flip. |
 
-Floors: root `LICENSE` stays proprietary. Not full BAS. No live Atomic / Caldera / SharpHound / sqlmap / Metasploit. **Fixed** only after a verification event.
+Root `LICENSE` is Apache-2.0. Demonstrate only qualified adapters and measured BAS/AEV coverage. **Fixed** only after a verification event.
 
 Not a case study. No logos, testimonials, or “customer reference.” Companion SE rules: [`docs/competitive/DEMO_AND_SE_RULES.md`](../docs/competitive/DEMO_AND_SE_RULES.md).
 

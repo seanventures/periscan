@@ -523,11 +523,19 @@ describe("renderValidationSnapshotReportHtml", () => {
       packType: "SOC2Support"
     });
 
-    expect(html).toContain("Compliance Support");
-    expect(html).toContain("customer evidence support");
+    expect(html).toContain("Compliance Control Trace");
+    expect(html).toContain(
+      "Customer SOC 2 support evidence (partial Trust Services Criteria — not vendor attestation)"
+    );
+    expect(html).toContain("SOC 2 CC6.1");
+    expect(html).toContain("SOC 2 CC5.2");
+    expect(html).toContain("SOC 2 CC8.1");
+    expect(html).toMatch(/customer evidence support/i);
     expect(html).toContain("does not assert");
     expect(html).toMatch(/not a certification/i);
     expect(html).toMatch(/not an audit opinion/i);
+    expect(html).toMatch(/not a vendor SOC 2 Type II/i);
+    expect(html).not.toMatch(/Type II certified/i);
     expect(html).toContain("Evidence Appendix");
   });
 
@@ -821,6 +829,8 @@ describe("renderValidationSnapshotReportHtml", () => {
     expect(html).toContain("CTEM Program View");
     expect(html).toContain("Scope");
     expect(html).toContain("Validate");
+    expect(html).toContain("program summary of authorized proof");
+    expect(html).toContain("not a certification");
   });
 
   it("preserves CTEM summary provenance for Snapshot and live baselines", () => {
@@ -845,6 +855,42 @@ describe("renderValidationSnapshotReportHtml", () => {
     });
     expect(html).toContain(
       "Live tenant-state baseline; no Snapshot report has been generated yet"
+    );
+  });
+
+  it("includes non-snap scheduled packs in Validate and Verify evidence", () => {
+    const snapshot = createSnapshotFixture();
+    const snapshotOnly = buildCTEMProgramSummary(snapshot);
+    const withContinuous = buildCTEMProgramSummary(snapshot, {
+      nonSnapValidateEvidence: 4,
+      nonSnapVerifyEvidence: 2
+    });
+    const validate = (program: typeof snapshotOnly) =>
+      program.stages.find((stage) => stage.stage === "Validate");
+    const verify = (program: typeof snapshotOnly) =>
+      program.stages.find((stage) => stage.stage === "Verify");
+
+    expect(snapshotOnly.nonSnapValidateEvidence).toBeUndefined();
+    expect(snapshotOnly.nonSnapVerifyEvidence).toBeUndefined();
+    expect(validate(snapshotOnly)?.evidenceCount).toBe(
+      snapshot.metrics.controlObservationCount + snapshot.metrics.aiRiskCount
+    );
+    expect(verify(snapshotOnly)?.evidenceCount).toBe(
+      snapshot.verificationPlan.length
+    );
+
+    expect(withContinuous).toMatchObject({
+      nonSnapValidateEvidence: 4,
+      nonSnapVerifyEvidence: 2,
+      source: "Snapshot"
+    });
+    expect(validate(withContinuous)?.evidenceCount).toBe(
+      snapshot.metrics.controlObservationCount +
+        snapshot.metrics.aiRiskCount +
+        4
+    );
+    expect(verify(withContinuous)?.evidenceCount).toBe(
+      snapshot.verificationPlan.length + 2
     );
   });
 

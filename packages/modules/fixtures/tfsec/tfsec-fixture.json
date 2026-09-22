@@ -1,0 +1,48 @@
+{
+  "failed_count": 99,
+  "results": [
+    {
+      "rule_id": "AVD-AWS-0089",
+      "long_id": "aws-s3-enable-bucket-logging",
+      "rule_description": "S3 bucket does not have logging enabled.",
+      "description": "Bucket logging disabled; secret=AKIAIOSFODNN7EXAMPLE",
+      "severity": "MEDIUM",
+      "warning": false,
+      "status": 0,
+      "resource": "aws_s3_bucket.fixture",
+      "location": {
+        "filename": "s3.tf",
+        "start_line": 1,
+        "end_line": 8
+      }
+    },
+    {
+      "rule_id": "AVD-AWS-0088",
+      "long_id": "aws-s3-enable-bucket-encryption",
+      "rule_description": "Unencrypted S3 bucket.",
+      "description": "-----BEGIN RSA PRIVATE KEY-----\nfixture\n-----END RSA PRIVATE KEY-----",
+      "severity": "HIGH",
+      "warning": false,
+      "status": 0,
+      "resource": "aws_s3_bucket.fixture",
+      "location": {
+        "filename": "s3.tf",
+        "start_line": 1,
+        "end_line": 8
+      }
+    },
+    {
+      "rule_id": "AVD-AWS-0090",
+      "long_id": "aws-s3-enable-versioning",
+      "description": "hashed_secret=fixture-passed",
+      "severity": "LOW",
+      "status": 1,
+      "resource": "aws_s3_bucket.ok",
+      "location": {
+        "filename": "s3.tf",
+        "start_line": 10,
+        "end_line": 14
+      }
+    }
+  ]
+}

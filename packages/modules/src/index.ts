@@ -27,6 +27,15 @@ import { parseAllDocuments } from "yaml";
 
 import { buildCommunityPopularOssModules } from "./community-popular-oss.js";
 import { buildCopyleftOptInModules, runCopyleftTool } from "./copyleft-opt-in.js";
+import {
+  BLOODHOUND_GRAPH_IMPORT_LICENSE,
+  SHARPHOUND_COLLECTOR_LICENSE,
+  applyBloodHoundImportHonesty,
+  compileSharpHoundCollectionProfile,
+  evaluateSharpHoundLiveAdCollection,
+  redactBloodHoundGraph
+} from "./sharphound-collection.js";
+import { compileAllowlistedMetasploitCheck } from "./metasploit-check-adapter.js";
 
 import {
   ExternalValidationTemplateProfileSchema,
@@ -63,10 +72,18 @@ import {
   type ValidationState,
   SAFE_STAGE_PLAYBOOKS,
   buildSafeStageHandoffSummary,
+  evaluateIdentityAbuseStart,
+  evaluateIdentityCredSprayStart,
+  IDENTITY_CRED_SPRAY_INTERNET_FORBIDDEN_CODE,
+  IDENTITY_CRED_SPRAY_MODULE_ID,
+  isIdentityAbuseModuleId,
+  isInternetSprayHost,
   listExecutableSafeStages,
   targetHasUpstreamLicense,
   COPYLEFT_OPT_IN_SUITE,
-  isCopyleftOptInModuleId
+  isCopyleftEngineLabModuleId,
+  isCopyleftOptInModuleId,
+  type SharpHoundCollectionProfile
 } from "@periscan/shared";
 
 import {
@@ -581,13 +598,33 @@ const ALWAYS_OFFENSIVE_MODULE_IDS = new Set<string>([
  * gate that "unlocks" live spray/kerberos/MSF/Caldera/SQLi while execute stays
  * dead-code theater).
  */
-const LIVE_OFFENSIVE_PERMANENTLY_DISABLED_MODULE_IDS = new Set<string>([
+const UNQUALIFIED_LIVE_MODULE_IDS = new Set<string>([
   "caldera.advanced_adversarial",
   "web.sqli_probe",
   "identity.cred_spray",
   "exploit.metasploit_check",
   "identity.kerberos_userenum"
 ]);
+
+/**
+ * PERISCAN-460: live-offensive start is allowed only when ALL of:
+ * 1. PERISCAN_LIVE_OFFENSIVE === "1"
+ * 2. target.sowId is a non-empty string (signed legal SOW)
+ * 3. target.dryRun === false
+ * Default env unset → deny. This does not queue Caldera, Metasploit, or
+ * SharpHound, and does not execute Atomic techniques against a host.
+ */
+export function isLiveOffensiveTripleGateOpen(
+  target: Record<string, unknown>
+): boolean {
+  const sowId = target.sowId;
+  return (
+    process.env.PERISCAN_LIVE_OFFENSIVE === "1" &&
+    typeof sowId === "string" &&
+    sowId.trim().length > 0 &&
+    target.dryRun === false
+  );
+}
 
 // An offensive/high-impact action is permitted ONLY through the SaaS
 // authorization rails for non-executing plan/import workflows: a verified
@@ -625,12 +662,12 @@ function requireGovernedOffensiveAuthorization(
   // Caldera / SQLi live execution in this release.
   if (
     target.dryRun === false &&
-    LIVE_OFFENSIVE_PERMANENTLY_DISABLED_MODULE_IDS.has(moduleId)
+    UNQUALIFIED_LIVE_MODULE_IDS.has(moduleId)
   ) {
     return ModuleStartConstraintResultSchema.parse({
       allowed: false,
       code: `${label}_live_permanently_disabled`,
-      rationale: `${moduleId} live (non-dry-run) execution is permanently disabled in the current Periscan release (plan/fixture only). The destructive-validation tier does not unlock live credential spray, Kerberos enumeration, Metasploit, Caldera, or SQLi probes.`
+      rationale: `${moduleId} live (non-dry-run) execution is unavailable in this release until a qualified adapter ships (plan/fixture only). The destructive-validation tier does not unlock live credential spray, Kerberos enumeration, Metasploit, Caldera, or SQLi probes.`
     });
   }
 
@@ -664,13 +701,16 @@ export function evaluateModuleStartConstraints(
 
     const sharphoundCollector =
       manifest.moduleId === "bloodhound.identity_pathing" &&
-      (target.collector === "sharphound" ||
-        target.useSharpHound === true ||
-        target.collectorExecution === true);
-    // P05-3: Atomic live is always denied at start — never lifted by
-    // authorizedDestructive / authorizedOffensive. Execute path hard-disables too.
+      !evaluateSharpHoundLiveAdCollection(target).allowed;
+    // Atomic module preflight stays denied unless the triple-gate
+    // is fully open. authorizedDestructive / authorizedOffensive never lift it.
+    // Execute path still does not run Atomic techniques against a host.
     const atomicLive =
       manifest.moduleId === "atomic.control_validation_safe" &&
+      target.dryRun === false &&
+      !isLiveOffensiveTripleGateOpen(target);
+    const calderaLive =
+      manifest.moduleId === "caldera.advanced_adversarial" &&
       target.dryRun === false;
     const liveContentDiscovery =
       manifest.moduleId === "web.content_discovery" &&
@@ -696,7 +736,16 @@ export function evaluateModuleStartConstraints(
         allowed: false,
         code: "atomic_live_disabled",
         rationale:
-          "atomic.control_validation_safe supports dry-run content import only; Atomic live execution is disabled in the current Periscan release."
+          "atomic.control_validation_safe currently imports content. Its module preflight requires PERISCAN_LIVE_OFFENSIVE=1 and a non-empty target.sowId; customer execution additionally requires a qualified adapter and scope-bound policy approval."
+      });
+    }
+
+    if (calderaLive) {
+      return ModuleStartConstraintResultSchema.parse({
+        allowed: false,
+        code: "caldera_live_disabled",
+        rationale:
+          "caldera.advanced_adversarial live execution is disabled in the current Periscan release (plan/fixture import only). The live-offensive triple-gate does not queue live Caldera."
       });
     }
 
@@ -761,13 +810,64 @@ export function evaluateModuleStartConstraints(
       }
     }
 
-    if (sharphoundCollector) {
+    if (
+      isCopyleftEngineLabModuleId(manifest.moduleId) &&
+      target.fixtureMode !== true &&
+      !targetHasUpstreamLicense(target, "infection-monkey")
+    ) {
       return ModuleStartConstraintResultSchema.parse({
         allowed: false,
-        code: "sharphound_collector_legal_review_blocked",
+        code: "upstream_license_required",
         rationale:
-          "BloodHound-compatible graph import is supported, but SharpHound collection remains blocked pending legal and security review."
+          "infection-monkey.discover uses infection-monkey (GPL-3.0). Accept the upstream license in Engine Lab before a discover plan can be recorded."
       });
+    }
+
+    if (
+      manifest.moduleId === "infection-monkey.discover" &&
+      target.dryRun === false
+    ) {
+      return ModuleStartConstraintResultSchema.parse({
+        allowed: false,
+        code: "infection_monkey_discover_live_permanently_disabled",
+        rationale:
+          "infection-monkey.discover live crawl is unavailable. Record a discover plan of verified-scope hosts as promote-to-scope candidates only. Propagation and exploiters stay default-deny."
+      });
+    }
+
+    if (sharphoundCollector) {
+      return ModuleStartConstraintResultSchema.parse(
+        evaluateSharpHoundLiveAdCollection(target)
+      );
+    }
+
+    if (manifest.moduleId === IDENTITY_CRED_SPRAY_MODULE_ID) {
+      const spray = evaluateIdentityCredSprayStart(target);
+      if (!spray.allowed) {
+        return ModuleStartConstraintResultSchema.parse({
+          allowed: false,
+          code: spray.code,
+          rationale: spray.rationale
+        });
+      }
+      continue;
+    }
+
+    if (isIdentityAbuseModuleId(manifest.moduleId)) {
+      const abuse = evaluateIdentityAbuseStart({
+        candidates: target.identityCandidates,
+        moduleId: manifest.moduleId,
+        promotedExternalIds: target.promotedIdentityExternalIds,
+        sprayMode: target.sprayMode,
+        unscoped: target.unscoped
+      });
+      if (!abuse.allowed) {
+        return ModuleStartConstraintResultSchema.parse({
+          allowed: false,
+          code: abuse.code,
+          rationale: abuse.rationale
+        });
+      }
     }
 
     const offensive = ALWAYS_OFFENSIVE_MODULE_IDS.has(manifest.moduleId);
@@ -5008,9 +5108,14 @@ const BloodHoundGraphSchema = z.object({
   nodes: z.array(BloodHoundNodeSchema).default([])
 });
 const BloodHoundTargetSchema = z.object({
+  collectionProfile: z.unknown().optional(),
+  collector: z.string().optional(),
+  collectorExecution: z.boolean().optional(),
   fixtureGraphPath: z.string().min(1).optional(),
-  graphData: BloodHoundGraphSchema.optional(),
-  graphName: z.string().min(1).optional()
+  graphData: z.unknown().optional(),
+  graphName: z.string().min(1).optional(),
+  liveAdCollection: z.boolean().optional(),
+  useSharpHound: z.boolean().optional()
 });
 const DEFAULT_BLOODHOUND_GRAPH_FIXTURE_PATH = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -5020,15 +5125,103 @@ const DEFAULT_BLOODHOUND_GRAPH_FIXTURE_PATH = path.resolve(
 async function loadBloodHoundGraph(
   target: z.infer<typeof BloodHoundTargetSchema>
 ) {
-  if (target.graphData) {
-    return BloodHoundGraphSchema.parse(target.graphData);
-  }
-
-  return BloodHoundGraphSchema.parse(
-    await readJsonFile(
+  const raw =
+    target.graphData ??
+    (await readJsonFile(
       target.fixtureGraphPath ?? DEFAULT_BLOODHOUND_GRAPH_FIXTURE_PATH
+    ));
+  return BloodHoundGraphSchema.parse(redactBloodHoundGraph(raw));
+}
+
+function buildBloodHoundImportOutput(
+  context: ModuleExecutionContext,
+  target: z.infer<typeof BloodHoundTargetSchema>,
+  graph: z.infer<typeof BloodHoundGraphSchema>,
+  collectionProfile: SharpHoundCollectionProfile | null
+): ModuleOutput {
+  const honesty = applyBloodHoundImportHonesty({ graph });
+  const privilegedNodes = graph.nodes.filter(
+    (node) =>
+      node.privilege?.toLowerCase().includes("admin") ||
+      node.privilege?.toLowerCase().includes("privileged") ||
+      node.criticality?.toLowerCase() === "high"
+  );
+  const pathEdges = graph.edges.filter((edge) =>
+    ["member", "admin", "can"].some((term) =>
+      edge.relationship.toLowerCase().includes(term)
     )
   );
+
+  return {
+    outcome:
+      pathEdges.length > 0
+        ? "identity_path_observed"
+        : "no_identity_path_observed",
+    summary: `BloodHound-compatible graph ${target.graphName ?? "import"} contains ${graph.nodes.length} nodes, ${graph.edges.length} edges, and ${pathEdges.length} privileged path edge${pathEdges.length === 1 ? "" : "s"} (import only — not measured path proof).`,
+    validationState: "Inconclusive",
+    signals: [
+      createSignal("bloodhound.identity_pathing", context, {
+        confidence: pathEdges.length > 0 ? 0.82 : 0.56,
+        signalCategory: "Identity",
+        signalSubcategory:
+          pathEdges.length > 0
+            ? "PrivilegedPathObserved"
+            : "IdentityGraphImported",
+        sourceType: "graph_import"
+      }),
+      createSignal("bloodhound.identity_pathing", context, {
+        confidence: pathEdges.length > 0 ? 0.8 : 0.5,
+        signalCategory: "Exposure",
+        signalSubcategory: "IdentityAdminGap",
+        sourceType: "pathing"
+      })
+    ],
+    evidence: [
+      {
+        artifactType: "NormalizedEvidence",
+        attributes: fixtureOrSimulationEvidenceAttributes({
+          collectionIsNotExploitation: true,
+          collectionProfile,
+          edgeCount: graph.edges.length,
+          graphImportLicense: BLOODHOUND_GRAPH_IMPORT_LICENSE,
+          graphName: target.graphName ?? "bloodhound-import",
+          importedEdgesAreHypotheses: honesty.importedGraphIsNotProof,
+          licenseDisposition: SHARPHOUND_COLLECTOR_LICENSE,
+          liveAdCollection: false,
+          nodeCount: graph.nodes.length,
+          pathEdges: pathEdges.map((edge) => ({
+            evidenceBasis: "Heuristic",
+            hypothesis: true,
+            relationship: edge.relationship,
+            source: edge.source,
+            target: edge.target
+          })),
+          pathHonesty: {
+            canClaimExploitable: honesty.claim.canClaimExploitable,
+            canClaimReachable: honesty.claim.canClaimReachable,
+            canClaimValidated: honesty.claim.canClaimValidated,
+            fullyMeasured: honesty.claim.fullyMeasured,
+            kind: honesty.claim.kind,
+            measuredEdgeCount: honesty.claim.measuredEdgeCount,
+            totalEdgeCount: honesty.claim.totalEdgeCount
+          },
+          privilegedNodes: privilegedNodes.map((node) => ({
+            id: node.id,
+            name: node.name,
+            privilege: node.privilege ?? node.criticality ?? null,
+            type: node.type
+          })),
+          sharpHoundCollectorUsed: false,
+          simulated: false
+        }),
+        description:
+          "Approved BloodHound-compatible identity graph import with collector execution disabled. Import is not measured path validation.",
+        redactionStatus: "Redacted",
+        sensitivityLevel: "High"
+      }
+    ],
+    errors: []
+  };
 }
 
 const CalderaPlanAbilitySchema = z.object({
@@ -6538,13 +6731,33 @@ function lenientJsonArray(
 // Track C: safe stubs + Marketplace packs only. No live offense.
 // Catalog-only sims are excluded from the executable registry (P05-12).
 // All modules: safe simulated, dryRun/fixture default, no real exec.
+const IdentityCredSprayOwnedIdentitySchema = z.object({
+  inVerifiedScope: z.boolean(),
+  ownership: z.enum(["tenant_owned", "customer_owned"]),
+  username: z.string().min(1)
+});
+
 const IdentityCredSprayTargetSchema = z.object({
+  approvalId: z.string().min(1).optional(),
+  auditRequired: z.boolean().optional(),
+  authorizedOffensive: z.boolean().optional(),
+  credentialTheft: z.boolean().optional(),
   dryRun: z.boolean().optional(),
   fixtureMode: z.boolean().optional(),
   fixtureValidCredentials: z.array(z.string().min(1)).optional(),
+  ownedIdentities: z.array(IdentityCredSprayOwnedIdentitySchema).optional(),
   password: z.string().min(1).optional(),
+  persistCredentials: z.boolean().optional(),
+  persistStolenCredentials: z.boolean().optional(),
+  policyDecisionId: z.string().min(1).optional(),
   protocol: z.enum(["smb", "ldap", "ssh", "winrm", "mssql"]).optional(),
+  purpose: z.enum(["password_policy"]).optional(),
+  rateLimitPerMinute: z.number().int().optional(),
+  scopeVerified: z.boolean().optional(),
+  sprayMode: z.enum(["owned_account", "internet"]).optional(),
+  storeValidCredentials: z.boolean().optional(),
   targetHost: z.string().min(1),
+  unscoped: z.boolean().optional(),
   username: z.string().min(1).optional()
 });
 
@@ -6554,13 +6767,25 @@ const CloudScoutsuiteTargetSchema = z.object({
   provider: z.enum(["aws", "azure", "gcp"]).optional()
 });
 
-const ExploitMetasploitTargetSchema = z.object({
-  dryRun: z.boolean().optional(),
-  fixtureMode: z.boolean().optional(),
-  fixtureVulnerable: z.boolean().optional(),
-  moduleName: z.string().min(1).optional(),
-  targetHost: z.string().min(1)
-});
+const ExploitMetasploitTargetSchema = z
+  .object({
+    checkId: z.string().min(1).optional(),
+    claimKind: z
+      .enum([
+        "vulnerability_presence",
+        "check_supported",
+        "measured_exploitability"
+      ])
+      .optional(),
+    dryRun: z.boolean().optional(),
+    fixtureMode: z.boolean().optional(),
+    fixtureVulnerable: z.boolean().optional(),
+    frameworkVersion: z.string().min(1).optional(),
+    moduleName: z.string().min(1).optional(),
+    options: z.record(z.string(), z.unknown()).optional(),
+    targetHost: z.string().min(1)
+  })
+  .passthrough();
 
 const IdentityKerberosUserenumTargetSchema = z.object({
   domain: z.string().min(1),
@@ -10679,74 +10904,70 @@ const validationModules = [
     BloodHoundTargetSchema,
     async (context) => {
       const target = BloodHoundTargetSchema.parse(context.target);
-      const graph = await loadBloodHoundGraph(target);
-      const privilegedNodes = graph.nodes.filter(
-        (node) =>
-          node.privilege?.toLowerCase().includes("admin") ||
-          node.privilege?.toLowerCase().includes("privileged") ||
-          node.criticality?.toLowerCase() === "high"
-      );
-      const pathEdges = graph.edges.filter((edge) =>
-        ["member", "admin", "can"].some((term) =>
-          edge.relationship.toLowerCase().includes(term)
-        )
-      );
+      const collectorDeny = evaluateSharpHoundLiveAdCollection(target);
+      if (!collectorDeny.allowed) {
+        return {
+          outcome: "sharphound_collector_denied",
+          summary: collectorDeny.rationale,
+          validationState: "Inconclusive",
+          signals: [],
+          evidence: [
+            {
+              artifactType: "NormalizedEvidence",
+              attributes: fixtureOrSimulationEvidenceAttributes({
+                collectionIsNotExploitation: true,
+                licenseDisposition: SHARPHOUND_COLLECTOR_LICENSE,
+                liveAdCollection: false,
+                sharpHoundCollectorUsed: false,
+                simulated: false
+              }),
+              description:
+                "SharpHound live AD collection denied. Graph import remains available without collector execution.",
+              redactionStatus: "Redacted",
+              sensitivityLevel: "High"
+            }
+          ],
+          errors: [collectorDeny.rationale]
+        };
+      }
 
-      // Graph import is not hop measurement: never mint Validated/Fixed as path
-      // proof (P05-1 / P05-14). Privileged edges remain observable signals only.
-      return {
-        outcome:
-          pathEdges.length > 0
-            ? "identity_path_observed"
-            : "no_identity_path_observed",
-        summary: `BloodHound-compatible graph ${target.graphName ?? "import"} contains ${graph.nodes.length} nodes, ${graph.edges.length} edges, and ${pathEdges.length} privileged path edge${pathEdges.length === 1 ? "" : "s"} (import only — not measured path proof).`,
-        validationState: "Inconclusive",
-        signals: [
-          createSignal("bloodhound.identity_pathing", context, {
-            confidence: pathEdges.length > 0 ? 0.82 : 0.56,
-            signalCategory: "Identity",
-            signalSubcategory:
-              pathEdges.length > 0
-                ? "PrivilegedPathObserved"
-                : "IdentityGraphImported",
-            sourceType: "graph_import"
-          }),
-          createSignal("bloodhound.identity_pathing", context, {
-            confidence: pathEdges.length > 0 ? 0.8 : 0.5,
-            signalCategory: "Exposure",
-            signalSubcategory: "IdentityAdminGap",
-            sourceType: "pathing"
-          })
-        ],
-        evidence: [
-          {
-            artifactType: "NormalizedEvidence",
-            attributes: fixtureOrSimulationEvidenceAttributes({
-              edgeCount: graph.edges.length,
-              graphName: target.graphName ?? "bloodhound-import",
-              nodeCount: graph.nodes.length,
-              pathEdges: pathEdges.map((edge) => ({
-                relationship: edge.relationship,
-                source: edge.source,
-                target: edge.target
-              })),
-              privilegedNodes: privilegedNodes.map((node) => ({
-                id: node.id,
-                name: node.name,
-                privilege: node.privilege ?? node.criticality ?? null,
-                type: node.type
-              })),
-              sharpHoundCollectorUsed: false,
-              simulated: false
-            }),
-            description:
-              "Approved BloodHound-compatible identity graph import with collector execution disabled. Import is not measured path validation.",
-            redactionStatus: "Redacted",
-            sensitivityLevel: "High"
-          }
-        ],
-        errors: []
-      };
+      if (target.collectionProfile !== undefined) {
+        const compiled = compileSharpHoundCollectionProfile(
+          target.collectionProfile
+        );
+        if (!compiled.ok) {
+          return {
+            outcome: "sharphound_collection_profile_rejected",
+            summary: compiled.rationale,
+            validationState: "Inconclusive",
+            signals: [],
+            evidence: [
+              {
+                artifactType: "NormalizedEvidence",
+                attributes: fixtureOrSimulationEvidenceAttributes({
+                  collectionIsNotExploitation: true,
+                  collectionProfileCode: compiled.code,
+                  licenseDisposition: SHARPHOUND_COLLECTOR_LICENSE,
+                  liveAdCollection: false,
+                  sharpHoundCollectorUsed: false,
+                  simulated: false
+                }),
+                description:
+                  "Invalid SharpHound collection profile rejected. Import was not labeled as path proof.",
+                redactionStatus: "Redacted",
+                sensitivityLevel: "High"
+              }
+            ],
+            errors: [`${compiled.code}: ${compiled.rationale}`]
+          };
+        }
+
+        const graph = await loadBloodHoundGraph(target);
+        return buildBloodHoundImportOutput(context, target, graph, compiled.profile);
+      }
+
+      const graph = await loadBloodHoundGraph(target);
+      return buildBloodHoundImportOutput(context, target, graph, null);
     }
   ),
   createModule(
@@ -11920,11 +12141,77 @@ const validationModules = [
       evidenceTypes: ["NormalizedEvidence"],
       approvalRequired: true,
       customerVisibleDescription:
-        "Plans credential validation against in-scope hosts as dry-run evidence. Live credential authentication attempts are disabled in the current release."
+        "Owned-account password-policy test only against verified-scope identities. Internet and unscoped credential spray are Forbidden forever. Live directory spraying and credential persistence are disabled."
     },
     IdentityCredSprayTargetSchema,
     async (context) => {
       const target = IdentityCredSprayTargetSchema.parse(context.target);
+      const sprayTarget = target as Record<string, unknown>;
+      const spray = evaluateIdentityCredSprayStart(sprayTarget);
+      const internetForbidden =
+        spray.code === IDENTITY_CRED_SPRAY_INTERNET_FORBIDDEN_CODE ||
+        target.sprayMode === "internet" ||
+        target.unscoped === true ||
+        isInternetSprayHost(target.targetHost);
+
+      if (!target.fixtureMode && internetForbidden) {
+        return {
+          outcome: "credential_spray_forbidden",
+          summary:
+            "Internet and unscoped credential spray are Forbidden forever. identity.cred_spray is only an owned-account password-policy test.",
+          validationState: "Inconclusive",
+          signals: [],
+          evidence: [
+            {
+              artifactType: "NormalizedEvidence",
+              attributes: {
+                forbidden: true,
+                liveNetexec: false,
+                measured: false,
+                persistCredentials: false,
+                sprayMode: target.sprayMode ?? "internet",
+                targetHost: target.targetHost
+              },
+              description: `Internet/unscoped credential spray against ${target.targetHost} was refused.`,
+              redactionStatus: "Redacted",
+              sensitivityLevel: "High"
+            }
+          ],
+          errors: []
+        };
+      }
+
+      if (!target.fixtureMode && spray.allowed) {
+        const ownedUsernames = (target.ownedIdentities ?? [])
+          .filter((identity) => identity.inVerifiedScope)
+          .map((identity) => identity.username);
+        return {
+          outcome: "owned_account_password_policy_test",
+          summary: `Owned-account password-policy test for ${ownedUsernames.length} verified-scope identit${ownedUsernames.length === 1 ? "y" : "ies"} on ${target.targetHost} (rate-limited, audited, no credential persistence, not internet spray).`,
+          validationState: "Inconclusive",
+          signals: [],
+          evidence: [
+            {
+              artifactType: "NormalizedEvidence",
+              attributes: {
+                auditRequired: true,
+                liveNetexec: false,
+                measured: false,
+                ownedIdentityCount: ownedUsernames.length,
+                persistCredentials: false,
+                purpose: "password_policy",
+                rateLimitPerMinute: target.rateLimitPerMinute ?? null,
+                sprayMode: "owned_account",
+                targetHost: target.targetHost
+              },
+              description: `Owned-account password-policy test for ${target.targetHost}. Passwords are not persisted.`,
+              redactionStatus: "Redacted",
+              sensitivityLevel: "High"
+            }
+          ],
+          errors: []
+        };
+      }
 
       if (!target.fixtureMode && target.dryRun !== false) {
         return {
@@ -11938,6 +12225,7 @@ const validationModules = [
               attributes: {
                 dryRun: true,
                 measured: false,
+                persistCredentials: false,
                 targetHost: target.targetHost
               },
               description: `Dry-run plan for credential validation of ${target.targetHost}.`,
@@ -11953,6 +12241,7 @@ const validationModules = [
         return disabledLiveExecutionOutput({
           attributes: {
             dryRun: false,
+            persistCredentials: false,
             protocol: target.protocol ?? "smb",
             targetHost: target.targetHost
           },
@@ -12137,27 +12426,63 @@ const validationModules = [
       evidenceTypes: ["NormalizedEvidence"],
       approvalRequired: true,
       customerVisibleDescription:
-        "Plans a Metasploit check against an in-scope host as dry-run evidence. Live Metasploit execution is disabled in the current release."
+        "Plans a reviewed Metasploit check allowlist against an in-scope host as dry-run or fixture evidence. A method named check is not a safety guarantee. Live Metasploit execution is disabled."
     },
     ExploitMetasploitTargetSchema,
     async (context) => {
       const target = ExploitMetasploitTargetSchema.parse(context.target);
+      const compiled = compileAllowlistedMetasploitCheck(context.target);
+      const claimAttributes = {
+        checkCertifiedNonDestructive: compiled.checkCertifiedNonDestructive,
+        checkId: compiled.checkId,
+        checkMethodIsSafetyGuarantee: false,
+        claimKind: compiled.claimKind,
+        compileCode: compiled.code,
+        hasCheckMethod: compiled.entry?.hasCheckMethod ?? null,
+        measuredExploitability: false,
+        moduleName: compiled.moduleFullname ?? target.moduleName ?? null,
+        targetHost: target.targetHost,
+        typedOptions: compiled.typedOptions
+      };
+
+      if (!compiled.accepted && compiled.code !== "live_execution_disabled") {
+        const outcomeByCode = {
+          unrestricted_console_denied: "metasploit_unrestricted_console_denied",
+          arbitrary_payload_denied: "metasploit_arbitrary_payload_denied",
+          module_not_allowlisted: "metasploit_check_unsupported",
+          untyped_option_denied: "metasploit_untyped_option_denied",
+          invalid_typed_option: "metasploit_invalid_typed_option",
+          version_pin_mismatch: "metasploit_version_pin_mismatch",
+          measured_exploitability_unsupported:
+            "metasploit_measured_exploitability_unsupported",
+          accepted_plan: "metasploit_check_unsupported",
+          accepted_fixture: "metasploit_check_unsupported",
+          live_execution_disabled: "metasploit_live_execution_disabled"
+        } as const;
+        return disabledLiveExecutionOutput({
+          attributes: claimAttributes,
+          description: compiled.rationale,
+          outcome: outcomeByCode[compiled.code],
+          sensitivityLevel: "High",
+          summary: compiled.rationale
+        });
+      }
 
       if (!target.fixtureMode && target.dryRun !== false) {
         return {
           outcome: "exploit_check_planned",
-          summary: `Planned exploitation check of ${target.targetHost} (dry-run; live execution is disabled in this release).`,
+          summary: `Planned reviewed Metasploit check of ${target.targetHost} (dry-run; live execution is disabled in this release).`,
           validationState: "Inconclusive",
           signals: [],
           evidence: [
             {
               artifactType: "NormalizedEvidence",
               attributes: {
+                ...claimAttributes,
                 dryRun: true,
-                measured: false,
-                targetHost: target.targetHost
+                measured: false
               },
-              description: `Dry-run plan for exploitation check of ${target.targetHost}.`,
+              description: `Dry-run plan for reviewed Metasploit check of ${target.targetHost}.`,
               redactionStatus: "Redacted",
               sensitivityLevel: "High"
             }
@@ -12169,11 +12494,10 @@ const validationModules = [
       if (!target.fixtureMode && target.dryRun === false) {
         return disabledLiveExecutionOutput({
           attributes: {
-            dryRun: false,
-            moduleName: target.moduleName,
-            targetHost: target.targetHost
+            ...claimAttributes,
+            dryRun: false
           },
-          description: `Metasploit execution against ${target.targetHost} was blocked before tool execution.`,
+          description: `Metasploit execution against ${target.targetHost} was blocked before tool execution. A check() method is not a safety guarantee.`,
           outcome: "metasploit_live_execution_disabled",
           sensitivityLevel: "High",
           summary:
@@ -12181,36 +12505,24 @@ const validationModules = [
         });
       }
 
-      // Fixture-only success path (live is disabled above).
-      const vulnerable = target.fixtureVulnerable === true;
-
+      const presence = compiled.claimKind === "vulnerability_presence";
       return {
-        outcome: vulnerable ? "exploitable_confirmed" : "not_exploitable",
-        summary: vulnerable
-          ? `Fixture recorded exploitable: ${target.targetHost} (not live proof).`
-          : `Fixture recorded ${target.targetHost} not exploitable (not live proof).`,
-        validationState: validationStateForFixtureOrSimulation(
-          vulnerable ? "Exploitable" : "Fixed"
-        ),
-        signals: vulnerable
-          ? [
-              createSignal("exploit.metasploit_check", context, {
-                confidence: 0.92,
-                signalCategory: "Exposure",
-                signalSubcategory: "ConfirmedExploitable",
-                sourceType: "metasploit"
-              })
-            ]
-          : [],
+        outcome: presence
+          ? "fixture_vulnerability_presence"
+          : "fixture_check_supported",
+        summary: presence
+          ? `Fixture recorded vulnerability presence for ${target.targetHost} (not measured exploitability).`
+          : `Fixture recorded check support for ${target.targetHost}; check() is not a safety guarantee and is not measured exploitability.`,
+        validationState: "Inconclusive",
+        signals: [],
         evidence: [
           {
             artifactType: "NormalizedEvidence",
             attributes: fixtureOrSimulationEvidenceAttributes({
-              moduleName: target.moduleName ?? null,
-              targetHost: target.targetHost,
-              vulnerable
+              ...claimAttributes,
+              fixtureVulnerable: target.fixtureVulnerable === true
             }),
-            description: `Fixture exploitation check for ${target.targetHost} (live Metasploit disabled).`,
+            description: `Fixture Metasploit ${presence ? "presence" : "check-support"} record for ${target.targetHost} (live Metasploit disabled).`,
             redactionStatus: "Redacted",
             sensitivityLevel: "High"
           }
@@ -13541,6 +13853,19 @@ export async function executeModuleById(
 }
 
 export {
+  bindAtomicLabAdapterForCampaign,
+  getAllowlistedAtomicBasScenario,
+  listAllowlistedAtomicBasScenarios,
+  listAtomicLabAdapterBindings,
+  reviewAtomicLabEligibility
+} from "./atomic-bas-catalog.js";
+export {
+  compileAllowlistedMetasploitCheck,
+  getAllowlistedMetasploitCheck,
+  listAllowlistedMetasploitChecks
+} from "./metasploit-check-adapter.js";
+
+export {
   buildOpenSourceToolInstallPlan,
   executeOpenSourceToolInstallPlan,
   buildOpenSourceToolUninstallPlan,
@@ -13566,6 +13891,11 @@ export {
 } from "./tool-upstream.js";
 
 export {
+  listAttackTechniqueCoverageFromToolchain,
+  listLiveDisabledAttackTechniqueBindingsFromFixtures
+} from "./attack-technique-coverage.js";
+
+export {
   getDefaultDockerImageRef,
   getOpenSourceToolCatalogEntry,
   getOpenSourceToolCatalogEntryWithRuntime,
@@ -13580,3 +13910,245 @@ export {
   listOpenSourceToolDefinitions,
   resolveOpenSourceToolRuntime
 } from "./toolchain.js";
+
+export { BasContentError, previewBasContent } from "./bas-content.js";
+export {
+  CalderaAdapterError,
+  createCalderaOperationsClient
+} from "./caldera-operations-adapter.js";
+export type {
+  CalderaCreateOperationInput,
+  CalderaCreateOperationResult,
+  CalderaFetch,
+  CalderaOperationsClient,
+  CalderaOperationsClientConfig
+} from "./caldera-operations-adapter.js";
+export {
+  CALDERA_DISCOVERY_NOT_STARTABLE,
+  CALDERA_LIVE_DISABLED,
+  CALDERA_POLICY_NOT_ALLOWED,
+  CALDERA_QUALIFICATION_REQUIRED,
+  CALDERA_TENANT_AUTHORIZATION_REQUIRED,
+  queueCalderaQualifiedStart
+} from "./caldera-qualified-start.js";
+export type {
+  CalderaQualifiedStartInput,
+  CalderaQualifiedStartResult
+} from "./caldera-qualified-start.js";
+export {
+  applyBloodHoundImportHonesty,
+  compileSharpHoundCollectionProfile,
+  evaluateSharpHoundLiveAdCollection,
+  redactBloodHoundGraph,
+  SHARPHOUND_COLLECTOR_LICENSE,
+  BLOODHOUND_GRAPH_IMPORT_LICENSE
+} from "./sharphound-collection.js";
+export {
+  planSharpHoundQualifiedStart,
+  SHARPHOUND_COLLECTION_NOT_STARTABLE,
+  SHARPHOUND_LIVE_AD_REQUIRES_TENANT_AUTHORIZATION
+} from "./sharphound-qualified-start.js";
+export {
+  FALCO_LIVE_KERNEL_DENIED,
+  FALCO_OBSERVE_AUTHORIZATION_REQUIRED,
+  FALCO_OBSERVE_COMMUNITY_DEFAULT_DENIED,
+  FALCO_OBSERVE_MODULE_ID,
+  FALCO_OBSERVE_NOT_STARTABLE,
+  FALCO_OBSERVE_PARSER,
+  FALCO_OBSERVE_POLICY_NOT_ALLOWED,
+  FALCO_OBSERVE_QUALIFICATION_REQUIRED,
+  FALCO_OBSERVE_SPDX_LICENSE_ID,
+  correlateFalcoObserve,
+  evaluateFalcoObserveStart,
+  importFalcoObserveFindings,
+  mapFalcoObserveAlerts,
+  queueFalcoObserveStart
+} from "./falco-observe.js";
+export type {
+  FalcoObserveFinding,
+  FalcoObserveImportResult,
+  FalcoObservePlan,
+  FalcoObserveQualifiedStartInput,
+  FalcoObserveQualifiedStartResult,
+  FalcoObserveStartInput,
+  FalcoObserveStartResult
+} from "./falco-observe.js";
+export {
+  RUSTINEL_AUTHORIZATION_REQUIRED,
+  RUSTINEL_COMMUNITY_DEFAULT_DENIED,
+  RUSTINEL_COMMUNITY_PACK_ELIGIBLE,
+  RUSTINEL_LIVE_AGENT_DENIED,
+  RUSTINEL_MODULE_ID,
+  RUSTINEL_NOT_STARTABLE,
+  RUSTINEL_PARSER,
+  RUSTINEL_POLICY_NOT_ALLOWED,
+  RUSTINEL_QUALIFICATION_REQUIRED,
+  RUSTINEL_SPDX_LICENSE_ID,
+  RUSTINEL_YAML_EVAL_DENIED,
+  correlateRustinelDetection,
+  evaluateRustinelStart,
+  importRustinelAlerts,
+  mapRustinelAlerts,
+  queueRustinelObserveImportStart
+} from "./rustinel-endpoint.js";
+export type {
+  RustinelAlert,
+  RustinelImportResult,
+  RustinelObserveImportPlan,
+  RustinelQualifiedStartInput,
+  RustinelQualifiedStartResult,
+  RustinelStartInput,
+  RustinelStartResult
+} from "./rustinel-endpoint.js";
+export {
+  planInfectionMonkeyDiscoverStart,
+  queueInfectionMonkeyDiscoverStart,
+  INFECTION_MONKEY_AUTHORIZATION_REQUIRED,
+  INFECTION_MONKEY_COMMUNITY_DEFAULT_DENIED,
+  INFECTION_MONKEY_DISCOVER_MODULE_ID,
+  INFECTION_MONKEY_DISCOVER_NOT_STARTABLE,
+  INFECTION_MONKEY_LICENSE,
+  INFECTION_MONKEY_LIVE_DISABLED,
+  INFECTION_MONKEY_LICENSE_REQUIRED,
+  INFECTION_MONKEY_POLICY_NOT_ALLOWED,
+  INFECTION_MONKEY_QUALIFICATION_REQUIRED,
+  INFECTION_MONKEY_TOOL_ID
+} from "./infection-monkey-discover.js";
+export type {
+  InfectionMonkeyDiscoverStartInput,
+  InfectionMonkeyDiscoverStartResult,
+  InfectionMonkeyQualifiedStartInput,
+  InfectionMonkeyQualifiedStartResult
+} from "./infection-monkey-discover.js";
+export {
+  STRIX_AUTHORIZATION_REQUIRED,
+  STRIX_CLOUD_SHELL_FORBIDDEN,
+  STRIX_COMMUNITY_DEFAULT_DENIED,
+  STRIX_IMPORT_NOT_STARTABLE,
+  STRIX_LIVE_EXPLOIT_DENIED,
+  STRIX_MODULE_ID,
+  STRIX_PARSER,
+  STRIX_POLICY_NOT_ALLOWED,
+  STRIX_QUALIFICATION_REQUIRED,
+  STRIX_RUNNER_OR_LAB_REQUIRED,
+  STRIX_SPDX_LICENSE_ID,
+  evaluateStrixStart,
+  importStrixFindings,
+  mapStrixFindings,
+  queueStrixImportStart
+} from "./strix-pentest.js";
+export type {
+  StrixExecutionEnvironment,
+  StrixFinding,
+  StrixImportPlan,
+  StrixImportResult,
+  StrixQualifiedStartInput,
+  StrixQualifiedStartResult,
+  StrixStartInput,
+  StrixStartResult
+} from "./strix-pentest.js";
+export {
+  evaluateVigoliumStart,
+  importVigoliumFindings,
+  mapVigoliumFindings,
+  queueVigoliumImportStart,
+  VIGOLIUM_AUTHORIZATION_REQUIRED,
+  VIGOLIUM_COMMUNITY_DEFAULT_DENIED,
+  VIGOLIUM_FIXTURE_FILE,
+  VIGOLIUM_LICENSE,
+  VIGOLIUM_LIVE_ATTACK_PLANNING_DENIED,
+  VIGOLIUM_MODULE_ID,
+  VIGOLIUM_NOT_STARTABLE,
+  VIGOLIUM_PARSER,
+  VIGOLIUM_POLICY_NOT_ALLOWED,
+  VIGOLIUM_QUALIFICATION_REQUIRED,
+  VIGOLIUM_SPDX_LICENSE_ID,
+  VIGOLIUM_TOOL_ID,
+  VIGOLIUM_VERIFIED_SCOPE_REQUIRED
+} from "./vigolium-audit.js";
+export type {
+  VigoliumAuditPlan,
+  VigoliumFinding,
+  VigoliumImportResult,
+  VigoliumQualifiedStartInput,
+  VigoliumQualifiedStartResult,
+  VigoliumStartInput,
+  VigoliumStartResult
+} from "./vigolium-audit.js";
+export {
+  NUCLEI_SAFE_EXPOSURE_MODULE_ID,
+  NUCLEI_ZAP_AUTHORIZATION_REQUIRED,
+  NUCLEI_ZAP_COMMUNITY_DEFAULT_DENIED,
+  NUCLEI_ZAP_COMMUNITY_FIRST_HOUR_DENIED,
+  NUCLEI_ZAP_EXPLOIT_TEMPLATE_DENIED,
+  NUCLEI_ZAP_INTERNET_WIDE_DENIED,
+  NUCLEI_ZAP_LIVE_EXPLOIT_DENIED,
+  NUCLEI_ZAP_NOT_STARTABLE,
+  NUCLEI_ZAP_POLICY_NOT_ALLOWED,
+  NUCLEI_ZAP_QUALIFICATION_REQUIRED,
+  ZAP_BASELINE_MODULE_ID,
+  queueNucleiZapQualifiedStart
+} from "./nuclei-qualified-start.js";
+export type {
+  NucleiZapQualifiedStartInput,
+  NucleiZapQualifiedStartResult,
+  NucleiZapSafeScanPlan
+} from "./nuclei-qualified-start.js";
+export type {
+  SharpHoundQualifiedStartInput,
+  SharpHoundQualifiedStartResult,
+  SharpHoundTenantAuthorization
+} from "./sharphound-qualified-start.js";
+export {
+  ATOMIC_DATE_LAB,
+  ATOMIC_ENV_LAB,
+  ATOMIC_HOSTNAME_LAB,
+  ATOMIC_LAB_PLANS,
+  atomicDateLabPlanSha256,
+  atomicEnvLabPlanSha256,
+  atomicHostnameLabPlanSha256,
+  atomicLabPlanSha256,
+  checkAtomicLabPrerequisites,
+  getAtomicLabPlan,
+  qualifyAtomicHostnameLab,
+  qualifyAtomicLabScenario
+} from "./bas-local-lab.js";
+export type {
+  AtomicLabPlan,
+  AtomicLabPrerequisiteReport,
+  AtomicLabQualifyInput,
+  AtomicLabReceipt,
+  LabCommandResult,
+  LabCommandOptions,
+  LabDockerCommand
+} from "./bas-local-lab.js";
+export type {
+  AtomicQualifiedArgv,
+  AtomicQualifiedArgvTask,
+  AtomicQualifiedQueuePlan,
+  AtomicQualifiedStartPin
+} from "./atomic-qualified-start.js";
+export {
+  ATOMIC_QUALIFIED_START_NOT_STARTABLE,
+  ATOMIC_QUALIFIED_START_NO_ARGV,
+  ATOMIC_QUALIFIED_START_NO_QUALIFICATION,
+  ATOMIC_QUALIFIED_START_YAML_EVAL,
+  isAtomicQualifiedExecutionPin,
+  listAtomicQualifiedStartArgv,
+  planAtomicQualifiedCampaignQueue,
+  resolveAtomicQualifiedStartArgv
+} from "./atomic-qualified-start.js";
+export {
+  checkManagedSecurityFeeds,
+  listToolchainBoundSecurityFeeds
+} from "./security-feed-updater.js";
+export {
+  STRATUS_MODULES_ADAPTER_PATH,
+  STRATUS_QUALIFIED_START_LIVE_SUPPORTED,
+  isStratusModulesAdapterPresent,
+  startStratusQualifiedEval
+} from "./stratus-start.js";
+export type {
+  StratusQualifiedStartRequest,
+  StratusQualifiedStartResult
+} from "./stratus-start.js";

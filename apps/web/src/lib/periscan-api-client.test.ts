@@ -2362,9 +2362,9 @@ describe("PeriscanApiClient", () => {
             },
             jitProvisioning: {
               defaultRoleIfEnabled: "Viewer",
-              detail: "JIT membership on first SSO is NotConfigured.",
+              detail: "JIT membership on first SSO is Optional.",
               requiresDomainAllowlist: true,
-              status: "NotConfigured"
+              status: "Optional"
             },
             scimInbound: {
               discoveryPath: "/api/v1/scim/v2/ServiceProviderConfig",
@@ -3473,6 +3473,437 @@ describe("PeriscanApiClient", () => {
     });
   });
 
+  it("posts policy-gated BAS scenario start and returns the deny receipt", async () => {
+    const scopeId = "22222222-2222-4222-8222-222222222222";
+    const policyDecisionId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+    const fetchImpl = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        claimClass: "qualification_required",
+        denyReason:
+          "Atomic adapter qualification is required before live execution. Denied tasks are never queued.",
+        jobsQueued: 0,
+        mission: null,
+        outcome: "Denied",
+        policyDecisionId,
+        queued: false,
+        rationale:
+          "Atomic adapter qualification is required before live execution. Denied tasks are never queued.",
+        runs: [],
+        scenarioId: "atomic.live"
+      })
+    });
+    const client = new PeriscanApiClient(fetchImpl as typeof fetch);
+    const result = await client.startBasScenario({
+      scenarioId: "atomic.live",
+      scopeId
+    });
+    expect(result.queued).toBe(false);
+    expect(result.jobsQueued).toBe(0);
+    expect(result.policyDecisionId).toBe(policyDecisionId);
+    expect(result.denyReason).toMatch(/never queued/i);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      "/api/v1/control-sources/bas-scenarios/start",
+      expect.objectContaining({ method: "POST" })
+    );
+  });
+
+  it("lists BAS content versions from the existing registry API", async () => {
+    const tenantId = "11111111-1111-4111-8111-111111111111";
+    const versionId = "99999999-9999-4999-8999-999999999999";
+    const fetchImpl = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        items: [
+          {
+            basContentVersionId: versionId,
+            contentSha256: "ab".repeat(32),
+            createdAt: "2026-09-17T14:00:00.000Z",
+            evidenceProduced: false,
+            executable: false,
+            provider: "AtomicRedTeam",
+            provenance: "UserSuppliedUnverified",
+            registeredByUserId: null,
+            scenarioCount: 1,
+            sourcePath: "atomics/T1082/T1082.yaml",
+            sourceRevision: "unreviewed",
+            tenantId
+          }
+        ],
+        nextCursor: null
+      })
+    });
+    const client = new PeriscanApiClient(fetchImpl as typeof fetch);
+    const listed = await client.listBasContentVersions({ limit: 25 });
+    expect(listed.items[0]?.executable).toBe(false);
+    expect(listed.items[0]?.evidenceProduced).toBe(false);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      "/api/v1/bas/content/versions?limit=25",
+      expect.objectContaining({
+        cache: "no-store",
+        credentials: "include"
+      })
+    );
+  });
+
+  it("lists, compiles, starts, and cancels BAS campaigns with session credentials", async () => {
+    const tenantId = "11111111-1111-4111-8111-111111111111";
+    const scopeId = "22222222-2222-4222-8222-222222222222";
+    const policyDecisionId = "33333333-3333-4333-8333-333333333333";
+    const campaignPlanId = "44444444-4444-4444-8444-444444444444";
+    const compiledDigest = "ab".repeat(32);
+    const now = "2026-09-17T14:00:00.000Z";
+    const plan = {
+      approvalDigest: "cd".repeat(32),
+      basCampaignPlanId: campaignPlanId,
+      cleanupPolicy: {
+        onCancel: "request_then_record",
+        requireVerifiedCleanup: true
+      },
+      compiledDigest,
+      contentVersionIds: [],
+      createdAt: now,
+      policyDecisionId,
+      runnerId: null,
+      scenarioPins: [
+        {
+          contentSha256: "ef".repeat(32),
+          provider: "ControlPlane",
+          typedInputs: { timeout: 30 },
+          upstreamId: "control.detection.benign-marker"
+        }
+      ],
+      scopeId,
+      scopeVerificationStatus: "Verified",
+      scopeVersion: now,
+      startable: true,
+      tenantId
+    };
+    const preview = {
+      cancelledAt: null,
+      cleanup: [
+        {
+          detail: null,
+          status: "not_required",
+          stepKey: "control.detection.benign-marker"
+        }
+      ],
+      denyReason: null,
+      dispatchPrevented: false,
+      jobsQueued: 0,
+      missionId: null,
+      plan,
+      policyOutcome: "Allowed",
+      policyRationale: "Campaign compile preview is Allowed."
+    };
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ items: [preview] })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          denyReason: null,
+          jobsQueued: 0,
+          plan,
+          queued: false,
+          startable: true
+        })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          campaignPlanId,
+          compiledDigest,
+          denyReason: null,
+          jobsQueued: 1,
+          mission: null,
+          outcome: "Allowed",
+          policyDecisionId,
+          queued: true,
+          rationale: "Allowed",
+          runs: [],
+          startable: true
+        })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          cancelCompleted: true,
+          cancelRequested: true,
+          cleanup: preview.cleanup,
+          compiledDigest,
+          delayedCancel: false,
+          dispatchPrevented: true,
+          mission: null
+        })
+      });
+    const client = new PeriscanApiClient(fetchImpl as typeof fetch);
+
+    const listed = await client.listBasCampaigns();
+    expect(listed.items[0]?.plan.compiledDigest).toBe(compiledDigest);
+    expect(listed.items[0]?.plan.scenarioPins[0]?.typedInputs).toEqual({
+      timeout: 30
+    });
+    expect(listed.items[0]?.policyOutcome).toBe("Allowed");
+    expect(listed.items[0]?.jobsQueued).toBe(0);
+
+    const compiled = await client.compileBasCampaign({
+      scopeId,
+      scenarioPins: [
+        {
+          provider: "ControlPlane",
+          typedInputs: { timeout: 30 },
+          upstreamId: "control.detection.benign-marker"
+        }
+      ]
+    });
+    expect(compiled.queued).toBe(false);
+    expect(compiled.jobsQueued).toBe(0);
+
+    await client.startBasCampaign({ compiledDigest });
+    await client.cancelBasCampaign({ compiledDigest, cleanupReceipts: [] });
+
+    expect(fetchImpl).toHaveBeenNthCalledWith(
+      1,
+      "/api/v1/bas/campaigns",
+      expect.objectContaining({
+        cache: "no-store",
+        credentials: "include"
+      })
+    );
+    expect(fetchImpl).toHaveBeenNthCalledWith(
+      2,
+      "/api/v1/bas/campaigns/compile",
+      expect.objectContaining({
+        credentials: "include",
+        method: "POST"
+      })
+    );
+    expect(fetchImpl).toHaveBeenNthCalledWith(
+      3,
+      "/api/v1/bas/campaigns/start",
+      expect.objectContaining({
+        body: JSON.stringify({ compiledDigest }),
+        credentials: "include",
+        method: "POST"
+      })
+    );
+    expect(fetchImpl).toHaveBeenNthCalledWith(
+      4,
+      "/api/v1/bas/campaigns/cancel",
+      expect.objectContaining({
+        body: JSON.stringify({ compiledDigest, cleanupReceipts: [] }),
+        credentials: "include",
+        method: "POST"
+      })
+    );
+  });
+
+  it("treats a missing High-danger catalog gate as qualification required, not a live run", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 404,
+      json: async () => ({ error: "not found" })
+    });
+    const client = new PeriscanApiClient(fetchImpl as typeof fetch);
+    const gate = await client.getBasDangerOperatorGate();
+    expect(gate.available).toBe(false);
+    expect(gate.qualified).toBe(false);
+    expect(gate.tenantAuthorized).toBe(false);
+    expect(gate.items.map((item) => item.moduleId)).toEqual([
+      "exploitation.impact_t1486",
+      "identity.cred_spray",
+      "identity.credential_harvest",
+      "exploitation.killchain.engine",
+      "exploitation.persistence",
+      "exploit.metasploit_payload",
+      "infection-monkey.mimikatz"
+    ]);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      "/api/v1/bas/danger-catalog",
+      expect.objectContaining({
+        cache: "no-store",
+        credentials: "include"
+      })
+    );
+  });
+
+  it("parses a live High-danger catalog gate and posts qualify/authorize", async () => {
+    const scopeId = "22222222-2222-4222-8222-222222222222";
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          available: true,
+          items: [
+            {
+              dangerClass: "ransomware_impact",
+              description: "T1486 impact-class validation.",
+              moduleId: "exploitation.impact_t1486",
+              section: "High danger",
+              techniqueId: "T1486",
+              title: "Ransomware / impact (T1486)"
+            }
+          ],
+          qualified: true,
+          tenantAuthorized: false
+        })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          created: true,
+          qualification: {
+            basPackQualificationId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+            labReceiptHash: "ab".repeat(32),
+            pack: "atomic",
+            pinIds: ["atomic.t1082"],
+            qualifiedAt: "2026-09-18T00:00:00.000Z",
+            qualifiedByUserId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+            tenantId: "11111111-1111-4111-8111-111111111111"
+          }
+        })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          authorization: {
+            approver: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+            digest: "cd".repeat(32),
+            expiresAt: "2027-01-01T00:00:00.000Z",
+            pack: "atomic",
+            scopeId,
+            tenantBasPackAuthorizationId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+            tenantId: "11111111-1111-4111-8111-111111111111"
+          },
+          created: true
+        })
+      });
+    const client = new PeriscanApiClient(fetchImpl as typeof fetch);
+
+    const gate = await client.getBasDangerOperatorGate();
+    expect(gate.available).toBe(true);
+    expect(gate.qualified).toBe(true);
+    expect(gate.tenantAuthorized).toBe(false);
+
+    await client.qualifyBasPack({
+      labReceiptHash: "ab".repeat(32),
+      pack: "atomic",
+      pinIds: ["atomic.t1082"]
+    });
+    await client.authorizeBasPack({
+      expiresAt: "2027-01-01T00:00:00.000Z",
+      pack: "atomic",
+      scopeId
+    });
+
+    expect(fetchImpl).toHaveBeenNthCalledWith(
+      2,
+      "/api/v1/bas/packs/qualify",
+      expect.objectContaining({ method: "POST" })
+    );
+    expect(fetchImpl).toHaveBeenNthCalledWith(
+      3,
+      "/api/v1/bas/packs/authorize",
+      expect.objectContaining({ method: "POST" })
+    );
+  });
+
+  it("lists atomic tests and posts a bound-runner start with session credentials", async () => {
+    const scopeId = "22222222-2222-4222-8222-222222222222";
+    const runnerId = "33333333-3333-4333-8333-333333333333";
+    const policyDecisionId = "55555555-5555-4555-8555-555555555555";
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          items: [
+            {
+              dangerClass: null,
+              denyReason: null,
+              description: "Queue a benign-marker ControlValidation.",
+              livePack: "none",
+              pinId: "control.detection.benign-marker",
+              provider: "ControlPlane",
+              section: "Qualified",
+              startable: true,
+              techniqueId: "T1059",
+              title: "Benign detection marker",
+              upstreamId: "control.detection.benign-marker"
+            }
+          ],
+          liveSupported: false
+        })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          boundAssetId: null,
+          boundRunnerId: runnerId,
+          claimClass: "qualification_required",
+          denyReason:
+            "Atomic adapter qualification is required before live execution. Denied tasks are never queued.",
+          jobsQueued: 0,
+          liveSupported: false,
+          mission: null,
+          outcome: "Denied",
+          policyDecisionId,
+          queued: false,
+          rationale:
+            "Atomic adapter qualification is required before live execution. Denied tasks are never queued.",
+          result: "Inconclusive",
+          runs: [],
+          scenarioPin: {
+            provider: "AtomicRedTeam",
+            typedInputs: {},
+            upstreamId: "atomic.live"
+          },
+          startable: false
+        })
+      });
+    const client = new PeriscanApiClient(fetchImpl as typeof fetch);
+    const catalog = await client.listAtomicTests();
+    expect(catalog.liveSupported).toBe(false);
+    expect(catalog.items[0]?.startable).toBe(true);
+
+    const started = await client.startAtomicTest({
+      runnerId,
+      scenarioPin: {
+        provider: "AtomicRedTeam",
+        typedInputs: {},
+        upstreamId: "atomic.live"
+      },
+      scopeId
+    });
+    expect(started.jobsQueued).toBe(0);
+    expect(started.liveSupported).toBe(false);
+    expect(started.result).toBe("Inconclusive");
+    expect(fetchImpl).toHaveBeenNthCalledWith(
+      1,
+      "/api/v1/bas/atomic-tests",
+      expect.objectContaining({
+        cache: "no-store",
+        credentials: "include"
+      })
+    );
+    expect(fetchImpl).toHaveBeenNthCalledWith(
+      2,
+      "/api/v1/bas/atomic-tests",
+      expect.objectContaining({
+        credentials: "include",
+        method: "POST"
+      })
+    );
+  });
+
   it("posts Phase C dns-exfil-canary-proof for a control source", async () => {
     const controlSourceId = "44444444-4444-4444-8444-444444444444";
     const missionId = "77777777-7777-4777-8777-777777777777";
@@ -3696,5 +4127,58 @@ describe("PeriscanApiClient", () => {
         status: 401
       })
     );
+  });
+
+  it("lists security-feed pins and treats a missing enterprise-site catalog as empty", async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce({
+        json: async () => ({
+          items: [
+            {
+              autoExecute: false,
+              contentVersionStatus: "PendingReview",
+              executablePinFlipped: false,
+              id: "gitleaks",
+              lastCheckedAt: "2026-09-17T12:00:00.000Z",
+              lastDigest:
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              liveSupported: false,
+              pin: { kind: "version", value: "v8.30.0" },
+              spdxLicenseId: "MIT",
+              updatePolicy: "scheduled"
+            }
+          ]
+        }),
+        ok: true,
+        status: 200
+      })
+      .mockResolvedValueOnce({
+        json: async () => ({ error: "Not found" }),
+        ok: false,
+        status: 404
+      });
+    const client = new PeriscanApiClient(fetchImpl as typeof fetch);
+
+    const feeds = await client.listSecurityFeeds();
+    expect(feeds[0]).toMatchObject({
+      autoExecute: false,
+      contentVersionStatus: "PendingReview",
+      id: "gitleaks",
+      liveSupported: false,
+      pin: { kind: "version", value: "v8.30.0" },
+      spdxLicenseId: "MIT"
+    });
+    expect(await client.listEnterpriseSites()).toEqual([]);
+    expect(fetchImpl).toHaveBeenNthCalledWith(1, "/api/v1/security-feeds", {
+      cache: "no-store",
+      credentials: "include",
+      headers: {}
+    });
+    expect(fetchImpl).toHaveBeenNthCalledWith(2, "/api/v1/enterprise-sites", {
+      cache: "no-store",
+      credentials: "include",
+      headers: {}
+    });
   });
 });

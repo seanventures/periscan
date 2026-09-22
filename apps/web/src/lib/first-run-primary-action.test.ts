@@ -5,8 +5,13 @@ import {
 } from "@periscan/shared";
 
 import {
+  railPrimaryCompetesWithFindingsFirstHour,
+  resolveCommunityReviewFindingsMissionId,
   resolveFirstRunPrimaryAction,
-  resolvePostFindingPrimaryAction
+  resolveOptionalAwsFirstHourCta,
+  homeTopFindingIsSettled,
+  resolvePostFindingPrimaryAction,
+  selectHomeTopFinding
 } from "./first-run-primary-action";
 
 function milestone(
@@ -504,6 +509,55 @@ describe("resolveFirstRunPrimaryAction", () => {
   });
 });
 
+describe("resolveOptionalAwsFirstHourCta", () => {
+  it("keeps empty-tenant Home Gitleaks-only (no Prowler second primary)", () => {
+    expect(
+      resolveOptionalAwsFirstHourCta({ cloudAwsAvailable: false })
+    ).toBeNull();
+    const empty = resolveFirstRunPrimaryAction(base());
+    expect(empty.label).not.toMatch(/Prowler/i);
+    expect(empty.label).not.toMatch(/Assess connected AWS/i);
+  });
+
+  it("adds Assess connected AWS (Prowler) next to Gitleaks when AWS is Connected", () => {
+    const cta = resolveOptionalAwsFirstHourCta({
+      cloudAwsAvailable: true,
+      startableModuleIds: ["gitleaks.repo_secrets", "prowler.aws_posture"]
+    });
+    expect(cta?.label).toBe("Assess connected AWS (Prowler)");
+    expect(cta?.moduleIds).toEqual(["prowler.aws_posture"]);
+    expect(cta?.label).not.toMatch(/full cloud BAS/i);
+    const primary = resolveFirstRunPrimaryAction(
+      base({
+        completedMilestones: 3,
+        nextAction: {
+          href: "/missions",
+          label: COMMUNITY_FIRST_RUN_START_LABEL,
+          reason: "from API"
+        },
+        milestones: [
+          milestone("AccountCreated", "Completed"),
+          milestone("SourceConnected", "Completed"),
+          milestone("ScopeVerified", "Completed"),
+          milestone("PolicyPreviewed", "Current"),
+          milestone("MissionCreated", "Upcoming"),
+          milestone("MeasuredResult", "Upcoming"),
+          milestone("RemediationCreated", "Upcoming"),
+          milestone("Revalidated", "Upcoming"),
+          milestone("ProofDelivered", "Upcoming")
+        ]
+      }),
+      undefined,
+      {
+        cloudAwsAvailable: true,
+        startableModuleIds: ["gitleaks.repo_secrets", "prowler.aws_posture"]
+      }
+    );
+    expect(primary.label).toBe(COMMUNITY_FIRST_RUN_START_LABEL);
+    expect(primary.label).not.toBe(cta?.label);
+  });
+});
+
 describe("resolvePostFindingPrimaryAction", () => {
   it("is null before a finding exists", () => {
     expect(
@@ -527,6 +581,50 @@ describe("resolvePostFindingPrimaryAction", () => {
     });
   });
 
+  it("P3-HOMEMISSION: Review findings includes missionId so the stranger lands on the Community-mission chip", () => {
+    const missionId = "13d9422a-3dc2-4e82-8a29-a7d2527e764f";
+    expect(
+      resolvePostFindingPrimaryAction({
+        findingsCount: 1,
+        openRemediationCount: 0,
+        missionId
+      })
+    ).toMatchObject({
+      href: `/findings?missionId=${missionId}`,
+      label: "Review findings",
+      setupIncomplete: false
+    });
+  });
+
+  it("P3-HOMEMISSION: blank missionId keeps the tenant findings queue", () => {
+    expect(
+      resolvePostFindingPrimaryAction({
+        findingsCount: 1,
+        openRemediationCount: 0,
+        missionId: "   "
+      })
+    ).toMatchObject({
+      href: "/findings",
+      label: "Review findings"
+    });
+  });
+
+  it("never competes with Connect a source or Validate after a finding exists", () => {
+    const review = resolvePostFindingPrimaryAction({
+      findingsCount: 1,
+      openRemediationCount: 0
+    });
+    const verify = resolvePostFindingPrimaryAction({
+      findingsCount: 4,
+      openRemediationCount: 1
+    });
+    for (const action of [review, verify]) {
+      expect(action?.label).not.toMatch(/connect a source/i);
+      expect(action?.label).not.toMatch(/^validate$/i);
+      expect(action?.href).not.toBe("/integrations");
+    }
+  });
+
   it("verifies when Open remediations exist", () => {
     expect(
       resolvePostFindingPrimaryAction({
@@ -538,5 +636,172 @@ describe("resolvePostFindingPrimaryAction", () => {
       label: "Verify",
       setupIncomplete: false
     });
+  });
+
+  it("P2-HOMEFIXED: Keep on a cadence after measured Fixed and no Open remediations", () => {
+    expect(
+      resolvePostFindingPrimaryAction({
+        findingsCount: 1,
+        measuredFixedCount: 1,
+        openRemediationCount: 0
+      })
+    ).toMatchObject({
+      href: "/schedules",
+      label: "Keep on a cadence",
+      setupIncomplete: false
+    });
+  });
+});
+
+describe("resolveCommunityReviewFindingsMissionId", () => {
+  const missionId = "13d9422a-3dc2-4e82-8a29-a7d2527e764f";
+
+  it("reads the Community mission from MeasuredResult /missions/:id", () => {
+    expect(
+      resolveCommunityReviewFindingsMissionId({
+        measuredResultHref: `/missions/${missionId}`
+      })
+    ).toBe(missionId);
+  });
+
+  it("falls back to the latest snapshot missionId", () => {
+    expect(
+      resolveCommunityReviewFindingsMissionId({
+        measuredResultHref: "/missions",
+        snapshots: [
+          {
+            createdAt: "2026-07-14T19:00:00.000Z",
+            missionId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+          },
+          {
+            createdAt: "2026-07-14T20:00:00.000Z",
+            missionId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+          }
+        ]
+      })
+    ).toBe("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb");
+  });
+
+  it("returns null when no Community mission is known", () => {
+    expect(
+      resolveCommunityReviewFindingsMissionId({
+        measuredResultHref: "/missions",
+        snapshots: [{ createdAt: "2026-07-14T20:00:00.000Z", missionId: null }]
+      })
+    ).toBeNull();
+  });
+
+  it("leads unsettled findings; settled Fixed stays visible instead of empty Home", () => {
+    expect(
+      selectHomeTopFinding(
+        [{ fingerprint: "abc" }, { fingerprint: "def" }],
+        [
+          {
+            latestVerification: { outcome: "Fixed" },
+            relatedFindingFingerprint: "abc",
+            status: "Fixed"
+          }
+        ]
+      )
+    ).toEqual({ fingerprint: "def" });
+    expect(
+      selectHomeTopFinding(
+        [{ fingerprint: "abc", title: "leaked.js:2 · slack-bot-token" }],
+        [
+          {
+            latestVerification: { outcome: "Fixed" },
+            relatedFindingFingerprint: "abc",
+            status: "Fixed"
+          }
+        ]
+      )
+    ).toEqual({ fingerprint: "abc", title: "leaked.js:2 · slack-bot-token" });
+  });
+
+  it("marks a Home top finding settled when its remediation is measured Fixed", () => {
+    expect(
+      homeTopFindingIsSettled(
+        { fingerprint: "abc" },
+        [
+          {
+            latestVerification: { outcome: "Fixed" },
+            relatedFindingFingerprint: "abc",
+            status: "Fixed"
+          }
+        ]
+      )
+    ).toBe(true);
+    expect(
+      homeTopFindingIsSettled(
+        { fingerprint: "abc" },
+        [
+          {
+            relatedFindingFingerprint: "abc",
+            status: "Open"
+          }
+        ]
+      )
+    ).toBe(false);
+  });
+
+  it("treats a null snapshot list like unknown (useApiResource data)", () => {
+    expect(
+      resolveCommunityReviewFindingsMissionId({
+        measuredResultHref: "/missions",
+        snapshots: null
+      })
+    ).toBeNull();
+  });
+});
+
+describe("railPrimaryCompetesWithFindingsFirstHour", () => {
+  const routeFix = {
+    href: "/remediation",
+    label: "Route the smallest fix"
+  };
+
+  it("hides Route the smallest fix on /findings so first-hour keeps one verb", () => {
+    expect(railPrimaryCompetesWithFindingsFirstHour("/findings", routeFix)).toBe(
+      true
+    );
+    expect(
+      railPrimaryCompetesWithFindingsFirstHour("/findings?missionId=abc", routeFix)
+    ).toBe(true);
+  });
+
+  it("hides later remediations rail CTAs on /findings", () => {
+    expect(
+      railPrimaryCompetesWithFindingsFirstHour("/findings", {
+        href: "/remediation/99999999-9999-4999-8999-999999999999",
+        label: "Review remediations"
+      })
+    ).toBe(true);
+    expect(
+      railPrimaryCompetesWithFindingsFirstHour("/findings", {
+        href: "/missions",
+        label: "Run fresh verification"
+      })
+    ).toBe(true);
+  });
+
+  it("keeps setup CTAs on /findings and keeps Route the smallest fix off findings", () => {
+    expect(
+      railPrimaryCompetesWithFindingsFirstHour("/findings", {
+        href: "/scopes",
+        label: "Authorize scope"
+      })
+    ).toBe(false);
+    expect(
+      railPrimaryCompetesWithFindingsFirstHour("/findings", {
+        href: "/missions",
+        label: "Watch Community validation"
+      })
+    ).toBe(false);
+    expect(
+      railPrimaryCompetesWithFindingsFirstHour("/dashboard", routeFix)
+    ).toBe(false);
+    expect(
+      railPrimaryCompetesWithFindingsFirstHour("/remediation", routeFix)
+    ).toBe(false);
   });
 });
