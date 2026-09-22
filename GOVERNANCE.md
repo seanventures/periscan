@@ -25,8 +25,10 @@ boundaries, `LICENSE`, runner, and Prisma schema:
 exclude list: [`docs/PUBLIC_TREE.md`](./docs/PUBLIC_TREE.md). Neither is a
 LICENSE rewrite.
 
-Do not file security or Code of Conduct reports as public issues. Process:
-[`SECURITY.md`](./SECURITY.md). No `security@` domain is published.
+Security intake is a **title-only** public GitHub issue with the
+`[SECURITY]` prefix (use the Security issue template). Keep the public body
+free of PoCs. Process: [`SECURITY.md`](./SECURITY.md). No `security@`
+mailbox is published. Code of Conduct reports stay private to maintainers.
 
 ---
 
