@@ -5,7 +5,7 @@
 # next.config.ts does not set output:'standalone', and workspace packages are
 # published as TypeScript source (transpilePackages), so the runtime keeps the
 # installed workspace + the .next build and serves with `next start`.
-FROM node:22-bookworm-slim AS base
+FROM node:24-bookworm-slim AS base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable

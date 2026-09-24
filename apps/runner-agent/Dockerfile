@@ -30,7 +30,7 @@ ARG KERBRUTE_VERSION=1.0.3
 RUN curl -fsSL -o kerbrute "https://github.com/ropnop/kerbrute/releases/download/v${KERBRUTE_VERSION}/kerbrute_linux_amd64" \
   && chmod +x kerbrute
 
-FROM node:22-bookworm-slim AS base
+FROM node:24-bookworm-slim AS base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable
@@ -54,18 +54,16 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 COPY --from=recon-tools /tools/subfinder /tools/httpx /tools/dnsx /tools/kerbrute /usr/local/bin/
 # Offensive AD/identity tooling is not in the default runner-agent allowlist.
-# NetExec is present only for explicitly approved local opt-in deployments
-# (PERISCAN_RUNNER_ALLOWLISTED_MODULES + elevated safety levels). Metasploit
+# NetExec is LaterPhase and fixture-only: do not silently attempt an unpinned
+# pipx install in the default image. Metasploit
 # (exploit.metasploit_check) is heavy (ruby framework) and is provided via its
 # official container (metasploitframework/metasploit-framework) resolved at
 # runtime, or installed by the operator — NOT baked here (build = operator/CI).
 ENV PIPX_HOME=/opt/pipx PIPX_BIN_DIR=/usr/local/bin
-RUN pipx install netexec || true
 ENV PERISCAN_NMAP_RUNTIME=binary \
   PERISCAN_SUBFINDER_RUNTIME=binary \
   PERISCAN_HTTPX_RUNTIME=binary \
   PERISCAN_DNSX_RUNTIME=binary \
-  PERISCAN_NETEXEC_RUNTIME=binary \
   PERISCAN_KERBRUTE_RUNTIME=binary
 # Defaults; real values are injected at deploy time (control-plane URL, runner
 # identity/keypair from enrollment, task signing public key, allowlist).

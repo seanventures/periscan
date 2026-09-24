@@ -5,8 +5,9 @@
 #
 # Asserts:
 #   (1) every permissive bundled binary resolves + reports a version
-#   (2) the registry's own runtime resolver (`pnpm tools:check`) reports no
-#       CurrentMvp tool as missing
+#   (2) the registry's own runtime resolver finds the engines bundled in this
+#       server-side image; the full Current catalog also includes runner and
+#       optional engines that are not part of this image
 #   (3) legal-review GPL tools are absent from the default image (and present
 #       only when PERISCAN_INCLUDE_LEGAL_REVIEW_TOOLS=1, i.e. runtime-legal-review)
 set -euo pipefail
@@ -66,13 +67,17 @@ for cmd in "${legal_review_cmds[@]}"; do
   fi
 done
 
-echo "== registry runtime resolution (pnpm tools:check) =="
-# Every CurrentMvp tool must resolve to a runtime; none may be 'missing'.
-if pnpm tools:check --phase=CurrentMvp | tee /tmp/tools-check.txt; then
-  if grep -q " missing " /tmp/tools-check.txt; then
-    echo "FAIL | one or more CurrentMvp tools resolved as missing"
-    fail=1
-  fi
+echo "== bundled engine registry resolution (pnpm tools:check) =="
+if pnpm tools:check --phase=CurrentMvp > /tmp/tools-check.txt; then
+  bundled_tools=(gitleaks nuclei trivy osv-scanner prowler promptfoo pyrit)
+  for tool in "${bundled_tools[@]}"; do
+    if grep -F "${tool} | available |" /tmp/tools-check.txt; then
+      :
+    else
+      echo "FAIL | ${tool} | bundled engine missing from runtime registry"
+      fail=1
+    fi
+  done
 else
   echo "FAIL | pnpm tools:check exited non-zero"
   fail=1
