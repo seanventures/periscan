@@ -125,7 +125,7 @@ require_contains "$ENV_EXAMPLE" "PERISCAN_RUNNER_PROXY_URL"
 require_contains "$ENV_EXAMPLE" "PERISCAN_RUNNER_KILL_SWITCH"
 require_absent "$ENV_EXAMPLE" "PERISCAN_RUNNER_(CA_CERTIFICATE|CERTIFICATE|KEY)_PEM"
 
-require_contains "$PUBLISH_WORKFLOW" "ghcr.io/seanheiney/periscan-runner"
+require_contains "$PUBLISH_WORKFLOW" "ghcr.io/seanventures/periscan-runner"
 require_contains "$PUBLISH_WORKFLOW" "docker/build-push-action"
 
 require_contains "$DEPLOY_README" "outbound HTTPS"

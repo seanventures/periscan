@@ -3,7 +3,7 @@
 # Do not publish ports or create inbound firewall rules for this service.
 services:
   periscan-runner:
-    image: ghcr.io/seanheiney/periscan-runner:${PERISCAN_RUNNER_IMAGE_TAG:-latest}
+    image: ghcr.io/seanventures/periscan-runner:${PERISCAN_RUNNER_IMAGE_TAG:-latest}
     restart: unless-stopped
     user: "65532:65532"
     environment:

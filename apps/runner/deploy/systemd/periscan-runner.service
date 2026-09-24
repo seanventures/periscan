@@ -3,7 +3,7 @@
 
 [Unit]
 Description=Periscan Internal Runner
-Documentation=https://github.com/seanheiney/periscan/blob/main/RUNNER_ARCHITECTURE.md
+Documentation=https://github.com/seanventures/periscan/blob/main/RUNNER_ARCHITECTURE.md
 After=network-online.target
 Wants=network-online.target
 

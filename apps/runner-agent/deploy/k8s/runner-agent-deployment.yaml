@@ -76,7 +76,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: runner-agent
-          image: ghcr.io/seanheiney/periscan-runner-agent:latest
+          image: ghcr.io/seanventures/periscan-runner-agent:latest
           imagePullPolicy: IfNotPresent
           envFrom:
             - secretRef:

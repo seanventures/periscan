@@ -31,10 +31,10 @@ Pipeline files:
 
 Tagging is the intended release path: version tags also drive
 [`images-build.yml`](../.github/workflows/images-build.yml), which builds and
-pushes control-plane images to GHCR (`ghcr.io/seanheiney/periscan-api`,
+pushes control-plane images to GHCR (`ghcr.io/seanventures/periscan-api`,
 `-web`, `-scan-executor`, and optional Agent (in-network) `-runner-agent`), and
 [`runner-publish.yml`](../.github/workflows/runner-publish.yml), which publishes
-the Supported Customer Runner Go LTS image (`ghcr.io/seanheiney/periscan-runner`).
+the Supported Customer Runner Go LTS image (`ghcr.io/seanventures/periscan-runner`).
 
 ## Stages
 

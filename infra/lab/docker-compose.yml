@@ -96,7 +96,7 @@ services:
 
   runner-plant:
     profiles: ["runners"]
-    image: ${PERISCAN_RUNNER_IMAGE:-ghcr.io/seanheiney/periscan-runner:latest}
+    image: ${PERISCAN_RUNNER_IMAGE:-ghcr.io/seanventures/periscan-runner:latest}
     # Load task-signing PEM from enroll-runners creds dir (multiline-safe).
     entrypoint: ["/bin/sh", "-c"]
     command:
@@ -125,7 +125,7 @@ services:
 
   runner-hq:
     profiles: ["runners"]
-    image: ${PERISCAN_RUNNER_IMAGE:-ghcr.io/seanheiney/periscan-runner:latest}
+    image: ${PERISCAN_RUNNER_IMAGE:-ghcr.io/seanventures/periscan-runner:latest}
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |

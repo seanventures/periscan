@@ -92,10 +92,10 @@ describe("agentInNetworkInstallHint (optional lab path)", () => {
 describe("GHCR image name alignment", () => {
   it("uses seanheiney GHCR paths claimed by deploy/publish workflows", () => {
     expect(SUPPORTED_CUSTOMER_RUNNER_IMAGE).toBe(
-      "ghcr.io/seanheiney/periscan-runner:latest"
+      "ghcr.io/seanventures/periscan-runner:latest"
     );
     expect(IN_NETWORK_AGENT_IMAGE).toBe(
-      "ghcr.io/seanheiney/periscan-runner-agent:latest"
+      "ghcr.io/seanventures/periscan-runner-agent:latest"
     );
   });
 });

@@ -81,7 +81,7 @@ permissions:
 ## Example
 
 ```yaml
-- uses: seanheiney/periscan/actions/community-proof@main
+- uses: seanventures/periscan/actions/community-proof@main
   with:
     api_url: ${{ vars.PERISCAN_API_URL }}
     api_token: ${{ secrets.PERISCAN_API_TOKEN }}

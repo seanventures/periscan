@@ -32,12 +32,12 @@ Read alongside:
 **In-network runner (customer network) — deployed per network segment:**
 
 - **Supported Customer Runner (Go LTS, primary):** `apps/runner` — built from
-  `apps/runner/Dockerfile`, image `ghcr.io/seanheiney/periscan-runner`. Production
+  `apps/runner/Dockerfile`, image `ghcr.io/seanventures/periscan-runner`. Production
   private-network package: register, mTLS, signed poll, passive internal modules.
   Deploy guide: `apps/runner/deploy/`. Publish workflow: `runner-publish.yml`.
 - **Agent (in-network) — optional lab / AgentLocal companion:** `apps/runner-agent`
   — built from `apps/runner-agent/Dockerfile`, image
-  `ghcr.io/seanheiney/periscan-runner-agent`. Same outbound signed-task contract
+  `ghcr.io/seanventures/periscan-runner-agent`. Same outbound signed-task contract
   for measured/`periscan.*` and safe recon modules. **Not** a second enterprise
   LTS SKU. Deploy guide: `apps/runner-agent/deploy/`.
 
@@ -155,7 +155,7 @@ targets/cloud APIs it scans. It exposes no inbound port.
 
 1. **Enroll** from the control plane (`/runners` UI pairing or registration-token
    API). Primary install snippets use
-   `ghcr.io/seanheiney/periscan-runner` with `PERISCAN_REGISTRATION_TOKEN` +
+   `ghcr.io/seanventures/periscan-runner` with `PERISCAN_REGISTRATION_TOKEN` +
    `register` (see `apps/runner/README.md` and `apps/runner/deploy/`).
 2. **Run** the issued credentials inside the target network (compose / k8s /
    systemd examples under `apps/runner/deploy/`).
@@ -170,7 +170,7 @@ Use only when the site needs AgentLocal measured or safe recon modules.
 
 1. Prefer enrollment via the Supported Customer Runner path (or equivalent issued
    runner id + auth token + mTLS + task-signing public key).
-2. **Run** `ghcr.io/seanheiney/periscan-runner-agent` with those issued credentials
+2. **Run** `ghcr.io/seanventures/periscan-runner-agent` with those issued credentials
    (`apps/runner-agent/deploy/`). Do not treat this image as the production LTS
    package.
 3. Keep the local module allowlist scoped to qualified scenarios. Add BAS/AEV
