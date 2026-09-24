@@ -200,10 +200,38 @@ lab_compose_running_host_port() {
   return 1
 }
 
+# Keep an existing periscan-deps installation stable, but never attach a second
+# checkout to that installation's containers or volumes. An explicit project
+# override (for a disposable lab, for example) always wins.
+lab_choose_clone_compose_project() {
+  local compose_file="${1:-}"
+  if [[ -n "${COMPOSE_PROJECT_NAME:-}" || ! -f "$compose_file" ]]; then
+    return 0
+  fi
+
+  local compose_dir owner="" candidate suffix found=0
+  compose_dir="$(cd "$(dirname "$compose_file")" && pwd -P)"
+  for candidate in periscan-deps-postgres-1 periscan-deps-redis-1 periscan-deps-minio-1; do
+    if docker inspect "$candidate" >/dev/null 2>&1; then
+      found=1
+      owner="$(docker inspect "$candidate" --format '{{index .Config.Labels "com.docker.compose.project.working_dir"}}' 2>/dev/null || true)"
+      break
+    fi
+  done
+  if [[ "$found" == "0" || "$owner" == "$compose_dir" ]]; then
+    return 0
+  fi
+
+  suffix="$(printf '%s' "$compose_dir" | cksum | awk '{print $1}')"
+  export COMPOSE_PROJECT_NAME="periscan-deps-${suffix}"
+  echo "[first-hour] another checkout owns periscan-deps — using ${COMPOSE_PROJECT_NAME}"
+}
+
 # Choose published Postgres/Redis/MinIO ports for THIS clone's compose file.
 # Never treat a neighbor bind (e.g. workspace :5434) as ours.
 lab_select_deps_publish_ports() {
   local compose_file="${1:-}"
+  lab_choose_clone_compose_project "$compose_file"
   local preferred_pg="${PERISCAN_POSTGRES_PUBLISHED_PORT:-5434}"
   local preferred_redis="${PERISCAN_REDIS_PUBLISHED_PORT:-6379}"
   local preferred_minio="${PERISCAN_MINIO_PUBLISHED_PORT:-9000}"

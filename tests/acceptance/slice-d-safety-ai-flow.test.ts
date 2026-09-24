@@ -100,14 +100,14 @@ describe("Slice D safety scaffolds + AI ops floors", () => {
       expect(ransomware?.claimClass).toBe("danger_section");
       expect(ransomware?.honestSubstituteVerdict).toBe("DangerSection");
       expect(ransomware?.safeModules).toContain("exploitation.impact_t1486");
-      expect(ransomware?.foreverRefuse.join(" ")).toMatch(/first-hour/i);
+      expect(ransomware?.foreverRefuse.join(" ")).toMatch(/Community default-start/i);
 
       const identity = body.packs.find((p) => p.scorecardId === 22);
       expect(identity?.claimClass).toBe("exposure_only");
       expect(identity?.honestSubstituteVerdict).toBe("Partial");
       expect(identity?.canElevateSubstituteToPartial).toBe(true);
       expect(identity?.safeModules).toContain("gitleaks.repo_secrets");
-      expect(identity?.foreverRefuse.join(" ")).toMatch(/first-hour|High-danger/i);
+      expect(identity?.foreverRefuse.join(" ")).toMatch(/default start|High-danger/i);
 
       expect(body.note).toMatch(/16=plan_only/);
       expect(body.note).toMatch(/21=danger_section/);

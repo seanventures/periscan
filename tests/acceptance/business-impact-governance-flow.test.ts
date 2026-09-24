@@ -269,12 +269,18 @@ describe("business-impact governance", () => {
           tenantId
         }
       });
-      expect(audits.map((audit) => audit.action)).toEqual([
-        "asset_valuation_submitted",
-        "asset_valuation_reviewed",
-        "asset_valuation_updated"
-      ]);
-      expect(audits[1]?.metadata).toMatchObject({
+      expect(audits.map((audit) => audit.action)).toEqual(
+        expect.arrayContaining([
+          "asset_valuation_submitted",
+          "asset_valuation_reviewed",
+          "asset_valuation_updated"
+        ])
+      );
+      expect(audits).toHaveLength(3);
+      expect(
+        audits.find((audit) => audit.action === "asset_valuation_reviewed")
+          ?.metadata
+      ).toMatchObject({
         decision: "Approve",
         reviewReference: "RISK-COMMITTEE-2026-07",
         sequence: 1

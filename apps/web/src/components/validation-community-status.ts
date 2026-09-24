@@ -247,7 +247,7 @@ export function communityStartNowCopy(input: {
   const bits = [`${ids.length} engine${ids.length === 1 ? "" : "s"} start now`];
   const firstHour = communityFirstHourStartModuleIds(input.startableModuleIds);
   const usingFirstHourSubset =
-    pinned.length === 0 && input.pack !== "full" && firstHour.length > 0;
+    pinned.length === 0 && firstHour.length > 0;
   if (!usingFirstHourSubset && pinned.length === 0) {
     if (!input.runnerAvailable && deferredMentionsRunner(deferred)) {
       bits.push("runner needed");

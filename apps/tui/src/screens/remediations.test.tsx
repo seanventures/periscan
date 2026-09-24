@@ -84,12 +84,12 @@ async function tick(ms = 20): Promise<void> {
 
 async function mountScreen(
   api: PeriscanApi,
-  options: { missionId?: string; onStatus?: ReturnType<typeof vi.fn> } = {}
+  options: { missionId?: string; onStatus?: (status: string) => void } = {}
 ): Promise<{
   instance: ReturnType<typeof render>;
-  onStatus: ReturnType<typeof vi.fn>;
+  onStatus: (status: string) => void;
 }> {
-  const onStatus = options.onStatus ?? vi.fn();
+  const onStatus = options.onStatus ?? vi.fn<(status: string) => void>();
   const instance = render(
     <RemediationsScreen
       api={api}

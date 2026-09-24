@@ -90,6 +90,7 @@ write_state() {
   mkdir -p "$STATE_DIR"
   cat > "$STATE_ENV" <<EOF
 PERISCAN_POSTGRES_PUBLISHED_PORT=${PERISCAN_POSTGRES_PUBLISHED_PORT:-}
+COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME:-}
 PERISCAN_REDIS_PUBLISHED_PORT=${PERISCAN_REDIS_PUBLISHED_PORT:-}
 PERISCAN_MINIO_PUBLISHED_PORT=${PERISCAN_MINIO_PUBLISHED_PORT:-}
 PERISCAN_MINIO_CONSOLE_PUBLISHED_PORT=${PERISCAN_MINIO_CONSOLE_PUBLISHED_PORT:-}
@@ -113,6 +114,7 @@ load_state() {
 }
 
 print_ports() {
+  echo "COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME:-periscan-deps}"
   echo "PERISCAN_POSTGRES_PUBLISHED_PORT=${PERISCAN_POSTGRES_PUBLISHED_PORT:-}"
   echo "PERISCAN_REDIS_PUBLISHED_PORT=${PERISCAN_REDIS_PUBLISHED_PORT:-}"
   echo "PERISCAN_API_PORT=${PERISCAN_API_PORT:-}"
@@ -278,6 +280,8 @@ cmd_down() {
     echo "lab:dev not tracked (no ${PIDFILE})"
   fi
   require_docker
+  load_state
+  lab_choose_clone_compose_project "$COMPOSE_FILE"
   echo "==> docker compose stop (${COMPOSE_FILE})"
   docker compose -f "$COMPOSE_FILE" stop
   echo "stopped. start again with: bash scripts/periscan.sh start"

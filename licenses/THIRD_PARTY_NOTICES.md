@@ -496,7 +496,7 @@ Periscan-owned adapters and content with no third-party tool laundering.
 | concurrently | 10.0.4 | MIT | periscan |
 | cytoscape | 3.34.0 | MIT | @periscan/web |
 | eslint | 10.8.0 | MIT | periscan |
-| fastify | 5.10.0 | MIT | @periscan/api |
+| fastify | 5.12.5 | MIT | @periscan/api |
 | globals | 17.6.0 | MIT | periscan |
 | ink | 5.2.1 | MIT | @periscan/tui |
 | ink-testing-library | 4.0.0 | MIT | @periscan/tui |
@@ -520,6 +520,6 @@ Periscan-owned adapters and content with no third-party tool laundering.
 | tsx | 4.23.1 | MIT | @periscan/tui, periscan |
 | typescript | 5.9.3 | Apache-2.0 | @periscan/tui, periscan |
 | typescript-eslint | 8.60.1 | MIT | periscan |
-| vitest | 3.2.7 | MIT | @periscan/tui, periscan |
+| vitest | 4.1.11 | MIT | @periscan/tui, periscan |
 | yaml | 2.9.0 | ISC | @periscan/modules |
 | zod | 4.4.3 | MIT | @periscan/api, @periscan/connectors, @periscan/evidence, @periscan/model-gateway, @periscan/modules, @periscan/operators, @periscan/policy, @periscan/runner-agent, @periscan/shared, @periscan/tui, @periscan/web, @periscan/webhooks |
