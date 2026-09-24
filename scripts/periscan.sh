@@ -111,11 +111,19 @@ EOF
 
 load_state() {
   if [[ -f "$STATE_ENV" ]]; then
+    local requested_project="${COMPOSE_PROJECT_NAME:-}"
+    local requested_deps_file="${PERISCAN_DEPS_COMPOSE_FILE:-}"
     # shellcheck disable=SC1090
     set -a
     # shellcheck disable=SC1091
     source "$STATE_ENV"
     set +a
+    if [[ -n "$requested_project" ]]; then
+      export COMPOSE_PROJECT_NAME="$requested_project"
+    fi
+    if [[ -n "$requested_deps_file" ]]; then
+      export PERISCAN_DEPS_COMPOSE_FILE="$requested_deps_file"
+    fi
   fi
 }
 
@@ -184,6 +192,7 @@ cmd_install() {
 
 cmd_start() {
   require_node
+  load_state
   lab_select_deps_publish_ports "$COMPOSE_FILE"
   export_selected_deps
   lab_env_defaults
@@ -241,6 +250,7 @@ cmd_status() {
 cmd_update() {
   require_node
   require_docker
+  load_state
   lab_select_deps_publish_ports "$COMPOSE_FILE"
   export_selected_deps
   if is_dry_run; then
