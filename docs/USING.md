@@ -64,7 +64,7 @@ bash scripts/periscan.sh help
 
 | Rule | Meaning |
 | --- | --- |
-| `install` | Toolchain + `infra/docker-compose/docker-compose.yml` (project `periscan-deps`) + Prisma migrate. Not `seed:demo`. Not `lab:up`. Not `pnpm verify`. |
+| `install` | Toolchain + `infra/docker-compose/docker-compose.yml` (project `periscan-deps`, or a checkout-specific name if another clone owns it) + Prisma migrate. Not `seed:demo`. Not `lab:up`. Not `pnpm verify`. |
 | `start` | Host toolchain control plane. Prints web + API URLs. Auto-shifts off `:3000` / `:3001` when busy. |
 | `status` | `GET /api/v1/health` against the chosen API port. Down is honest, not a fake pass. |
 | `update` | Pull + install + migrate. Does **not** restart processes. You run `start` again. |

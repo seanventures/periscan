@@ -28,7 +28,10 @@ Do **not** run `docker compose` at the repo root.
 
 Local Postgres, Redis, and MinIO live in
 [`infra/docker-compose/docker-compose.yml`](../infra/docker-compose/docker-compose.yml)
-(project name **`periscan-deps`**). That is the only Community deps file.
+(default project name **`periscan-deps`**). The install script selects a
+checkout-specific project if another checkout already owns that name, and
+stores the choice in `.periscan/community.env`. That is the only Community
+deps file.
 
 Root `compose.yaml` is **not** Community deps. It is the private production
 stack and is **excluded from the public tree**
@@ -69,7 +72,7 @@ bash scripts/periscan.sh start
 | `bash scripts/periscan.sh start` | `pnpm lab:dev` (API + **worker** + web). Prints URLs. Auto-shifts off `:3000` / `:3001` when busy. |
 | `bash scripts/periscan.sh status` | `GET /api/v1/health` on the chosen API port. Down is honest, not a fake pass. |
 | `bash scripts/periscan.sh update` | `git pull` (if on a branch) + `pnpm install` + migrate. Does **not** restart. You run `start` again. |
-| `bash scripts/periscan.sh down` | Stop tracked `lab:dev` children; `compose stop` deps. Volumes stay. |
+| `bash scripts/periscan.sh down` | Stop tracked `lab:dev` children; `compose stop` only this checkout's deps. Volumes stay. |
 
 `install` does **not** start the apps. `start` does. `pnpm dev` is api+web
 only and **cannot** finish Community runs.

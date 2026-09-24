@@ -67,7 +67,7 @@ bash install.sh --dry-run
 
 Local/self-host: [docs/SETUP.md](docs/SETUP.md). Operator notes: [USING.md](USING.md). Full FAQ: [docs/FAQ.md](docs/FAQ.md). Offering: [COMMUNITY.md](COMMUNITY.md).
 
-Measurement mark lives in [docs/BADGES.md](docs/BADGES.md). This repo has no dogfood Community evidence yet — do not treat the product as measured.
+A [clean public clone completed the local Community proof loop](docs/qa/COMMUNITY_GA_CLEAN_CLONE_2026-09-24.md) on a disposable owned repository. This repo itself has no dogfood Community evidence yet; its [measurement mark](docs/BADGES.md) remains **not measured**.
 
 ## Contents
 
