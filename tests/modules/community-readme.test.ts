@@ -557,7 +557,7 @@ describe("Community local/self-host SETUP (PERISCAN-490)", () => {
     expect(setup).toContain("compose.yaml");
     expect(setup).not.toContain("PUBLIC_TREE.md");
     expect(setup).toContain("A public clone may");
-    expect(setup).toContain("-f infra/docker-compose/docker-compose.yml");
+    expect(setup).toContain("-f infra/docker-compose/docker-compose.community-deps.yml");
     expect(setup).not.toMatch(/^docker compose up$/m);
   });
 

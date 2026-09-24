@@ -26,15 +26,16 @@ Do **not** run `docker compose` at the repo root.
 
 ## Compose honesty
 
-Local Postgres, Redis, and MinIO live in
+New installs use Postgres, Redis, and SeaweedFS S3 in
+[`infra/docker-compose/docker-compose.community-deps.yml`](../infra/docker-compose/docker-compose.community-deps.yml)
+(default project name **`periscan-community-deps`**). Existing installs keep
 [`infra/docker-compose/docker-compose.yml`](../infra/docker-compose/docker-compose.yml)
-(default project name **`periscan-deps`**). The install script selects a
+and their MinIO data until a verified migration. The install script selects a
 checkout-specific project if another checkout already owns that name, and
-stores the choice in `.periscan/community.env`. That is the only Community
-deps file.
+stores the choice in `.periscan/community.env`.
 
 Root `compose.yaml`, if present, is **not** Community deps. A public clone may
-not have that file. Always pass `-f infra/docker-compose/docker-compose.yml`
+not have that file. New installs pass `-f infra/docker-compose/docker-compose.community-deps.yml`
 for local dependencies instead of running a bare `docker compose up` at the
 repo root.
 
@@ -42,9 +43,14 @@ Bare bring-up (host toolchain; scripts below do this for you):
 
 ```bash
 export PERISCAN_POSTGRES_PUBLISHED_PORT=5434
-docker compose -f infra/docker-compose/docker-compose.yml up -d --wait
+docker compose -f infra/docker-compose/docker-compose.community-deps.yml up -d --wait
 export DATABASE_URL=postgresql://periscan:periscan@127.0.0.1:5434/periscan
 export REDIS_URL=redis://127.0.0.1:6379
+export PERISCAN_EVIDENCE_S3_ENDPOINT=http://127.0.0.1:9000
+export PERISCAN_EVIDENCE_S3_BUCKET=periscan-evidence
+export PERISCAN_EVIDENCE_S3_ACCESS_KEY_ID=periscan
+export PERISCAN_EVIDENCE_S3_SECRET_ACCESS_KEY=periscan123
+pnpm --filter @periscan/evidence exec tsx src/ensure-local-bucket.ts
 ```
 
 Do not `docker compose down -v` unless you intend to wipe **this clone's**
@@ -109,12 +115,12 @@ when those binds are taken. Chosen values are printed and stored in
 | API      | `http://127.0.0.1:3001`                                  | next free                           | `PERISCAN_API_PORT` / `PERISCAN_API_URL`                  |
 | Postgres | host **5432** (`PERISCAN_POSTGRES_PUBLISHED_PORT:-5432`) | prefer **5434**, then next free     | `PERISCAN_POSTGRES_PUBLISHED_PORT` **and** `DATABASE_URL` |
 | Redis    | host **6379**                                            | same, then next free                | `PERISCAN_REDIS_PUBLISHED_PORT` **and** `REDIS_URL`       |
-| MinIO    | host **9000**                                            | same, then next free                | `PERISCAN_MINIO_PUBLISHED_PORT`                           |
+| S3 store | host **9000**                                            | same, then next free                | `PERISCAN_MINIO_PUBLISHED_PORT` (legacy port variable)    |
 
 Two Postgres numbers on purpose:
 
 1. The compose file default is **5432** so a manual
-   `docker compose -f infra/docker-compose/docker-compose.yml up` matches
+   `docker compose -f infra/docker-compose/docker-compose.community-deps.yml up` matches
    [`.env.example`](../.env.example).
 2. `scripts/community-first-hour.sh` / `scripts/periscan.sh install` call
    `lab_select_deps_publish_ports`, which prefers **5434** so a neighbor
@@ -202,7 +208,7 @@ bash scripts/community-up.sh
 ```
 
 That is
-`docker compose -f infra/docker-compose/docker-compose.yml -f infra/docker-compose/docker-compose.community.yml up -d --build --wait`.
+`docker compose -f infra/docker-compose/docker-compose.community-deps.yml -f infra/docker-compose/docker-compose.community.yml up -d --build --wait`.
 First image build copies the monorepo. Do not copy this overlay into a
 customer production deploy. Production topology: [`DEPLOY.md`](./DEPLOY.md).
 
@@ -212,7 +218,7 @@ customer production deploy. Production topology: [`DEPLOY.md`](./DEPLOY.md).
 
 | Temptation                                 | Honest answer                                                                                                                                          |
 | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `docker compose` at repo root              | Wrong file. Use `-f infra/docker-compose/docker-compose.yml`.                                                                                          |
+| `docker compose` at repo root              | Wrong file. Use `-f infra/docker-compose/docker-compose.community-deps.yml` for new installs.                                                          |
 | Hosted `github.com/org/repo` as the target | Refused. Clone locally, paste the absolute path.                                                                                                       |
 | Full pack / Nuclei on first start          | Default start is Gitleaks (`jobsQueued=1`). Nuclei is a second mission.                                                                                |
 | Atomic / Caldera / Metasploit / SharpHound | BAS/AEV adapters are under development; live execution requires scenario qualification and bound authorization. See [the program](BAS_AEV_PROGRAM.md). |
@@ -229,7 +235,7 @@ Ledger: [`SETTLED.md`](./SETTLED.md).
 
 | Symptom                                    | Check                                                                                                  |
 | ------------------------------------------ | ------------------------------------------------------------------------------------------------------ |
-| `docker compose` errors at repo root       | You omitted `-f infra/docker-compose/docker-compose.yml`.                                              |
+| `docker compose` errors at repo root       | You omitted `-f infra/docker-compose/docker-compose.community-deps.yml` for a new install.             |
 | Migrate / API cannot reach Postgres        | Published port ≠ `DATABASE_URL`. Print `.periscan/community.env` or `bash scripts/periscan.sh status`. |
 | `:5432` / `:5434` / `:3000` / `:3001` busy | Scripts remap. Do not kill the neighbor. Export the printed ports.                                     |
 | `Node 24 is required`                      | This shell is not 24. See `.nvmrc`.                                                                    |

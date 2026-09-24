@@ -21,7 +21,7 @@ demo login is **not** measured proof.
 | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Node **24**          | [`.nvmrc`](../.nvmrc)                                                                                                                                                                        |
 | pnpm **9.15.0**      | Corepack                                                                                                                                                                                     |
-| Docker               | Engine + Compose plugin. Use [`infra/docker-compose/docker-compose.yml`](../infra/docker-compose/docker-compose.yml) for local deps; do not run a bare `docker compose up` at the repo root. |
+| Docker               | Engine + Compose plugin. New installs use [`infra/docker-compose/docker-compose.community-deps.yml`](../infra/docker-compose/docker-compose.community-deps.yml); do not run a bare `docker compose up` at the repo root. |
 | A repository you own | `git clone <your-repo>`, then paste the **absolute path**. Hosted `github.com/org/repo` is refused.                                                                                          |
 | Gitleaks runtime     | A host binary is optional. Docker runs the pinned image when the binary is absent. A failed runtime returns Inconclusive, not invented findings.                                             |
 
@@ -45,7 +45,8 @@ bash install.sh repair    # alias doctor
 
 Reuses `scripts/periscan.sh` / `scripts/community-first-hour.sh` /
 `infra/lab/scripts/env.sh`. Local deps stay
-`infra/docker-compose/docker-compose.yml`. Busy ports remap (557). Do not kill
+`infra/docker-compose/docker-compose.community-deps.yml` for new installs;
+existing install state retains the legacy MinIO Compose file. Busy ports remap (557). Do not kill
 neighbor apps. Do not wipe a neighbor Redis.
 
 ## Install contract (`scripts/periscan.sh`)
@@ -64,7 +65,7 @@ bash scripts/periscan.sh help
 
 | Rule      | Meaning                                                                                                                                                                                                   |
 | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `install` | Toolchain + `infra/docker-compose/docker-compose.yml` (project `periscan-deps`, or a checkout-specific name if another clone owns it) + Prisma migrate. Not `seed:demo`. Not `lab:up`. Not `pnpm verify`. |
+| `install` | Toolchain + isolated `infra/docker-compose/docker-compose.community-deps.yml` (project `periscan-community-deps`) + Prisma migrate. Existing state retains legacy MinIO. Not `seed:demo`, `lab:up`, or `pnpm verify`. |
 | `start`   | Host toolchain control plane. Prints web + API URLs. Auto-shifts off `:3000` / `:3001` when busy.                                                                                                         |
 | `status`  | `GET /api/v1/health` against the chosen API port. Down is honest, not a fake pass.                                                                                                                        |
 | `update`  | Pull + install + migrate. Does **not** restart processes. You run `start` again.                                                                                                                          |

@@ -10,7 +10,7 @@
 # Requires: Node (see .nvmrc), Corepack, Docker with the compose plugin.
 # Do not `docker compose up` at the repo root — that file is production.
 #
-# Postgres/Redis/MinIO publish ports honor PERISCAN_*_PUBLISHED_PORT, then the
+# Postgres/Redis/S3 publish ports honor PERISCAN_*_PUBLISHED_PORT, then the
 # next free port. A neighbor bind on :5434 is never treated as this clone.
 # PERISCAN_FIRST_HOUR_DRY_RUN=1 prints chosen ports and exits before compose.
 
@@ -20,10 +20,10 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 PNPM_VERSION="9.15.0"
-COMPOSE_FILE="infra/docker-compose/docker-compose.yml"
-
 # shellcheck source=../infra/lab/scripts/env.sh
 source "${ROOT_DIR}/infra/lab/scripts/env.sh"
+COMPOSE_FILE="$(lab_community_deps_compose_file "$ROOT_DIR")"
+export PERISCAN_DEPS_COMPOSE_FILE="$COMPOSE_FILE"
 
 fail() {
   echo "error: $*" >&2
@@ -53,13 +53,17 @@ ensure_pnpm() {
 lab_select_deps_publish_ports "$COMPOSE_FILE"
 
 if [[ "${PERISCAN_FIRST_HOUR_DRY_RUN:-}" == "1" ]]; then
-  echo "COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME:-periscan-deps}"
+  echo "COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME:-periscan-community-deps}"
+  echo "PERISCAN_DEPS_COMPOSE_FILE=${COMPOSE_FILE}"
   echo "PERISCAN_POSTGRES_PUBLISHED_PORT=${PERISCAN_POSTGRES_PUBLISHED_PORT}"
   echo "PERISCAN_REDIS_PUBLISHED_PORT=${PERISCAN_REDIS_PUBLISHED_PORT}"
   echo "PERISCAN_MINIO_PUBLISHED_PORT=${PERISCAN_MINIO_PUBLISHED_PORT}"
-  echo "PERISCAN_MINIO_CONSOLE_PUBLISHED_PORT=${PERISCAN_MINIO_CONSOLE_PUBLISHED_PORT}"
+  if [[ -n "${PERISCAN_MINIO_CONSOLE_PUBLISHED_PORT:-}" ]]; then
+    echo "PERISCAN_MINIO_CONSOLE_PUBLISHED_PORT=${PERISCAN_MINIO_CONSOLE_PUBLISHED_PORT}"
+  fi
   echo "DATABASE_URL=${DATABASE_URL}"
   echo "REDIS_URL=${REDIS_URL}"
+  echo "PERISCAN_EVIDENCE_S3_ENDPOINT=${PERISCAN_EVIDENCE_S3_ENDPOINT}"
   echo "COMPOSE=up"
   exit 0
 fi
@@ -78,9 +82,12 @@ else
   pnpm install
 fi
 
-echo "==> docker compose up (${COMPOSE_FILE} — Postgres/Redis/MinIO)"
+echo "==> docker compose up (${COMPOSE_FILE} — Postgres/Redis/S3)"
 echo "    Postgres :${PERISCAN_POSTGRES_PUBLISHED_PORT}  Redis :${PERISCAN_REDIS_PUBLISHED_PORT}"
 docker compose -f "$COMPOSE_FILE" up -d --wait
+
+echo "==> ensure local evidence bucket"
+pnpm --filter @periscan/evidence exec tsx src/ensure-local-bucket.ts
 
 echo "==> prisma generate + migrate deploy"
 pnpm --filter @periscan/db db:generate
@@ -93,6 +100,7 @@ Deps and schema are ready. In this (or a new) shell:
   export PERISCAN_POSTGRES_PUBLISHED_PORT=${PERISCAN_POSTGRES_PUBLISHED_PORT}
   export DATABASE_URL=${DATABASE_URL}
   export REDIS_URL=${REDIS_URL}
+  export PERISCAN_EVIDENCE_S3_ENDPOINT=${PERISCAN_EVIDENCE_S3_ENDPOINT}
 
 If the worker logs "missing mission context", stale BullMQ jobs are in Redis:
 

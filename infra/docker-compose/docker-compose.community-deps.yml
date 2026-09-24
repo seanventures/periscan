@@ -1,0 +1,60 @@
+# New Community installs use an isolated project and volume namespace. The
+# legacy docker-compose.yml remains the MinIO path for existing installs until
+# their evidence is migrated and verified.
+name: periscan-community-deps
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: periscan
+      POSTGRES_USER: periscan
+      POSTGRES_PASSWORD: periscan
+    ports:
+      - "${PERISCAN_POSTGRES_PUBLISHED_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U periscan -d periscan"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "${PERISCAN_REDIS_PUBLISHED_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    # The service alias preserves the existing S3 endpoint contract. Its data
+    # is held in seaweedfs_data, never in a legacy MinIO volume.
+    image: chrislusf/seaweedfs:4.47@sha256:ce9e796f1fe6f06968f4c04bdaf8f678dad9c8acdfef3d244133d71bfa6bf882
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >-
+        printf '%s' "$$S3_CONFIG" > /tmp/s3.json;
+        exec weed server -s3 -s3.port=9000 -dir=/data
+        -s3.config=/tmp/s3.json -ip.bind=0.0.0.0
+    environment:
+      S3_CONFIG: '{"identities":[{"name":"periscan-local","credentials":[{"accessKey":"periscan","secretKey":"periscan123"}],"actions":["Admin","Read","List","Tagging","Write"]}]}'
+    ports:
+      - "${PERISCAN_MINIO_PUBLISHED_PORT:-9000}:9000"
+    volumes:
+      - seaweedfs_data:/data
+    healthcheck:
+      test: ["CMD", "nc", "-z", "127.0.0.1", "9000"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  postgres_data:
+  redis_data:
+  seaweedfs_data:

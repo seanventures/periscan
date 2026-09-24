@@ -11,13 +11,14 @@
 #   scripts/community-first-hour.sh  (via periscan.sh install)
 #   infra/lab/scripts/env.sh         (lab_select_deps_publish_ports, 557 remap)
 #
-# Local deps file: infra/docker-compose/docker-compose.yml
+# New Community deps: infra/docker-compose/docker-compose.community-deps.yml
+# Existing installs retain infra/docker-compose/docker-compose.yml and MinIO data.
 # Never `docker compose up` at the repo root (compose.yaml is not Community deps).
 # Never wipe a neighbor Redis. Never live offensive packs.
 set -euo pipefail
 
 CLONE_URL="https://github.com/seanventures/periscan.git"
-COMPOSE_FILE="infra/docker-compose/docker-compose.yml"
+COMPOSE_FILE="infra/docker-compose/docker-compose.community-deps.yml"
 PNPM_VERSION="9.15.0"
 NODE_MAJOR_MIN=24
 DOCKER_DESKTOP_URL="https://docs.docker.com/get-docker/"
@@ -84,7 +85,9 @@ export_dry_run() {
 
 is_checkout() {
   local dir="${1:-}"
-  [[ -n "$dir" && -f "${dir}/${PERISCAN_SH}" && -f "${dir}/${COMPOSE_FILE}" && -f "${dir}/package.json" ]]
+  [[ -n "$dir" && -f "${dir}/${PERISCAN_SH}" && -f "${dir}/package.json" &&
+    ( -f "${dir}/infra/docker-compose/docker-compose.community-deps.yml" ||
+      -f "${dir}/infra/docker-compose/docker-compose.yml" ) ]]
 }
 
 self_dir() {
@@ -274,15 +277,33 @@ ensure_checkout() {
 
 STATE_ENV_REL=".periscan/community.env"
 
+select_clone_compose_file() {
+  if [[ -z "${ROOT:-}" || ! -f "${ROOT}/${ENV_SH}" ]]; then
+    return 0
+  fi
+  # shellcheck source=infra/lab/scripts/env.sh
+  source "${ROOT}/${ENV_SH}"
+  COMPOSE_FILE="$(lab_community_deps_compose_file "$ROOT")"
+  export PERISCAN_DEPS_COMPOSE_FILE="$COMPOSE_FILE"
+}
+
 load_clone_state() {
   local state="${ROOT:-}/${STATE_ENV_REL}"
   if [[ -z "${ROOT:-}" || ! -f "$state" ]]; then
     return 0
   fi
+  local requested_project="${COMPOSE_PROJECT_NAME:-}"
+  local requested_deps_file="${PERISCAN_DEPS_COMPOSE_FILE:-}"
   set -a
   # shellcheck disable=SC1090
   source "$state"
   set +a
+  if [[ -n "$requested_project" ]]; then
+    export COMPOSE_PROJECT_NAME="$requested_project"
+  fi
+  if [[ -n "$requested_deps_file" ]]; then
+    export PERISCAN_DEPS_COMPOSE_FILE="$requested_deps_file"
+  fi
 }
 
 clone_has_saved_listen_ports() {
@@ -528,12 +549,13 @@ cmd_install() {
   export_dry_run
   detect_os
   echo "clone URL: ${CLONE_URL}"
-  echo "compose file: ${COMPOSE_FILE}"
   ensure_git
   ensure_node
   ensure_docker
   ensure_pnpm
   ensure_checkout
+  select_clone_compose_file
+  echo "compose file: ${COMPOSE_FILE}"
   check_compose_file
   load_lab_env
   if is_dry_run; then
@@ -561,12 +583,13 @@ cmd_doctor() {
   export_dry_run
   detect_os
   echo "clone URL: ${CLONE_URL}"
-  echo "compose file: ${COMPOSE_FILE}"
   ensure_git
   ensure_node
   ensure_docker
   ensure_pnpm
   ensure_checkout
+  select_clone_compose_file
+  echo "compose file: ${COMPOSE_FILE}"
   check_compose_file
   load_lab_env
   if is_dry_run; then
@@ -600,6 +623,7 @@ cmd_health() {
   else
     echo "checkout: none"
   fi
+  select_clone_compose_file
   check_compose_file
   load_lab_env
   if is_dry_run; then

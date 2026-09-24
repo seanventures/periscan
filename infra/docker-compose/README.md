@@ -1,11 +1,15 @@
 # Local Community compose
 
-Postgres, Redis, and MinIO live in [`docker-compose.yml`](./docker-compose.yml)
-(project name **`periscan-deps`**). The Community overlay adds api, web, and
-worker so a clone can run the control plane against those deps.
+New installs use [`docker-compose.community-deps.yml`](./docker-compose.community-deps.yml)
+for Postgres, Redis, and SeaweedFS S3 (project **`periscan-community-deps`**).
+Existing installs keep [`docker-compose.yml`](./docker-compose.yml) and their
+MinIO volumes until evidence is migrated and verified. The Community overlay
+adds api, web, and worker to the selected dependency project.
+The legacy path is `infra/docker-compose/docker-compose.yml`.
 
-Do **not** `docker compose up` at the repo root. Root `compose.yaml` is the
-goldeneye production stack (private tailnet registry + Traefik).
+Do **not** `docker compose up` at the repo root. Use the Community scripts or
+the explicit dependency file below. The root `compose.yaml` is not this local
+development stack.
 
 ## Overlay (api + web + worker)
 
@@ -13,7 +17,7 @@ Requires Docker. First image build copies the monorepo and runs `pnpm install`.
 
 ```bash
 docker compose \
-  -f infra/docker-compose/docker-compose.yml \
+  -f infra/docker-compose/docker-compose.community-deps.yml \
   -f infra/docker-compose/docker-compose.community.yml \
   up -d --build --wait
 ```
@@ -43,7 +47,7 @@ Stop:
 
 ```bash
 docker compose \
-  -f infra/docker-compose/docker-compose.yml \
+  -f infra/docker-compose/docker-compose.community-deps.yml \
   -f infra/docker-compose/docker-compose.community.yml \
   down
 ```
@@ -54,8 +58,13 @@ docker compose \
 
 ```bash
 export PERISCAN_POSTGRES_PUBLISHED_PORT=5434
-docker compose -f infra/docker-compose/docker-compose.yml up -d --wait
+docker compose -f infra/docker-compose/docker-compose.community-deps.yml up -d --wait
 export DATABASE_URL=postgresql://periscan:periscan@127.0.0.1:5434/periscan
+export PERISCAN_EVIDENCE_S3_ENDPOINT=http://127.0.0.1:9000
+export PERISCAN_EVIDENCE_S3_BUCKET=periscan-evidence
+export PERISCAN_EVIDENCE_S3_ACCESS_KEY_ID=periscan
+export PERISCAN_EVIDENCE_S3_SECRET_ACCESS_KEY=periscan123
+pnpm --filter @periscan/evidence exec tsx src/ensure-local-bucket.ts
 pnpm --filter @periscan/db db:generate
 pnpm --filter @periscan/db db:migrate:deploy
 pnpm lab:dev

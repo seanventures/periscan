@@ -284,7 +284,7 @@ curl -fsSL --proto '=https' --tlsv1.2 https://raw.githubusercontent.com/seanvent
 `scripts/periscan.sh` / `install.sh` require **Node 24+** ([`.nvmrc`](../.nvmrc)).
 Node 20 / 22 fail the major check before compose or migrate — that is intentional,
 not a surprise after start. Use Node 24 (nvm / fnm / package manager), then
-Corepack for pnpm **9.15.0**. Docker is required for Postgres / Redis / MinIO.
+Corepack for pnpm **9.15.0**. Docker is required for Postgres, Redis, and local S3.
 
 ### Which ports? What if 5434 or 3001 is busy?
 
@@ -294,7 +294,7 @@ Corepack for pnpm **9.15.0**. Docker is required for Postgres / Redis / MinIO.
 | API | `:3001` | next free; printed as `PERISCAN_API_PORT` / `PERISCAN_API_URL` |
 | Postgres (published) | **5434** recommended (`PERISCAN_POSTGRES_PUBLISHED_PORT`) | next free; **never** skip compose because a neighbor already has 5434 |
 | Redis | `:6379` | `PERISCAN_REDIS_PUBLISHED_PORT` |
-| MinIO | `:9000` | `PERISCAN_MINIO_PUBLISHED_PORT` |
+| S3 store | `:9000` | `PERISCAN_MINIO_PUBLISHED_PORT` (legacy port variable) |
 
 Internal compose hostname is always `postgres` on 5432. Host `DATABASE_URL`
 must match the **published** port. Compose port env does not rewrite
@@ -321,19 +321,20 @@ restart with `start`. It does not live-reload a running plane.
 
 ### Do I need Docker? A worker? Node 24?
 
-Yes, yes, and yes. Docker for Postgres/Redis/MinIO (and optional Community
+Yes, yes, and yes. Docker for Postgres/Redis/S3 (and optional Community
 overlay). Worker to finish Community jobs. Node 24 + pnpm 9.15.0 via Corepack.
 Anything below Node 24 fails install (see above).
 
 ### How do I back up?
 
-Community state is primarily **Postgres**. Compose pins project `periscan-deps`
-and volume `postgres_data` (`infra/docker-compose/docker-compose.yml`). Snapshot
-that volume, or dump via `pnpm db:backup` /
+Community state is primarily **Postgres**. New installs use project
+`periscan-community-deps`, with `postgres_data` and `seaweedfs_data` volumes.
+Existing installs retain `periscan-deps` and `minio_data` until a verified
+migration. Snapshot the relevant volumes or dump Postgres via `pnpm db:backup` /
 [`scripts/db-backup.sh`](../scripts/db-backup.sh) against `DATABASE_URL`
 (custom-format `pg_dump`). Restore is destructive and confirmed:
 [`scripts/db-restore.sh`](../scripts/db-restore.sh). Non-destructive drill:
-`pnpm db:restore-drill`. MinIO evidence objects need separate retention —
+`pnpm db:restore-drill`. S3 evidence objects need separate retention —
 database dump alone is not a full DR story. See
 [`docs/runbooks/README.md`](./runbooks/README.md).
 

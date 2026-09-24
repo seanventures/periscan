@@ -5,7 +5,8 @@
 # (lab_select_deps_publish_ports), and infra/lab/scripts/control-plane-dev.sh
 # (pnpm lab:dev, PERISCAN-557 API remap). Does not fork those paths.
 #
-# Local compose only: infra/docker-compose/docker-compose.yml
+# New installs use infra/docker-compose/docker-compose.community-deps.yml;
+# existing state retains infra/docker-compose/docker-compose.yml.
 # Never `docker compose up` at the repo root. Local deps are this compose file.
 # Stop deps with `compose stop` only — do not wipe volumes. Neighbor :5434 is never this clone.
 #
@@ -20,7 +21,8 @@ cd "$ROOT_DIR"
 source "${ROOT_DIR}/infra/lab/scripts/env.sh"
 
 PNPM_VERSION="9.15.0"
-COMPOSE_FILE="infra/docker-compose/docker-compose.yml"
+COMPOSE_FILE="$(lab_community_deps_compose_file "$ROOT_DIR")"
+export PERISCAN_DEPS_COMPOSE_FILE="$COMPOSE_FILE"
 FIRST_HOUR="${ROOT_DIR}/scripts/community-first-hour.sh"
 CONTROL_PLANE_DEV="${ROOT_DIR}/infra/lab/scripts/control-plane-dev.sh"
 STATE_DIR="${ROOT_DIR}/.periscan"
@@ -49,7 +51,7 @@ Commands:
   help      show this help
 
 Requires Node 24 (see .nvmrc), pnpm 9.15.0 (Corepack), and Docker.
-Local deps file: infra/docker-compose/docker-compose.yml
+Local deps file: selected per clone (new SeaweedFS or legacy MinIO).
 Do not docker compose up at the repo root.
 EOF
 }
@@ -90,12 +92,16 @@ write_state() {
   mkdir -p "$STATE_DIR"
   cat > "$STATE_ENV" <<EOF
 PERISCAN_POSTGRES_PUBLISHED_PORT=${PERISCAN_POSTGRES_PUBLISHED_PORT:-}
+PERISCAN_DEPS_COMPOSE_FILE=${COMPOSE_FILE}
 COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME:-}
 PERISCAN_REDIS_PUBLISHED_PORT=${PERISCAN_REDIS_PUBLISHED_PORT:-}
 PERISCAN_MINIO_PUBLISHED_PORT=${PERISCAN_MINIO_PUBLISHED_PORT:-}
 PERISCAN_MINIO_CONSOLE_PUBLISHED_PORT=${PERISCAN_MINIO_CONSOLE_PUBLISHED_PORT:-}
 DATABASE_URL=${DATABASE_URL:-}
 REDIS_URL=${REDIS_URL:-}
+PERISCAN_EVIDENCE_S3_ENDPOINT=${PERISCAN_EVIDENCE_S3_ENDPOINT:-}
+PERISCAN_EVIDENCE_S3_BUCKET=${PERISCAN_EVIDENCE_S3_BUCKET:-}
+PERISCAN_EVIDENCE_S3_REGION=${PERISCAN_EVIDENCE_S3_REGION:-}
 PERISCAN_API_PORT=${PERISCAN_API_PORT:-3001}
 PERISCAN_WEB_PORT=${PERISCAN_WEB_PORT:-3000}
 PERISCAN_API_URL=${PERISCAN_API_URL:-http://127.0.0.1:${PERISCAN_API_PORT:-3001}}
@@ -115,6 +121,7 @@ load_state() {
 
 print_ports() {
   echo "COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME:-periscan-deps}"
+  echo "PERISCAN_DEPS_COMPOSE_FILE=${COMPOSE_FILE}"
   echo "PERISCAN_POSTGRES_PUBLISHED_PORT=${PERISCAN_POSTGRES_PUBLISHED_PORT:-}"
   echo "PERISCAN_REDIS_PUBLISHED_PORT=${PERISCAN_REDIS_PUBLISHED_PORT:-}"
   echo "PERISCAN_API_PORT=${PERISCAN_API_PORT:-}"
@@ -123,6 +130,7 @@ print_ports() {
   echo "PERISCAN_WEB_URL=${PERISCAN_WEB_URL:-}"
   echo "DATABASE_URL=${DATABASE_URL:-}"
   echo "REDIS_URL=${REDIS_URL:-}"
+  echo "PERISCAN_EVIDENCE_S3_ENDPOINT=${PERISCAN_EVIDENCE_S3_ENDPOINT:-}"
 }
 
 print_first_hour_next() {
@@ -133,6 +141,9 @@ export_selected_deps() {
   export PERISCAN_POSTGRES_PUBLISHED_PORT PERISCAN_REDIS_PUBLISHED_PORT
   export PERISCAN_MINIO_PUBLISHED_PORT PERISCAN_MINIO_CONSOLE_PUBLISHED_PORT
   export DATABASE_URL REDIS_URL
+  export PERISCAN_EVIDENCE_S3_ENDPOINT PERISCAN_EVIDENCE_S3_BUCKET
+  export PERISCAN_EVIDENCE_S3_ACCESS_KEY_ID PERISCAN_EVIDENCE_S3_SECRET_ACCESS_KEY
+  export PERISCAN_EVIDENCE_S3_REGION
 }
 
 clone_owns_pid() {
