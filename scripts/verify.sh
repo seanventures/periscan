@@ -25,6 +25,7 @@ fi
 cd "$ROOT_DIR"
 
 echo "==> settled tripwire"
+pnpm public:tree:check
 pnpm settled:check
 pnpm bas:scope:check
 

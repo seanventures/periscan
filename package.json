@@ -27,6 +27,7 @@
     "modules:certify:check": "tsx scripts/module-certification.ts check",
     "prd:audit": "tsx scripts/prd-audit-gate.ts check",
     "prd:audit:strict": "tsx scripts/prd-audit-gate.ts strict",
+    "public:tree:check": "node scripts/public-tree-hygiene.mjs",
     "runner:docker:build": "docker build -t periscan-runner:local apps/runner",
     "lab:up": "bash ./infra/lab/scripts/up.sh",
     "lab:down": "bash ./infra/lab/scripts/stop.sh",

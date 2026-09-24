@@ -15,7 +15,7 @@ Companion docs:
 | [`docs/CONNECTOR_LIVE_SMOKE.md`](../CONNECTOR_LIVE_SMOKE.md) | How to run live create → health → sync → observe against a vendor API |
 | [`docs/INTEGRATIONS.md`](../INTEGRATIONS.md) | Generated catalog honesty table (Production / Beta / Planned counts) |
 | [`SECURITY_BOUNDARIES.md`](../../SECURITY_BOUNDARIES.md) | Read-only, authorized-scope, no destructive actions |
-| [`docs/ops/PLANE.md`](PLANE.md) | Plane is the system of record for evidence and state |
+| [`CONTRIBUTING.md`](../../CONTRIBUTING.md) | Public issue tracking and contribution process |
 
 ---
 
@@ -38,7 +38,7 @@ top-10 cert board) — **not** Production.
 `productionCertified: true` into
 `resolveExternalIntegrationTier` /
 `buildTop10ProductionCertBoard` **without live partner smoke evidence**
-documented in Plane (see §4).
+recorded in a public issue (see §4).
 
 Enforced by tests:
 
@@ -105,7 +105,7 @@ item is **required**. Partial success stays **Beta**.
       implemented; no tight loops on 429)
 - [ ] Smoke run does not hammer production partner tenants (use bounded
       windows, small page sizes, disposable scratch where possible)
-- [ ] Document observed throttle behavior (429 / Retry-After) in the Plane
+- [ ] Document observed throttle behavior (429 / Retry-After) in the GitHub issue
       evidence note if encountered
 
 ### 2.5 Tenant isolation
@@ -141,7 +141,7 @@ item is **required**. Partial success stays **Beta**.
 
 | Action | Allowed only when… |
 | --- | --- |
-| Set manifest `availability: "Production"` | Live partner smoke completed + Plane issue evidence (§4) |
+| Set manifest `availability: "Production"` | Live partner smoke completed + GitHub issue evidence (§4) |
 | Set `certificationLevel: "Certified"` | Same |
 | Pass `productionCertified: true` to tier board / generators | Same |
 | Claim “Production-certified” in UI, GTM, or reports | Same |
@@ -158,23 +158,20 @@ dedicated live client + this qualification path first.
 
 ---
 
-## 4. How to document evidence in Plane when elevating
+## 4. How to document evidence when elevating
 
-Plane is mandatory (`goldeneye` / project **periscan**). Git commits alone are
-not tracked work.
+Track public connector work in [GitHub issues](https://github.com/seanventures/periscan/issues). Git commits alone are not a qualification receipt.
 
 ### 4.1 Before elevation
 
-1. **Dedupe** — find or create an issue (parent residual often **PERISCAN-467**
-   Design-partner Production connectors, or a child per connector).
-2. Move issue **Backlog → Todo → In Progress** when smoke starts.
+1. **Dedupe** — find or create an issue for the connector.
+2. Assign an owner and mark the issue in progress when smoke starts.
 3. Run the checklist in §2 against an authorized design-partner or scratch
    tenant. Prefer scripts/patterns in `docs/CONNECTOR_LIVE_SMOKE.md`.
 
 ### 4.2 Evidence packet (issue body / comment)
 
-Paste a structured receipt (HTML or markdown converted to `description_html`
-as needed). Minimum fields:
+Paste a structured Markdown receipt. Minimum fields:
 
 ```text
 ## Production qualification receipt — <connectorKey>
@@ -207,7 +204,7 @@ as needed). Minimum fields:
 
 Attach or link non-secret artifacts only (redacted health JSON status,
 validation run id, evidence ids). **Never** paste API keys, client secrets, or
-tokens into Plane.
+tokens into GitHub issues.
 
 ### 4.3 After elevation (code + issue)
 
@@ -223,30 +220,16 @@ Only after the receipt is on the issue:
      `catalog-production-honesty.test.ts` expectations carefully so
      **unqualified** connectors remain non-Production.
 2. Regenerate docs: `npx tsx scripts/generate-integrations.ts`.
-3. Commit with message referencing the Plane issue and connector key.
-4. Patch the Plane issue: state → **Done**, description includes:
+3. Commit with message referencing the GitHub issue and connector key.
+4. Close the issue only when its description includes:
    - Path to this runbook: `docs/ops/CONNECTOR_PRODUCTION_QUALIFICATION.md`
    - Commit SHA
    - Evidence packet summary
    - New external-tier counts if totals changed
 
-### 4.4 Plane API sketch
+### 4.4 Public issue tracker
 
-```bash
-# Fetch key (do not ask humans to paste tokens)
-PLANE_API_KEY=$(curl -s -H "X-Ops-Token: $OPS_TOKEN" "$OPS_API/secret?key=PLANE_API_KEY" | jq -r .value)
-PLANE_PROJECT_ID=$(curl -s -H "X-Ops-Token: $OPS_TOKEN" "$OPS_API/secret?key=PLANE_PROJECT_ID" | jq -r .value)
-# or on goldeneye: cat /root/projects/infra/plane/.plane-api-token
-
-# Update issue description / state (replace ISSUE_ID and state id)
-curl -s -X PATCH \
-  -H "X-API-Key: $PLANE_API_KEY" \
-  -H "Content-Type: application/json" \
-  "https://plane.local.sean.network/api/v1/workspaces/goldeneye/projects/$PLANE_PROJECT_ID/issues/$ISSUE_ID/" \
-  -d '{"description_html":"<p>…receipt…</p>"}'
-```
-
-See `skills/using-plane/SKILL.md` and `docs/ops/PLANE.md`.
+Use the connector's GitHub issue to link the redacted receipt and reviewable change. Follow [`CONTRIBUTING.md`](../../CONTRIBUTING.md) for issue and pull-request conventions.
 
 ---
 
@@ -267,7 +250,7 @@ Machine-checkable companion to this runbook (PERISCAN-467):
 pnpm connectors:qual:dry-run crowdstrike
 
 # Keys in env + complete receipt JSON → EligibleForElevation only if gate passes
-# (still does NOT mutate catalog; elevation is a separate code+Plane step)
+# (still does NOT mutate catalog; elevation is a separate code+issue step)
 pnpm connectors:qual:dry-run crowdstrike --receipt ./receipts/crowdstrike.json
 ```
 
@@ -281,12 +264,12 @@ declared — the harness never invents partner credentials.
 Before setting `productionCertified: true` or catalog `availability:
 "Production"`:
 
-1. Build a receipt matching §4.2 (or parse from Plane / JSON).
+1. Build a receipt matching §4.2 (or parse from the issue / JSON).
 2. Call `assertCanElevateToProduction(receipt)` (throws
    `ProductionElevationBlockedError` if incomplete).
 3. Prefer `buildProductionCertifiedOverrideFromReceipt(receipt)` when wiring
    `buildTop10ProductionCertBoard` overrides.
-4. Complete Plane evidence (§4) and regenerate integrations docs.
+4. Complete issue evidence (§4) and regenerate integrations docs.
 
 ---
 
@@ -319,9 +302,9 @@ pnpm connectors:qual:dry-run crowdstrike
 | --- | --- |
 | Catalog honesty (0 Production, Beta dedicated + Planned scaffolds) | Shipped and test-guarded |
 | Live-smoke procedure for several vendors | `docs/CONNECTOR_LIVE_SMOKE.md` |
-| Production qualification checklist + Plane evidence process | **This document** |
+| Production qualification checklist + GitHub issue evidence process | **This document** |
 | Receipt schema + certification gate + dry-run NotConfigured | **Shipped** (harness; no elevation) |
 | CrowdStrike / Wiz / Tenable / Datadog / QRadar Production elevation | **Blocked** on design-partner live-smoke receipts — no fake elevation |
 
 When the first partner smoke lands, follow §4–§5 — do not edit counts in this
-section until code + Plane evidence agree.
+section until code + issue evidence agree.

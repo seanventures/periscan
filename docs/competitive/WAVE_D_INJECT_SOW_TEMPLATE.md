@@ -1,6 +1,6 @@
 # Wave D — Optional lab inject SOW template
 
-**Status:** documentation / residual for [PERISCAN-460](https://plane.local.sean.network/goldeneye/projects/c6549620-33ca-46d1-a8b3-d24dc09a033e) (D0: Spec + SOW template)  
+**Status:** D0 specification and SOW template.
 **Product path:** **not enabled** by this document. Default product remains **observe-only** control validation until a fully executed SOW **and** dual policy flags land.  
 **This file is a written-contract template only** — it does not implement inject code, flip `control_live_execution_disabled`, or enable Atomic/Caldera live.
 
@@ -203,9 +203,9 @@ or live inject paths “ready for SOW.”
 `control_live_execution_disabled` (mentions Wave D SOW + dual gates). Denied
 inject never queues because live inject never starts.
 
-**Hard stop for agents:** do not implement inject product code, enable live offensive modules, or remove `control_live_execution_disabled` under this residual.
+This D0 template does not authorize a customer live run or by itself change `control_live_execution_disabled`. Implement qualified BAS/AEV adapters under the current program and its policy, evidence, and disposable-lab gates.
 
-**Recommended Plane state:** keep **Backlog** (or Done only if project allows
+**Recommended issue state:** keep **Backlog** (or Done only if project allows
 “dormant until SOW” with explicit note that D1–D5 are residual). Parent decides.
 
 ---
