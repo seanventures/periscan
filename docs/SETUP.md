@@ -13,12 +13,12 @@ current adapter coverage and runtime readiness are documented per engine.
 
 ## Prerequisites
 
-| Need | Notes |
-| --- | --- |
-| **Node 24** | [`.nvmrc`](../.nvmrc). `nvm install 24 && nvm use` |
-| **pnpm 9.15.0** | Corepack: `corepack enable && corepack prepare pnpm@9.15.0 --activate` |
-| **Docker** | Engine + **Compose plugin** (`docker compose version`) |
-| `gitleaks` on PATH | Community default-start secrets engine. Missing binary → `tool_unavailable` / Inconclusive, not invented findings |
+| Need             | Notes                                                                                                                                                   |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Node 24**      | [`.nvmrc`](../.nvmrc). `nvm install 24 && nvm use`                                                                                                      |
+| **pnpm 9.15.0**  | Corepack: `corepack enable && corepack prepare pnpm@9.15.0 --activate`                                                                                  |
+| **Docker**       | Engine + **Compose plugin** (`docker compose version`)                                                                                                  |
+| Gitleaks runtime | A host `gitleaks` binary is optional. With Docker available, the pinned image runs on first scan. If neither runtime works, the result is Inconclusive. |
 
 Do **not** run `docker compose` at the repo root.
 
@@ -33,11 +33,10 @@ checkout-specific project if another checkout already owns that name, and
 stores the choice in `.periscan/community.env`. That is the only Community
 deps file.
 
-Root `compose.yaml` is **not** Community deps. It is the private production
-stack and is **excluded from the public tree**
-([`PUBLIC_TREE.md`](./PUBLIC_TREE.md)). Public clones may not have
-`compose.yaml` at all. `docker compose up` with no `-f` at the repo root is
-wrong even when the file is present.
+Root `compose.yaml`, if present, is **not** Community deps. A public clone may
+not have that file. Always pass `-f infra/docker-compose/docker-compose.yml`
+for local dependencies instead of running a bare `docker compose up` at the
+repo root.
 
 Bare bring-up (host toolchain; scripts below do this for you):
 
@@ -66,13 +65,13 @@ bash scripts/periscan.sh install
 bash scripts/periscan.sh start
 ```
 
-| Command | What it does |
-| --- | --- |
+| Command                            | What it does                                                                                                                                                  |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `bash scripts/periscan.sh install` | Node / pnpm / Docker checks, compose `periscan-deps`, Prisma migrate. **Does not** start the control plane. Not `seed:demo`. Not `lab:up`. Not `pnpm verify`. |
-| `bash scripts/periscan.sh start` | `pnpm lab:dev` (API + **worker** + web). Prints URLs. Auto-shifts off `:3000` / `:3001` when busy. |
-| `bash scripts/periscan.sh status` | `GET /api/v1/health` on the chosen API port. Down is honest, not a fake pass. |
-| `bash scripts/periscan.sh update` | `git pull` (if on a branch) + `pnpm install` + migrate. Does **not** restart. You run `start` again. |
-| `bash scripts/periscan.sh down` | Stop tracked `lab:dev` children; `compose stop` only this checkout's deps. Volumes stay. |
+| `bash scripts/periscan.sh start`   | `pnpm lab:dev` (API + **worker** + web). Prints URLs. Auto-shifts off `:3000` / `:3001` when busy.                                                            |
+| `bash scripts/periscan.sh status`  | `GET /api/v1/health` on the chosen API port. Down is honest, not a fake pass.                                                                                 |
+| `bash scripts/periscan.sh update`  | `git pull` (if on a branch) + `pnpm install` + migrate. Does **not** restart. You run `start` again.                                                          |
+| `bash scripts/periscan.sh down`    | Stop tracked `lab:dev` children; `compose stop` only this checkout's deps. Volumes stay.                                                                      |
 
 `install` does **not** start the apps. `start` does. `pnpm dev` is api+web
 only and **cannot** finish Community runs.
@@ -85,13 +84,13 @@ Inspect `install.sh` first. Safer: download, then `bash install.sh`.
 curl -fsSL --proto '=https' --tlsv1.2 https://raw.githubusercontent.com/seanventures/periscan/main/install.sh | bash
 ```
 
-| Command | What it does |
-| --- | --- |
+| Command                     | What it does                                                                                                      |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------- |
 | `bash install.sh` (default) | Toolchain, clone to `$PERISCAN_HOME` (default `~/periscan`) if needed, `periscan.sh install` + **start** + health |
-| `bash install.sh doctor` | health + repair (compose, migrate, restart if API down, clone-owned queue drain) |
-| `bash install.sh health` | check only (no compose / start) |
-| `bash install.sh --dry-run` | print the plan |
-| `bash install.sh repair` | alias for `doctor` |
+| `bash install.sh doctor`    | health + repair (compose, migrate, restart if API down, clone-owned queue drain)                                  |
+| `bash install.sh health`    | check only (no compose / start)                                                                                   |
+| `bash install.sh --dry-run` | print the plan                                                                                                    |
+| `bash install.sh repair`    | alias for `doctor`                                                                                                |
 
 `scripts/install.sh` is a thin wrapper to the same root file. Pipe help:
 `bash -s -- --help`.
@@ -104,13 +103,13 @@ curl -fsSL --proto '=https' --tlsv1.2 https://raw.githubusercontent.com/seanvent
 when those binds are taken. Chosen values are printed and stored in
 `.periscan/community.env`.
 
-| Service | Compose / `.env.example` default | First-hour scripts | Override |
-| --- | --- | --- | --- |
-| Web | `http://127.0.0.1:3000` | next free (`3010+` if `:3000` busy) | `PERISCAN_WEB_PORT` |
-| API | `http://127.0.0.1:3001` | next free | `PERISCAN_API_PORT` / `PERISCAN_API_URL` |
-| Postgres | host **5432** (`PERISCAN_POSTGRES_PUBLISHED_PORT:-5432`) | prefer **5434**, then next free | `PERISCAN_POSTGRES_PUBLISHED_PORT` **and** `DATABASE_URL` |
-| Redis | host **6379** | same, then next free | `PERISCAN_REDIS_PUBLISHED_PORT` **and** `REDIS_URL` |
-| MinIO | host **9000** | same, then next free | `PERISCAN_MINIO_PUBLISHED_PORT` |
+| Service  | Compose / `.env.example` default                         | First-hour scripts                  | Override                                                  |
+| -------- | -------------------------------------------------------- | ----------------------------------- | --------------------------------------------------------- |
+| Web      | `http://127.0.0.1:3000`                                  | next free (`3010+` if `:3000` busy) | `PERISCAN_WEB_PORT`                                       |
+| API      | `http://127.0.0.1:3001`                                  | next free                           | `PERISCAN_API_PORT` / `PERISCAN_API_URL`                  |
+| Postgres | host **5432** (`PERISCAN_POSTGRES_PUBLISHED_PORT:-5432`) | prefer **5434**, then next free     | `PERISCAN_POSTGRES_PUBLISHED_PORT` **and** `DATABASE_URL` |
+| Redis    | host **6379**                                            | same, then next free                | `PERISCAN_REDIS_PUBLISHED_PORT` **and** `REDIS_URL`       |
+| MinIO    | host **9000**                                            | same, then next free                | `PERISCAN_MINIO_PUBLISHED_PORT`                           |
 
 Two Postgres numbers on purpose:
 
@@ -174,8 +173,9 @@ bash install.sh doctor    # health + repair
 5. Remediations stay **Open** until a retest produces a verification event.
    Creating a ticket is not Fixed.
 
-Need `gitleaks` on PATH. Missing engine → `tool_unavailable`, not a clean
-bill of health.
+A host `gitleaks` binary is optional; Docker can run the pinned image. If
+neither runtime succeeds, the result is Inconclusive rather than a clean bill
+of health.
 
 Step-by-step loop (UI + curl): [`USING.md`](./USING.md).
 
@@ -210,16 +210,16 @@ customer production deploy. Production topology: [`DEPLOY.md`](./DEPLOY.md).
 
 ## What this setup is not
 
-| Temptation | Honest answer |
-| --- | --- |
-| `docker compose` at repo root | Wrong file. Use `-f infra/docker-compose/docker-compose.yml`. |
-| Hosted `github.com/org/repo` as the target | Refused. Clone locally, paste the absolute path. |
-| Full pack / Nuclei on first start | Default start is Gitleaks (`jobsQueued=1`). Nuclei is a second mission. |
+| Temptation                                 | Honest answer                                                                                                                                          |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `docker compose` at repo root              | Wrong file. Use `-f infra/docker-compose/docker-compose.yml`.                                                                                          |
+| Hosted `github.com/org/repo` as the target | Refused. Clone locally, paste the absolute path.                                                                                                       |
+| Full pack / Nuclei on first start          | Default start is Gitleaks (`jobsQueued=1`). Nuclei is a second mission.                                                                                |
 | Atomic / Caldera / Metasploit / SharpHound | BAS/AEV adapters are under development; live execution requires scenario qualification and bound authorization. See [the program](BAS_AEV_PROGRAM.md). |
-| `pnpm seed:demo` / `/demo` | Labeled fixture / sample. Not measured proof. |
-| `pnpm lab:up` | Measured lab hops (`*.lab.range.test`). Not Community OSS start. |
-| `pnpm verify` as Community start | Release gate. Too heavy for install. |
-| Invented security mailbox | Intake is title-only `[SECURITY]` issues — [`SECURITY.md`](../SECURITY.md). |
+| `pnpm seed:demo` / `/demo`                 | Labeled fixture / sample. Not measured proof.                                                                                                          |
+| `pnpm lab:up`                              | Measured lab hops (`*.lab.range.test`). Not Community OSS start.                                                                                       |
+| `pnpm verify` as Community start           | Release gate. Too heavy for install.                                                                                                                   |
+| Invented security mailbox                  | Intake is title-only `[SECURITY]` issues — [`SECURITY.md`](../SECURITY.md).                                                                            |
 
 Ledger: [`SETTLED.md`](./SETTLED.md).
 
@@ -227,14 +227,14 @@ Ledger: [`SETTLED.md`](./SETTLED.md).
 
 ## Troubleshooting
 
-| Symptom | Check |
-| --- | --- |
-| `docker compose` errors at repo root | You omitted `-f infra/docker-compose/docker-compose.yml`. |
-| Migrate / API cannot reach Postgres | Published port ≠ `DATABASE_URL`. Print `.periscan/community.env` or `bash scripts/periscan.sh status`. |
-| `:5432` / `:5434` / `:3000` / `:3001` busy | Scripts remap. Do not kill the neighbor. Export the printed ports. |
-| `Node 24 is required` | This shell is not 24. See `.nvmrc`. |
-| Community run stays empty | `pnpm dev` has no worker. Use `start` / `lab:dev`. Confirm `jobsQueued`. |
-| Secrets run is Inconclusive | `gitleaks` missing → `tool_unavailable`. |
-| Hosted GitHub URL on Add / Verify | Paste the absolute clone path instead. |
+| Symptom                                    | Check                                                                                                  |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------ |
+| `docker compose` errors at repo root       | You omitted `-f infra/docker-compose/docker-compose.yml`.                                              |
+| Migrate / API cannot reach Postgres        | Published port ≠ `DATABASE_URL`. Print `.periscan/community.env` or `bash scripts/periscan.sh status`. |
+| `:5432` / `:5434` / `:3000` / `:3001` busy | Scripts remap. Do not kill the neighbor. Export the printed ports.                                     |
+| `Node 24 is required`                      | This shell is not 24. See `.nvmrc`.                                                                    |
+| Community run stays empty                  | `pnpm dev` has no worker. Use `start` / `lab:dev`. Confirm `jobsQueued`.                               |
+| Secrets run is Inconclusive                | `gitleaks` missing → `tool_unavailable`.                                                               |
+| Hosted GitHub URL on Add / Verify          | Paste the absolute clone path instead.                                                                 |
 
 Repair path: `bash install.sh doctor`. Check only: `bash install.sh health`.

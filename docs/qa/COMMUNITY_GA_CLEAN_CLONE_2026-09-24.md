@@ -40,7 +40,7 @@ A second local API and worker run forced `PERISCAN_GITLEAKS_RUNTIME=docker` agai
 
 ## Release gate on this public candidate
 
-The full local `pnpm verify` passed under Node 24.21.0 against the disposable PostgreSQL/Redis project. It included lint, typecheck, unit tests, clean build, runner and local lab checks, toolchain and license checks, migration checks, 80 browser tests, 37 security tests, and 263 passing acceptance tests with two skips. The dependency audit found zero high-severity advisories. The internal analyst scorecard is excluded from the public tree, so that one gate explicitly reported **skipped, no analyst score qualified**. Hosted CI and a second platform run are separate evidence.
+The full local `pnpm verify` passed at `f913c97` under Node 24.21.0 against the disposable PostgreSQL/Redis project. It included lint, typecheck, unit tests, the required Docker nested-scan regression, clean build, runner and local lab checks, toolchain and license checks, migration checks, 80 browser tests, 37 security tests, and 263 passing acceptance tests with two skips. The dependency audit found zero high-severity advisories. The internal analyst scorecard is excluded from the public tree, so that one gate explicitly reported **skipped, no analyst score qualified**. Hosted CI and a second platform run are separate evidence.
 
 ## Remaining release evidence
 

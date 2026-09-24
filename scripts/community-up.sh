@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Bring up Community api+web+worker against periscan-deps.
-# Do not `docker compose up` at the repo root (goldeneye compose.yaml).
+# Do not run a bare `docker compose up` at the repo root; use the local deps file.
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"

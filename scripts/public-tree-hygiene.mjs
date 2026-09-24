@@ -11,10 +11,16 @@ const allowedDetectionFiles = new Set([
 const privatePaths = new Set([
   "app.env.tmpl",
   "compose.yaml",
+  "docs/PUBLIC_SNAPSHOT.md",
+  "docs/PUBLIC_TREE.md",
+  "docs/DESIGN_PARTNER/WARTIME_SALES_MOTION.md",
+  "docs/DESIGN_PARTNER/WARTIME_SELLER_SCORECARD.md",
   "docs/ops/PLANE.md",
   "docs/ops/PLANE_SYNC_2026-07-30.md",
-  "skills/using-plane/SKILL.md"
+  "docs/qa/HANDOFF.md",
+  "apps/tui/src/first-hour.live.test.tsx"
 ]);
+const privatePathPrefixes = ["docs/qa/lab-runs/", "skills/using-plane/"];
 const forbidden = new RegExp(
   [
     "plane\\.local\\.sean\\.network",
@@ -34,7 +40,10 @@ const tracked = execFileSync("git", ["ls-files", "-z"], {
 const failures = [];
 
 for (const path of tracked) {
-  if (privatePaths.has(path)) {
+  if (
+    privatePaths.has(path) ||
+    privatePathPrefixes.some((prefix) => path.startsWith(prefix))
+  ) {
     failures.push(`${path}: private-only path is tracked`);
     continue;
   }

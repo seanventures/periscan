@@ -450,7 +450,7 @@ Scorecard bumps happen **only after** golden artifacts + memo in a dedicated res
 
 ## 17. Non-goals (explicit)
 
-- Replacing production PaaS (goldeneye) with lab  
+- Replacing the production platform with the lab
 - Full BAS peer scenario library  
 - Real OT protocol speak  
 - Crowd HITL network  
