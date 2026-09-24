@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -61,6 +61,7 @@ const resolveOpenSourceToolRuntimeMock = vi.mocked(
 afterEach(() => {
   resolveOpenSourceToolRuntimeMock.mockClear();
   vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
 });
 
 describe("hardened Docker tool runtime", () => {
@@ -1391,6 +1392,46 @@ describe("module registry", () => {
       "ghp_periscanfixturetoken1234567890"
     );
   });
+
+  it.runIf(process.env.PERISCAN_TEST_DOCKER_GITLEAKS === "1")(
+    "scans nested files with Docker Gitleaks and retains redacted file evidence",
+    async () => {
+      const repositoryPath = await mkdtemp(
+        path.join(tmpdir(), "periscan-gitleaks-docker-test-")
+      );
+      const syntheticMarker = randomUUID().replaceAll("-", "") + "12345678";
+      const nestedPath = path.join(repositoryPath, "src", "config.txt");
+
+      try {
+        await mkdir(path.dirname(nestedPath));
+        await writeFile(nestedPath, `GITHUB_TOKEN=${syntheticMarker}\n`);
+        vi.stubEnv("PERISCAN_GITLEAKS_RUNTIME", "docker");
+
+        const exposed = await executeModuleById(
+          "gitleaks.repo_secrets",
+          createContext({ target: { repositoryPath } })
+        );
+        expect(exposed.outcome).toBe("secret_exposure_observed");
+        expect(exposed.signals).toHaveLength(1);
+        expect(
+          new URL(exposed.signals[0]!.rawPayloadPointer!).searchParams.get(
+            "file"
+          )
+        ).toBe(nestedPath);
+        expect(JSON.stringify(exposed)).not.toContain(syntheticMarker);
+
+        await rm(nestedPath);
+        const clean = await executeModuleById(
+          "gitleaks.repo_secrets",
+          createContext({ target: { repositoryPath } })
+        );
+        expect(clean.outcome).toBe("no_secret_exposure_observed");
+      } finally {
+        await rm(repositoryPath, { force: true, recursive: true });
+      }
+    },
+    120_000
+  );
 
   it("runs Trivy repository dependency scanning against a fixture report", async () => {
     const fixtureReportPath = path.resolve(

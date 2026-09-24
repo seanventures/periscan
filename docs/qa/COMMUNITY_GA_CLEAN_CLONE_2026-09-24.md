@@ -32,6 +32,12 @@ A second new tenant left the same local path **Pending** and did not write that 
 
 The published installer pinned Compose to `periscan-deps`. Code inspection showed that a second checkout would select the first checkout's Compose project and could reuse its data volumes. The install scripts now keep an existing checkout's project name stable while selecting and persisting a checkout-specific project when another checkout owns `periscan-deps`. On this host, the second checkout selected `periscan-deps-1524208623` and published its own Postgres on port 5436; the original checkout's Postgres remained running throughout install and `down`. An explicit `COMPOSE_PROJECT_NAME` still takes precedence. This is a local two-checkout safety check, not a multi-host upgrade certification.
 
+## Docker scanner coverage defect found and repaired in this candidate
+
+The Docker Gitleaks fallback in the published tree read only root-level files and discarded filenames. An opt-in test against the pinned Gitleaks Docker image reproduced a false clean result for a synthetic marker in `src/config.txt`. The candidate now streams a bounded working-tree archive into an isolated container, scans nested files, and maps findings back to their repository paths. The same Docker test now observes one redacted finding, retains the nested file path, and returns clean only after the marker is removed. Oversized or failed scans return an inconclusive module result.
+
+A second local API and worker run forced `PERISCAN_GITLEAKS_RUNTIME=docker` against a new synthetic marker in `src/config.txt`. Scope `2994a0ea-7f7c-4109-8d25-9d3378bf2871` became `Verified`, policy decision `0198b402-270f-4759-81e5-fddf1fabdfed` allowed the start, and `jobsQueued=1`. Mission `c77f22ce-6e15-41be-bbc9-f839ae59a6a0` completed with one measured finding; remediation creation succeeded. After removing the marker, a separate FixVerification run completed with `no_secret_exposure_observed`, and event `a5de0c72-b429-4c3e-ae72-b7c9dd22026e` recorded `measuredRevalidation=true` and `newState=Fixed`. This is an operator-run macOS Docker proof, not an uncoached or Linux qualification.
+
 ## Release gate on this public candidate
 
 The full local `pnpm verify` passed under Node 24.21.0 against the disposable PostgreSQL/Redis project. It included lint, typecheck, unit tests, clean build, runner and local lab checks, toolchain and license checks, migration checks, 80 browser tests, 37 security tests, and 263 passing acceptance tests with two skips. The dependency audit found zero high-severity advisories. The internal analyst scorecard is excluded from the public tree, so that one gate explicitly reported **skipped, no analyst score qualified**. Hosted CI and a second platform run are separate evidence.
@@ -39,6 +45,6 @@ The full local `pnpm verify` passed under Node 24.21.0 against the disposable Po
 ## Remaining release evidence
 
 - Have an uncoached participant use the current public tree and record time, task success, errors, and comprehension from clone through retest.
-- Repeat with the bundled Docker Gitleaks runtime and on supported Linux, not only this host binary/macOS path.
+- Repeat clone, Docker runtime, and release qualification on supported Linux.
 - Run hosted CI and a second platform qualification. This local receipt does not qualify production SLOs, broad BAS/AEV adapters, external customer value, or analyst standing.
 - This Periscan repository itself has not had an authorized Community scan with evidence. Its static badge remains **not measured**.
