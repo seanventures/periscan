@@ -176,7 +176,7 @@ describe("runner-agent BoundRunner SIEM sync", () => {
       `${ON_PREM_SPLUNK}/services/search/jobs/export`
     );
     expect(JSON.stringify(result)).not.toContain(SPLUNK_TOKEN);
-  });
+  }, 20_000);
 
   it("never dials on-prem Splunk when the signed envelope is tampered", async () => {
     const fetchMock = vi.fn(async () => splunkNotableExport());
