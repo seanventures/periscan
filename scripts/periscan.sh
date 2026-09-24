@@ -208,6 +208,11 @@ cmd_start() {
     return 0
   fi
   ensure_pnpm
+  require_docker
+  echo "==> docker compose up (${COMPOSE_FILE})"
+  docker compose -f "$COMPOSE_FILE" up -d --wait
+  echo "==> ensure local evidence bucket"
+  pnpm --filter @periscan/evidence exec tsx src/ensure-local-bucket.ts
   mkdir -p "$STATE_DIR"
   write_state
   echo $$ > "$PIDFILE"
