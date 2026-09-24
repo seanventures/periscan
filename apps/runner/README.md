@@ -126,7 +126,7 @@ docker run --rm \
   -e PERISCAN_RUNNER_MTLS_CLIENT_CERT_FILE="$PERISCAN_RUNNER_MTLS_CLIENT_CERT_FILE" \
   -e PERISCAN_RUNNER_MTLS_CLIENT_KEY_FILE="$PERISCAN_RUNNER_MTLS_CLIENT_KEY_FILE" \
   -e PERISCAN_TASK_SIGNING_PUBLIC_KEY_PEM="$PERISCAN_TASK_SIGNING_PUBLIC_KEY_PEM" \
-  ghcr.io/seanheiney/periscan-runner:latest poll
+  ghcr.io/seanventures/periscan-runner:latest poll
 
 docker compose -f apps/runner/deploy/docker-compose.runner.yml up -d
 ```

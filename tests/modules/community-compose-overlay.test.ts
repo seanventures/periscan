@@ -6,7 +6,8 @@ import { describe, expect, it } from "vitest";
 
 const repoRoot = fileURLToPath(new URL("../..", import.meta.url));
 const overlayRel = "infra/docker-compose/docker-compose.community.yml";
-const depsRel = "infra/docker-compose/docker-compose.yml";
+const depsRel = "infra/docker-compose/docker-compose.community-deps.yml";
+const legacyDepsRel = "infra/docker-compose/docker-compose.yml";
 const readmeRel = "infra/docker-compose/README.md";
 
 async function readRepoFile(path: string) {
@@ -25,6 +26,7 @@ type ComposeService = {
 type ComposeConfig = {
   name?: string;
   services?: Record<string, ComposeService>;
+  volumes?: Record<string, unknown>;
 };
 
 function envMap(service: ComposeService | undefined) {
@@ -55,7 +57,7 @@ function renderMergedCommunityCompose() {
 }
 
 describe("Community local compose overlay", () => {
-  it("keeps a documented overlay next to periscan-deps, not root compose.yaml", async () => {
+  it("documents the isolated new-install stack and keeps legacy MinIO available", async () => {
     await expect(
       access(new URL(`../../${overlayRel}`, import.meta.url))
     ).resolves.toBeUndefined();
@@ -77,12 +79,14 @@ describe("Community local compose overlay", () => {
     expect(overlay).not.toMatch(/^ {2}postgres:/mu);
     expect(overlay).not.toMatch(/^ {2}traefik:/mu);
 
-    for (const source of [overlay, readme, script]) {
+    for (const source of [overlay, readme]) {
       expect(source).toContain(depsRel);
       expect(source).toContain(overlayRel);
     }
+    expect(script).toContain("lab_community_deps_compose_file");
+    expect(readme).toContain(legacyDepsRel);
 
-    expect(readme).toContain("periscan-deps");
+    expect(readme).toContain("periscan-community-deps");
     expect(readme).toContain("3001");
     expect(readme).toContain("3000");
     expect(readme).toMatch(/pnpm lab:dev/);
@@ -95,17 +99,18 @@ describe("Community local compose overlay", () => {
     expect(script).toContain("DATABASE_URL");
   });
 
-  it("renders api+web+worker against healthy postgres/redis on the periscan-deps project", () => {
+  it("renders api+web+worker against healthy Postgres, Redis, and S3", () => {
     const config = renderMergedCommunityCompose();
     const services = config.services ?? {};
 
-    expect(config.name).toBe("periscan-deps");
+    expect(config.name).toBe("periscan-community-deps");
     expect(Object.keys(services).sort()).toEqual(
       expect.arrayContaining([
         "api",
         "minio",
         "postgres",
         "redis",
+        "s3-init",
         "web",
         "worker"
       ])
@@ -136,12 +141,14 @@ describe("Community local compose overlay", () => {
       "service_healthy"
     );
     expect(services.api?.depends_on?.redis?.condition).toBe("service_healthy");
+    expect(services.api?.depends_on?.["s3-init"]?.condition).toBe("service_completed_successfully");
     expect(services.worker?.depends_on?.postgres?.condition).toBe(
       "service_healthy"
     );
     expect(services.worker?.depends_on?.redis?.condition).toBe(
       "service_healthy"
     );
+    expect(services.worker?.depends_on?.["s3-init"]?.condition).toBe("service_completed_successfully");
     expect(services.web?.depends_on?.api).toBeDefined();
 
     const apiPorts = services.api?.ports ?? [];
@@ -158,11 +165,23 @@ describe("Community local compose overlay", () => {
     expect(rendered).not.toContain(".ts.net");
   });
 
-  it("pins MinIO from public Quay, not Docker Hub minio/minio (PERISCAN-572)", () => {
+  it("pins pullable SeaweedFS for new data without reusing the legacy MinIO volume", () => {
     const config = renderMergedCommunityCompose();
     const image = config.services?.minio?.image ?? "";
 
-    expect(image).toMatch(/^quay\.io\/minio\/minio:RELEASE\./u);
-    expect(image).not.toMatch(/^minio\/minio:/u);
+    expect(image).toMatch(/^chrislusf\/seaweedfs:4\.47@sha256:[a-f0-9]{64}$/u);
+    expect(config.volumes).toHaveProperty("seaweedfs_data");
+    expect(config.volumes).not.toHaveProperty("minio_data");
+
+    const legacyRaw = execFileSync(
+      "docker",
+      ["compose", "-f", legacyDepsRel, "config", "--format", "json"],
+      { cwd: repoRoot, encoding: "utf8" }
+    );
+    const legacy = JSON.parse(legacyRaw) as ComposeConfig;
+    expect(legacy.name).toBe("periscan-deps");
+    expect(legacy.services?.minio?.image).toMatch(/^quay\.io\/minio\/minio:RELEASE\./u);
+    expect(legacy.volumes).toHaveProperty("minio_data");
+    expect(legacy.volumes).not.toHaveProperty("seaweedfs_data");
   });
 });

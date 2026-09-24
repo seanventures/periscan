@@ -47,7 +47,7 @@ RUN curl -fsSL -o osv-scanner "https://github.com/google/osv-scanner/releases/do
   && chmod +x osv-scanner
 
 # ---- Stage 2: node deps (mirror apps/worker/Dockerfile) -------------------------
-FROM node:22-bookworm-slim AS deps
+FROM node:24-bookworm-slim AS deps
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable
@@ -58,7 +58,7 @@ RUN pnpm install --frozen-lockfile --prod=false \
   && pnpm --filter @periscan/db db:generate
 
 # ---- Stage 3: default runtime (worker + permissive server-side toolkit) --------
-FROM node:22-bookworm-slim AS runtime
+FROM node:24-bookworm-slim AS runtime
 ARG PROWLER_VERSION=5.28.1
 ARG PYRIT_VERSION=0.13.0
 ARG PROMPTFOO_VERSION=0.121.7

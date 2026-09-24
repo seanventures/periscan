@@ -1,6 +1,6 @@
 # Periscan API production image.
 # Built from the monorepo root context: docker build -f apps/api/Dockerfile .
-FROM node:22-bookworm-slim AS base
+FROM node:24-bookworm-slim AS base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable

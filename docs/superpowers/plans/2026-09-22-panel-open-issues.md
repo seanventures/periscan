@@ -131,4 +131,3 @@ GitHub has no social-preview API. Asset `docs/images/github-social-preview.png` 
 - [x] Focused vitest: findings-workbench, scopes-workbench, scope-safety-editor, first-run-primary-action.
 - [x] Live lab: walker Home still cadence + Fixed badge.
 - [x] Public: SETUP 200, no `asv` topic, Keep proving fold.
-- [x] Plane PERISCAN-583 comment if `OPS_TOKEN` available; else **not posted**.

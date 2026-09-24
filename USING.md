@@ -9,7 +9,9 @@ Step-by-step loop: [`docs/USING.md`](docs/USING.md).
 
 Need **Node 24** (`.nvmrc`), **pnpm 9.15.0** (Corepack), and **Docker**.
 Do **not** run `docker compose up` at the repo root — local deps are
-`infra/docker-compose/docker-compose.yml`.
+`infra/docker-compose/docker-compose.community-deps.yml` for new installs.
+Existing installs retain `infra/docker-compose/docker-compose.yml` and their
+MinIO data until a verified migration.
 
 Clone this repo, inspect it, then install:
 
@@ -68,7 +70,7 @@ If `:3001` is taken, it binds the next free API port.
 | Web      | `http://127.0.0.1:3000` | `PERISCAN_WEB_PORT` (`lab:dev` auto-shifts to 3010+ if busy) |
 | Postgres | `127.0.0.1:5432`        | `PERISCAN_POSTGRES_PUBLISHED_PORT` **and** `DATABASE_URL`    |
 | Redis    | `127.0.0.1:6379`        | `PERISCAN_REDIS_PUBLISHED_PORT` **and** `REDIS_URL`          |
-| MinIO    | `127.0.0.1:9000`        | `PERISCAN_MINIO_PUBLISHED_PORT`                              |
+| S3 store | `127.0.0.1:9000`        | `PERISCAN_MINIO_PUBLISHED_PORT` (legacy port variable)       |
 
 Prisma migrate needs `DATABASE_URL` exported — compose port overrides do not
 rewrite it automatically.
@@ -119,7 +121,7 @@ That seed measures `*.lab.range.test` hops. It is not Community OSS start.
 
 ```text
 apps/{api,web,worker,runner}   packages/{shared,db,policy,evidence,connectors,modules,reports}
-infra/docker-compose/          local Postgres / Redis / MinIO (project name: periscan-deps)
+infra/docker-compose/          local Postgres / Redis / SeaweedFS S3 (new project: periscan-community-deps)
 ```
 
 Map: [`ARCHITECTURE.md`](ARCHITECTURE.md).
@@ -135,7 +137,7 @@ pnpm verify
 Useful PR subset: `pnpm lint && pnpm typecheck && pnpm test && pnpm licenses:check`.
 
 GitHub Actions runs `pnpm verify` on `main`, tags `v*`, and pull requests
-(Postgres, Redis, MinIO). Optional secret scan: `pnpm secrets:scan`.
+(Postgres, Redis, ephemeral S3). Optional secret scan: `pnpm secrets:scan`.
 
 ## Operator / PRD audit index
 

@@ -309,7 +309,7 @@ describe("PRD section 3.6 Fix Verification coverage", () => {
     expect(reportSource).toContain("RemediationClosurePack");
     expect(reportSource).toContain("latestVerification");
     expect(reportSource).toContain(
-      "Periscan only treats remediation as closed when verification evidence supports"
+      "Periscan only treats remediation as Fixed when verification evidence supports"
     );
     expect(reportSource).toContain("Verification Plan");
     expect(reportSource).toContain("Evidence IDs");

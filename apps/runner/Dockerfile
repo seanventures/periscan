@@ -23,7 +23,7 @@ ENV PERISCAN_CONTROL_PLANE_URL="https://api.periscan.cloud" \
 
 LABEL org.opencontainers.image.title="Periscan Internal Runner" \
   org.opencontainers.image.description="Outbound-only Periscan internal validation runner" \
-  org.opencontainers.image.source="https://github.com/seanheiney/periscan"
+  org.opencontainers.image.source="https://github.com/seanventures/periscan"
 
 ENTRYPOINT ["/usr/local/bin/periscan-runner"]
 CMD ["poll"]

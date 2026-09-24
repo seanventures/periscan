@@ -76,7 +76,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: runner
-          image: ghcr.io/seanheiney/periscan-runner:latest
+          image: ghcr.io/seanventures/periscan-runner:latest
           imagePullPolicy: IfNotPresent
           args: ["poll"]
           envFrom:

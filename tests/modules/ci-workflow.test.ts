@@ -49,10 +49,10 @@ describe("CI workflow release gate", () => {
     }
 
     for (const image of [
-      "ghcr.io/seanheiney/periscan-api",
-      "ghcr.io/seanheiney/periscan-scan-executor",
-      "ghcr.io/seanheiney/periscan-runner-agent",
-      "ghcr.io/seanheiney/periscan-web"
+      "ghcr.io/seanventures/periscan-api",
+      "ghcr.io/seanventures/periscan-scan-executor",
+      "ghcr.io/seanventures/periscan-runner-agent",
+      "ghcr.io/seanventures/periscan-web"
     ]) {
       expect(imageWorkflow).toContain(image);
     }

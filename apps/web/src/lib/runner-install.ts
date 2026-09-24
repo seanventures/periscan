@@ -2,8 +2,8 @@
  * Pure runner install-snippet helpers for UI pairing and docs alignment.
  *
  * Product honesty (P10-3 / docs/SUPPORTED_CUSTOMER_RUNNER.md):
- * - Primary: Supported Customer Runner (Go LTS) — ghcr.io/seanheiney/periscan-runner
- * - Optional: Agent (in-network) lab/AgentLocal — ghcr.io/seanheiney/periscan-runner-agent
+ * - Primary: Supported Customer Runner (Go LTS) — ghcr.io/seanventures/periscan-runner
+ * - Optional: Agent (in-network) lab/AgentLocal — ghcr.io/seanventures/periscan-runner-agent
  * Never present the agent image as "the" LTS customer runner.
  */
 
@@ -28,7 +28,7 @@ export const RUNNER_CONTROL_PLANE = "https://app.periscan.com";
  * `docs/SUPPORTED_CUSTOMER_RUNNER.md`.
  */
 export const SUPPORTED_CUSTOMER_RUNNER_IMAGE =
-  "ghcr.io/seanheiney/periscan-runner:latest";
+  "ghcr.io/seanventures/periscan-runner:latest";
 
 /**
  * Agent (in-network) — optional lab / AgentLocal companion image.
@@ -36,7 +36,7 @@ export const SUPPORTED_CUSTOMER_RUNNER_IMAGE =
  * Aligns with `apps/runner-agent/deploy` and `images-build.yml`.
  */
 export const IN_NETWORK_AGENT_IMAGE =
-  "ghcr.io/seanheiney/periscan-runner-agent:latest";
+  "ghcr.io/seanventures/periscan-runner-agent:latest";
 
 export type RunnerInstallPackage = "supportedCustomer" | "agentInNetwork";
 

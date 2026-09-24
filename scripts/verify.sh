@@ -25,6 +25,7 @@ fi
 cd "$ROOT_DIR"
 
 echo "==> settled tripwire"
+pnpm public:tree:check
 pnpm settled:check
 pnpm bas:scope:check
 
@@ -36,6 +37,9 @@ pnpm typecheck
 
 echo "==> test"
 pnpm test
+
+echo "==> Community Docker Gitleaks nested scan"
+PERISCAN_TEST_DOCKER_GITLEAKS=1 pnpm --filter @periscan/modules exec vitest run src/index.test.ts -t 'scans nested files with Docker Gitleaks'
 
 echo "==> clean build artifacts"
 pnpm clean:build

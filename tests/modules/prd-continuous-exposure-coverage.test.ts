@@ -320,8 +320,8 @@ describe("PRD Continuous Exposure Validation source coverage", () => {
       "sourceMotion",
       "validationState",
       "evidenceIds",
-      "State: {finding.validationState}",
-      "Validation state"
+      "projectFindingClaimDisplay",
+      "state={claimDisplay.displayValidationState}"
     ]) {
       expect(
         sourcesContain(validatedRiskEvidence, marker),

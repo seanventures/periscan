@@ -6,12 +6,12 @@ name: Build Deployable Images
 #                      prowler/promptfoo/pyrit/ffuf — permissive licenses only;
 #                      GPL legal-review tools are NOT in the default image)
 #   - runner-agent   (in-network AgentLocal toolkit: nmap/subfinder/httpx/dnsx/
-#                      kerbrute/netexec)
+#                      kerbrute; NetExec is LaterPhase and not baked)
 #   - web            (Next.js API-driven UI shell)
 #
 # Each image is built then smoke-tested in-image (every bundled binary must
 # resolve + report a version; the scan-executor additionally runs
-# `pnpm tools:check` and asserts legal-review GPL tools are absent). Images are
+# `pnpm tools:check` for bundled engines and asserts legal-review GPL tools are absent). Images are
 # pushed to GHCR only on a version tag. Do not build/push the
 # `runtime-legal-review` stage from this workflow.
 #
@@ -98,7 +98,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/seanheiney/periscan-api
+          images: ghcr.io/seanventures/periscan-api
           tags: |
             type=semver,pattern={{version}}
             type=sha
@@ -156,7 +156,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/seanheiney/periscan-scan-executor
+          images: ghcr.io/seanventures/periscan-scan-executor
           tags: |
             type=semver,pattern={{version}}
             type=sha
@@ -213,7 +213,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/seanheiney/periscan-runner-agent
+          images: ghcr.io/seanventures/periscan-runner-agent
           tags: |
             type=semver,pattern={{version}}
             type=sha
@@ -270,7 +270,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/seanheiney/periscan-web
+          images: ghcr.io/seanventures/periscan-web
           tags: |
             type=semver,pattern={{version}}
             type=sha

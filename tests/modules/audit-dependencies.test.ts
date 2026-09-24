@@ -1,5 +1,9 @@
 import { spawn, spawnSync } from "node:child_process";
-import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import {
+  createServer,
+  type IncomingMessage,
+  type ServerResponse
+} from "node:http";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -86,7 +90,10 @@ function startMockRegistry(
   });
 }
 
-function runAudit(registryUrl: string, extraArgs: string[] = []): Promise<AuditRun> {
+function runAudit(
+  registryUrl: string,
+  extraArgs: string[] = []
+): Promise<AuditRun> {
   return new Promise((resolve, reject) => {
     const child = spawn(
       process.execPath,
@@ -117,8 +124,12 @@ function runAudit(registryUrl: string, extraArgs: string[] = []): Promise<AuditR
 describe("dependency audit GHSA gate (PERISCAN-580)", () => {
   it("process.exit(1)s on blocking findings instead of leaving a wrapper to guess", async () => {
     const source = await readRepoFile("scripts/audit-dependencies.mjs");
-    expect(source).toMatch(/if \(blocking\.length > 0\) \{\s*process\.exit\(1\);/u);
-    expect(source).not.toMatch(/if \(blocking\.length > 0\) process\.exitCode = 1;/u);
+    expect(source).toMatch(
+      /if \(blocking\.length > 0\) \{\s*process\.exit\(1\);/u
+    );
+    expect(source).not.toMatch(
+      /if \(blocking\.length > 0\) process\.exitCode = 1;/u
+    );
   });
 
   it("does not let verify.sh echo AUDIT_HIGH_OK after a failing high audit", async () => {
@@ -133,19 +144,19 @@ describe("dependency audit GHSA gate (PERISCAN-580)", () => {
   });
 
   it("every ALLOWED_GHSA entry is a GHSA id that cites Plane 580", async () => {
-    const { ALLOWED_GHSA } = await import(
-      "../../scripts/audit-dependencies.mjs"
-    );
-    for (const [ghsa, reason] of Object.entries(ALLOWED_GHSA as Record<string, string>)) {
+    const { ALLOWED_GHSA } =
+      await import("../../scripts/audit-dependencies.mjs");
+    for (const [ghsa, reason] of Object.entries(
+      ALLOWED_GHSA as Record<string, string>
+    )) {
       expect(ghsa).toMatch(/^GHSA-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}$/iu);
       expect(reason).toMatch(/PERISCAN-580/u);
     }
   });
 
   it("treats an unlisted critical as blocking even when another GHSA is allowlisted", async () => {
-    const { selectBlockingFindings } = await import(
-      "../../scripts/audit-dependencies.mjs"
-    );
+    const { selectBlockingFindings } =
+      await import("../../scripts/audit-dependencies.mjs");
     const findings = [
       {
         packageName: "next",
@@ -159,9 +170,9 @@ describe("dependency audit GHSA gate (PERISCAN-580)", () => {
     const blocking = selectBlockingFindings(findings, "high", {
       [WINDOWS_RCE_GHSA]: "do not use in production — PERISCAN-580"
     });
-    expect(blocking.map((item: { advisory: Advisory }) => item.advisory.url)).toEqual([
-      `https://github.com/advisories/${AVIF_RCE_GHSA}`
-    ]);
+    expect(
+      blocking.map((item: { advisory: Advisory }) => item.advisory.url)
+    ).toEqual([`https://github.com/advisories/${AVIF_RCE_GHSA}`]);
   });
 
   it("exits 1 when the registry returns an unlisted critical GHSA", async () => {
@@ -210,9 +221,10 @@ describe("Dependabot HIGH pins (PERISCAN-490)", () => {
   });
 
   it("does not waive xmldom or deepmerge-ts GHSAs on the high gate", async () => {
-    const { ALLOWED_GHSA } = await import("../../scripts/audit-dependencies.mjs");
-    const allowed = Object.keys(ALLOWED_GHSA as Record<string, string>).map((id) =>
-      id.toUpperCase()
+    const { ALLOWED_GHSA } =
+      await import("../../scripts/audit-dependencies.mjs");
+    const allowed = Object.keys(ALLOWED_GHSA as Record<string, string>).map(
+      (id) => id.toUpperCase()
     );
     expect(allowed).not.toContain("GHSA-GGR8-5VV4-36MX");
     expect(allowed).not.toContain("GHSA-X6WF-G6F9-QW9Q");
@@ -229,7 +241,9 @@ describe("Dependabot HIGH pins (PERISCAN-490)", () => {
   });
 
   it("pins apps/api fastify to a 5.12.1+ release", async () => {
-    const manifest = JSON.parse(await readRepoFile("apps/api/package.json")) as {
+    const manifest = JSON.parse(
+      await readRepoFile("apps/api/package.json")
+    ) as {
       dependencies?: Record<string, string>;
     };
     expect(manifest.dependencies?.fastify).toBe("^5.12.1");
@@ -248,16 +262,19 @@ describe("P2-DEP vitest mocker pin (GHSA-82fw-gwwq-j7x9)", () => {
   });
 
   it("aligns TUI vitest with the patched 4.1.11 line (3.x is unmaintained)", async () => {
-    const manifest = JSON.parse(await readRepoFile("apps/tui/package.json")) as {
+    const manifest = JSON.parse(
+      await readRepoFile("apps/tui/package.json")
+    ) as {
       devDependencies?: Record<string, string>;
     };
     expect(manifest.devDependencies?.vitest).toBe("^4.1.11");
   });
 
   it("does not waive GHSA-82fw-gwwq-j7x9 on the high gate", async () => {
-    const { ALLOWED_GHSA } = await import("../../scripts/audit-dependencies.mjs");
-    const allowed = Object.keys(ALLOWED_GHSA as Record<string, string>).map((id) =>
-      id.toUpperCase()
+    const { ALLOWED_GHSA } =
+      await import("../../scripts/audit-dependencies.mjs");
+    const allowed = Object.keys(ALLOWED_GHSA as Record<string, string>).map(
+      (id) => id.toUpperCase()
     );
     expect(allowed).not.toContain("GHSA-82FW-GWWQ-J7X9");
   });
@@ -273,26 +290,7 @@ describe("P2-DEP vitest mocker pin (GHSA-82fw-gwwq-j7x9)", () => {
   });
 });
 
-describe("P2-DEP public snapshot must include the patched lockfile", () => {
-  it("documents that the public snapshot must include pnpm-lock.yaml with vitest 4.1.11", async () => {
-    const snapshot = await readRepoFile("docs/PUBLIC_SNAPSHOT.md");
-    expect(snapshot).toContain("pnpm-lock.yaml");
-    expect(snapshot).toMatch(/must include/i);
-    expect(snapshot).toContain("vitest@4.1.11");
-    expect(snapshot).toContain("@vitest/mocker@4.1.11");
-    expect(snapshot).toContain("GHSA-82fw-gwwq-j7x9");
-    expect(snapshot).toMatch(/Dependabot/i);
-    expect(snapshot).toMatch(/do not retag `?v0\.12\.0`?/i);
-    expect(snapshot).not.toMatch(/\b5\.0\b/u);
-  });
-
-  it("does not exclude pnpm-lock.yaml from the public tree", async () => {
-    const publicTree = await readRepoFile("docs/PUBLIC_TREE.md");
-    const exclude = publicTree.split("## Must not go public")[1]?.split(/^## /m)[0] ?? "";
-    expect(exclude).toContain("compose.yaml");
-    expect(exclude).not.toMatch(/pnpm-lock\.yaml/u);
-  });
-
+describe("P2-DEP public checkout includes the patched lockfile", () => {
   it("keeps pnpm-lock.yaml git-tracked so Dependabot can see the 4.1.11 pin", () => {
     const listed = spawnSync("git", ["ls-files", "--", "pnpm-lock.yaml"], {
       cwd: repoRoot,

@@ -19,7 +19,7 @@ The default image ships nmap (NPSL — notices in `licenses/THIRD_PARTY_NOTICES.
 
 ## Run
 
-Customer deploy examples: [deploy/README.md](deploy/README.md) (Compose, Kubernetes, systemd). Image: `ghcr.io/seanheiney/periscan-runner-agent`.
+Customer deploy examples: [deploy/README.md](deploy/README.md) (Compose, Kubernetes, systemd). Image: `ghcr.io/seanventures/periscan-runner-agent`.
 
 ```sh
 pnpm --filter @periscan/runner-agent test

@@ -17,13 +17,13 @@ demo login is **not** measured proof.
 
 ## Prerequisites
 
-| Need | Notes |
-| --- | --- |
-| Node **24** | [`.nvmrc`](../.nvmrc) |
-| pnpm **9.15.0** | Corepack |
-| Docker | Compose plugin. **Do not** `docker compose up` at the repo root — root [`compose.yaml`](../compose.yaml) is the private goldeneye stack. Local deps are [`infra/docker-compose/docker-compose.yml`](../infra/docker-compose/docker-compose.yml). |
-| A repository you own | `git clone <your-repo>`, then paste the **absolute path**. Hosted `github.com/org/repo` is refused. |
-| `gitleaks` on PATH (first hour) | Control-plane secrets scan. Missing binary → `tool_unavailable` / Inconclusive, not invented findings. |
+| Need                 | Notes                                                                                                                                                                                        |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Node **24**          | [`.nvmrc`](../.nvmrc)                                                                                                                                                                        |
+| pnpm **9.15.0**      | Corepack                                                                                                                                                                                     |
+| Docker               | Engine + Compose plugin. New installs use [`infra/docker-compose/docker-compose.community-deps.yml`](../infra/docker-compose/docker-compose.community-deps.yml); do not run a bare `docker compose up` at the repo root. |
+| A repository you own | `git clone <your-repo>`, then paste the **absolute path**. Hosted `github.com/org/repo` is refused.                                                                                          |
+| Gitleaks runtime     | A host binary is optional. Docker runs the pinned image when the binary is absent. A failed runtime returns Inconclusive, not invented findings.                                             |
 
 `bash scripts/periscan.sh start` runs `pnpm lab:dev` (API + **worker** + web).
 Plain `pnpm dev` has no worker and cannot finish Community runs.
@@ -45,7 +45,8 @@ bash install.sh repair    # alias doctor
 
 Reuses `scripts/periscan.sh` / `scripts/community-first-hour.sh` /
 `infra/lab/scripts/env.sh`. Local deps stay
-`infra/docker-compose/docker-compose.yml`. Busy ports remap (557). Do not kill
+`infra/docker-compose/docker-compose.community-deps.yml` for new installs;
+existing install state retains the legacy MinIO Compose file. Busy ports remap (557). Do not kill
 neighbor apps. Do not wipe a neighbor Redis.
 
 ## Install contract (`scripts/periscan.sh`)
@@ -62,14 +63,14 @@ bash scripts/periscan.sh down      # stop tracked lab:dev children; compose stop
 bash scripts/periscan.sh help
 ```
 
-| Rule | Meaning |
-| --- | --- |
-| `install` | Toolchain + `infra/docker-compose/docker-compose.yml` (project `periscan-deps`) + Prisma migrate. Not `seed:demo`. Not `lab:up`. Not `pnpm verify`. |
-| `start` | Host toolchain control plane. Prints web + API URLs. Auto-shifts off `:3000` / `:3001` when busy. |
-| `status` | `GET /api/v1/health` against the chosen API port. Down is honest, not a fake pass. |
-| `update` | Pull + install + migrate. Does **not** restart processes. You run `start` again. |
-| `down` | Stop lab:dev children if tracked; `compose stop` deps. **Does not** `docker compose down -v` (volumes stay). |
-| Postgres | Honors `PERISCAN_POSTGRES_PUBLISHED_PORT` (lab default **5434**). If that bind is taken, pick the next free port. A neighbor `:5434` is never this clone. Export `DATABASE_URL` to match. |
+| Rule      | Meaning                                                                                                                                                                                                   |
+| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `install` | Toolchain + isolated `infra/docker-compose/docker-compose.community-deps.yml` (project `periscan-community-deps`) + Prisma migrate. Existing state retains legacy MinIO. Not `seed:demo`, `lab:up`, or `pnpm verify`. |
+| `start`   | Host toolchain control plane. Prints web + API URLs. Auto-shifts off `:3000` / `:3001` when busy.                                                                                                         |
+| `status`  | `GET /api/v1/health` against the chosen API port. Down is honest, not a fake pass.                                                                                                                        |
+| `update`  | Pull + install + migrate. Does **not** restart processes. You run `start` again.                                                                                                                          |
+| `down`    | Stop lab:dev children if tracked; `compose stop` deps. **Does not** `docker compose down -v` (volumes stay).                                                                                              |
+| Postgres  | Honors `PERISCAN_POSTGRES_PUBLISHED_PORT` (lab default **5434**). If that bind is taken, pick the next free port. A neighbor `:5434` is never this clone. Export `DATABASE_URL` to match.                 |
 
 ---
 
@@ -84,12 +85,12 @@ bash scripts/periscan.sh start
 
 Read the printed URLs. Defaults when free:
 
-| Service | Default | Override |
-| --- | --- | --- |
-| Web | `http://127.0.0.1:3000` | `PERISCAN_WEB_PORT` (`lab:dev` → `3010+` if busy) |
-| API | `http://127.0.0.1:3001` | `PERISCAN_API_PORT` (next free if busy; printed as `PERISCAN_API_URL`) |
-| Postgres | `127.0.0.1:5434` (published) | `PERISCAN_POSTGRES_PUBLISHED_PORT` **and** `DATABASE_URL` |
-| Redis | `127.0.0.1:6379` | `PERISCAN_REDIS_PUBLISHED_PORT` **and** `REDIS_URL` |
+| Service  | Default                      | Override                                                               |
+| -------- | ---------------------------- | ---------------------------------------------------------------------- |
+| Web      | `http://127.0.0.1:3000`      | `PERISCAN_WEB_PORT` (`lab:dev` → `3010+` if busy)                      |
+| API      | `http://127.0.0.1:3001`      | `PERISCAN_API_PORT` (next free if busy; printed as `PERISCAN_API_URL`) |
+| Postgres | `127.0.0.1:5434` (published) | `PERISCAN_POSTGRES_PUBLISHED_PORT` **and** `DATABASE_URL`              |
+| Redis    | `127.0.0.1:6379`             | `PERISCAN_REDIS_PUBLISHED_PORT` **and** `REDIS_URL`                    |
 
 Confirm the plane you actually started:
 
@@ -285,19 +286,19 @@ pnpm tui -- --api http://127.0.0.1:3001
 Equivalent: `export PERISCAN_API_URL=http://127.0.0.1:3001` then `pnpm tui`.
 If `start` remapped the API, pass **that** origin.
 
-| Key | Action |
-| --- | --- |
-| `2` | Auth (sign up / login) |
-| `3` | Scopes — add + verify |
-| `4` | Policy preview + Community run |
+| Key | Action                                           |
+| --- | ------------------------------------------------ |
+| `2` | Auth (sign up / login)                           |
+| `3` | Scopes — add + verify                            |
+| `4` | Policy preview + Community run                   |
 | `g` | Pin `gitleaks.repo_secrets` (first-hour secrets) |
-| `p` | Preview policy |
-| `r` | Run Community |
-| `5` | Missions |
-| `6` | Findings (evidence ∩ mission) |
-| `7` | Open remediations |
-| `?` | Help |
-| `q` | Quit |
+| `p` | Preview policy                                   |
+| `r` | Run Community                                    |
+| `5` | Missions                                         |
+| `6` | Findings (evidence ∩ mission)                    |
+| `7` | Open remediations                                |
+| `?` | Help                                             |
+| `q` | Quit                                             |
 
 Full map: [`TUI.md`](./TUI.md). `pnpm tui -- health` is liveness, not proof.
 
@@ -354,13 +355,13 @@ Cookie session + CSRF as in step 2, or a tenant API key (`Authorization:
 Bearer psk_…`, no CSRF). Example automation:
 [`examples/proof-loop.sh`](../examples/proof-loop.sh).
 
-| Job | Method | Path |
-| --- | --- | --- |
-| Suite (what can start on this verified scope) | `GET` | `/api/v1/community/validation-suite?scopeId=` |
-| Start (queues work after policy allow) | `POST` | `/api/v1/community/validation-runs` |
-| Findings (evidence ∩ this mission) | `GET` | `/api/v1/findings?missionId=` |
-| Open remediations from that mission | `POST` | `/api/v1/community/validation-runs/:missionId/remediations` |
-| Re-measure; **Fixed** only if the event proves it | `POST` | `/api/v1/remediations/:id/verify` |
+| Job                                               | Method | Path                                                        |
+| ------------------------------------------------- | ------ | ----------------------------------------------------------- |
+| Suite (what can start on this verified scope)     | `GET`  | `/api/v1/community/validation-suite?scopeId=`               |
+| Start (queues work after policy allow)            | `POST` | `/api/v1/community/validation-runs`                         |
+| Findings (evidence ∩ this mission)                | `GET`  | `/api/v1/findings?missionId=`                               |
+| Open remediations from that mission               | `POST` | `/api/v1/community/validation-runs/:missionId/remediations` |
+| Re-measure; **Fixed** only if the event proves it | `POST` | `/api/v1/remediations/:id/verify`                           |
 
 Read `jobsQueued` on start. Reconstruct pack + Nuclei sibling:
 `GET /api/v1/community/validation-runs?missionId=`.
@@ -369,27 +370,27 @@ Read `jobsQueued` on start. Reconstruct pack + Nuclei sibling:
 
 ## Honest stops
 
-| If you see this | It means | Do not |
-| --- | --- | --- |
-| Hosted GitHub URL refused | Control plane cannot read github.com as a repo path | Treat PENDING as “almost verified” |
-| `jobsQueued=0` | Nothing queued (deny, empty suite, missing AWS/runner) | Call HTTP 200 a run |
-| Empty findings | No evidence intersected this mission | Call it a clean bill of health |
-| Remediations **Open** | Work item exists; exposure not re-proved gone | Tick Fixed |
-| Prowler deferred | No Connected AWS | Count it as “engines start now” |
-| `tool_unavailable` | Binary not installed | Invent a finding |
-| `pnpm seed:demo` tenant | Labeled fixture | Cite it as measured lab proof |
-| Atomic / Caldera adapters | In development; current content/plan imports | Claim live execution before adapter qualification |
+| If you see this           | It means                                               | Do not                                            |
+| ------------------------- | ------------------------------------------------------ | ------------------------------------------------- |
+| Hosted GitHub URL refused | Control plane cannot read github.com as a repo path    | Treat PENDING as “almost verified”                |
+| `jobsQueued=0`            | Nothing queued (deny, empty suite, missing AWS/runner) | Call HTTP 200 a run                               |
+| Empty findings            | No evidence intersected this mission                   | Call it a clean bill of health                    |
+| Remediations **Open**     | Work item exists; exposure not re-proved gone          | Tick Fixed                                        |
+| Prowler deferred          | No Connected AWS                                       | Count it as “engines start now”                   |
+| `tool_unavailable`        | Binary not installed                                   | Invent a finding                                  |
+| `pnpm seed:demo` tenant   | Labeled fixture                                        | Cite it as measured lab proof                     |
+| Atomic / Caldera adapters | In development; current content/plan imports           | Claim live execution before adapter qualification |
 
 ---
 
 ## Related
 
-| Want | Where |
-| --- | --- |
-| FAQ | [`FAQ.md`](./FAQ.md) |
-| Community offering + pack | [`COMMUNITY.md`](../COMMUNITY.md) |
-| TUI keys | [`TUI.md`](./TUI.md) |
-| Engine adapter PR | [`ADAPTER_FIRST_PR.md`](./ADAPTER_FIRST_PR.md) |
-| `.periscan.yaml` (intent only; control plane does not load it) | [`PERISCAN_YAML.md`](./PERISCAN_YAML.md) |
-| Vuln report (no public PoC) | [`SECURITY.md`](../SECURITY.md) |
-| Settled axioms | [`SETTLED.md`](./SETTLED.md) |
+| Want                                                           | Where                                          |
+| -------------------------------------------------------------- | ---------------------------------------------- |
+| FAQ                                                            | [`FAQ.md`](./FAQ.md)                           |
+| Community offering + pack                                      | [`COMMUNITY.md`](../COMMUNITY.md)              |
+| TUI keys                                                       | [`TUI.md`](./TUI.md)                           |
+| Engine adapter PR                                              | [`ADAPTER_FIRST_PR.md`](./ADAPTER_FIRST_PR.md) |
+| `.periscan.yaml` (intent only; control plane does not load it) | [`PERISCAN_YAML.md`](./PERISCAN_YAML.md)       |
+| Vuln report (no public PoC)                                    | [`SECURITY.md`](../SECURITY.md)                |
+| Settled axioms                                                 | [`SETTLED.md`](./SETTLED.md)                   |

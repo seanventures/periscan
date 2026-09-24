@@ -27,9 +27,14 @@ check_version subfinder subfinder -version
 check_version httpx httpx -version
 check_version dnsx dnsx -version
 check_version kerbrute kerbrute version
-check_version netexec nxc --version
 
 echo "== deferred (resolved at runtime, not baked) =="
+if command -v nxc >/dev/null 2>&1; then
+  echo "FAIL | netexec | must not be baked into the default LaterPhase fixture-only image"
+  fail=1
+else
+  echo "info | netexec | LaterPhase fixture-only; no live credential execution in the default image"
+fi
 echo "info | metasploit | provided via metasploitframework/metasploit-framework container or operator install (PERISCAN_METASPLOIT_IMAGE/_BINARY)"
 
 if [ "${fail}" -ne 0 ]; then

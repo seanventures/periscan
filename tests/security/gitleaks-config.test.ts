@@ -74,16 +74,17 @@ describe("committed gitleaks config", () => {
     expect(config).toMatch(/root@goldeneye/u);
   });
 
-  it("documents history scrub and an optional working-tree scan", () => {
-    const publicTree = readRepo("docs/PUBLIC_TREE.md");
+  it("gates public-source hygiene and exposes an optional working-tree scan", () => {
+    const hygieneGate = readRepo("scripts/public-tree-hygiene.mjs");
+    const verify = readRepo("scripts/verify.sh");
     const pkg = JSON.parse(readRepo("package.json")) as {
       scripts?: Record<string, string>;
     };
 
-    expect(publicTree).toContain("gitleaks detect");
-    expect(publicTree).toContain("--log-opts='--all'");
-    expect(publicTree).toContain(".gitleaks.toml");
-    expect(publicTree).toMatch(/pnpm secrets:scan|optional/i);
+    expect(hygieneGate).toContain("docs/PUBLIC_TREE.md");
+    expect(hygieneGate).toContain("docs/PUBLIC_SNAPSHOT.md");
+    expect(verify).toContain("pnpm public:tree:check");
+    expect(verify).toContain("pnpm test:security");
 
     expect(pkg.scripts?.["secrets:scan"]).toBe(
       "gitleaks detect --source . --no-git"

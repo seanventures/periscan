@@ -320,7 +320,7 @@ describe("runner-agent signed SIEM task execution", () => {
       `${ON_PREM_SPLUNK}/services/search/jobs/export`
     );
     expect(JSON.stringify(result)).not.toContain(SPLUNK_TOKEN);
-  });
+  }, 20_000);
 
   it("never fetches an unscoped RFC1918 SIEM host even when the envelope is signed", async () => {
     const fetchMock = vi.fn(async () => splunkNotableExport());

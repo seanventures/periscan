@@ -12,7 +12,7 @@ lab_postgres_container() {
   fi
   local repo_root compose_file name candidate
   repo_root="${REPO_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)}"
-  compose_file="${repo_root}/infra/docker-compose/docker-compose.yml"
+  compose_file="${repo_root}/${PERISCAN_DEPS_COMPOSE_FILE:-infra/docker-compose/docker-compose.yml}"
   if [[ -f "$compose_file" ]]; then
     name=$(docker compose -f "$compose_file" ps --format '{{.Name}}' postgres 2>/dev/null | head -n 1 || true)
     if [[ -n "$name" ]]; then
@@ -20,13 +20,17 @@ lab_postgres_container() {
       return 0
     fi
   fi
-  for candidate in periscan-deps-postgres-1 docker-compose-postgres-1; do
+  local candidates=(periscan-deps-postgres-1 docker-compose-postgres-1)
+  if [[ "${PERISCAN_DEPS_COMPOSE_FILE:-}" == *docker-compose.community-deps.yml ]]; then
+    candidates=(periscan-community-deps-postgres-1)
+  fi
+  for candidate in "${candidates[@]}"; do
     if docker inspect "$candidate" >/dev/null 2>&1; then
       echo "$candidate"
       return 0
     fi
   done
-  echo "periscan-deps-postgres-1"
+  echo "${candidates[0]}"
 }
 
 lab_postgres_published_port() {
@@ -200,14 +204,88 @@ lab_compose_running_host_port() {
   return 1
 }
 
+# New clones get a separate SeaweedFS-backed dependency project. A state file
+# written by an older installer keeps using the legacy MinIO stack until its
+# objects have been migrated and verified; no existing volume is repurposed.
+lab_community_deps_compose_file() {
+  local repo_root="${1:?repo root required}"
+  local new_file="infra/docker-compose/docker-compose.community-deps.yml"
+  local legacy_file="infra/docker-compose/docker-compose.yml"
+  local selected="${PERISCAN_DEPS_COMPOSE_FILE:-}"
+  if [[ -n "$selected" ]]; then
+    printf '%s\n' "$selected"
+    return 0
+  fi
+  local state="${repo_root}/.periscan/community.env"
+  if [[ -f "$state" ]]; then
+    selected="$(sed -n 's/^PERISCAN_DEPS_COMPOSE_FILE=//p' "$state" | tail -n 1)"
+    if [[ "$selected" == "$new_file" ]]; then
+      printf '%s\n' "$new_file"
+    else
+      printf '%s\n' "$legacy_file"
+    fi
+    return 0
+  fi
+  printf '%s\n' "$new_file"
+}
+
+# Keep an existing periscan-deps installation stable, but never attach a second
+# checkout to that installation's containers or volumes. An explicit project
+# override (for a disposable lab, for example) always wins.
+lab_choose_clone_compose_project() {
+  local compose_file="${1:-}"
+  if [[ -n "${COMPOSE_PROJECT_NAME:-}" || ! -f "$compose_file" ]]; then
+    return 0
+  fi
+
+  # A checkout that once needed a collision-safe project must keep using its
+  # existing volumes even if the other checkout later disappears.
+  local repo_root saved_project state_file
+  repo_root="$(cd "$(dirname "$compose_file")/../.." && pwd -P)"
+  state_file="${repo_root}/.periscan/community.env"
+  if [[ -f "$state_file" ]]; then
+    saved_project="$(sed -n 's/^COMPOSE_PROJECT_NAME=//p' "$state_file" | tail -n 1)"
+    if [[ "$saved_project" =~ ^[a-z0-9][a-z0-9_-]*$ ]]; then
+      export COMPOSE_PROJECT_NAME="$saved_project"
+      return 0
+    fi
+  fi
+
+  local compose_dir owner="" candidate suffix found=0
+  local base_project="periscan-deps"
+  if [[ "$compose_file" == *docker-compose.community-deps.yml ]]; then
+    base_project="periscan-community-deps"
+  fi
+  compose_dir="$(cd "$(dirname "$compose_file")" && pwd -P)"
+  for candidate in "${base_project}-postgres-1" "${base_project}-redis-1" "${base_project}-minio-1"; do
+    if docker inspect "$candidate" >/dev/null 2>&1; then
+      found=1
+      owner="$(docker inspect "$candidate" --format '{{index .Config.Labels "com.docker.compose.project.working_dir"}}' 2>/dev/null || true)"
+      break
+    fi
+  done
+  if [[ "$found" == "0" || "$owner" == "$compose_dir" ]]; then
+    return 0
+  fi
+
+  suffix="$(printf '%s' "$compose_dir" | cksum | awk '{print $1}')"
+  export COMPOSE_PROJECT_NAME="${base_project}-${suffix}"
+  echo "[first-hour] another checkout owns ${base_project} — using ${COMPOSE_PROJECT_NAME}"
+}
+
 # Choose published Postgres/Redis/MinIO ports for THIS clone's compose file.
 # Never treat a neighbor bind (e.g. workspace :5434) as ours.
 lab_select_deps_publish_ports() {
   local compose_file="${1:-}"
+  lab_choose_clone_compose_project "$compose_file"
   local preferred_pg="${PERISCAN_POSTGRES_PUBLISHED_PORT:-5434}"
   local preferred_redis="${PERISCAN_REDIS_PUBLISHED_PORT:-6379}"
   local preferred_minio="${PERISCAN_MINIO_PUBLISHED_PORT:-9000}"
   local preferred_console="${PERISCAN_MINIO_CONSOLE_PUBLISHED_PORT:-9001}"
+  local new_community_store=0
+  if [[ "$compose_file" == *docker-compose.community-deps.yml ]]; then
+    new_community_store=1
+  fi
   local existing_pg=""
 
   if existing_pg="$(lab_compose_running_host_port "$compose_file" postgres 5432)"; then
@@ -239,12 +317,14 @@ lab_select_deps_publish_ports() {
     export PERISCAN_MINIO_PUBLISHED_PORT
     PERISCAN_MINIO_PUBLISHED_PORT="$(lab_pick_free_tcp_port "$preferred_minio" "$PERISCAN_POSTGRES_PUBLISHED_PORT" "$PERISCAN_REDIS_PUBLISHED_PORT")"
     if [[ "$PERISCAN_MINIO_PUBLISHED_PORT" != "$preferred_minio" ]]; then
-      echo "[first-hour] :${preferred_minio} busy — MinIO publish ${PERISCAN_MINIO_PUBLISHED_PORT}"
+      echo "[first-hour] :${preferred_minio} busy — S3 publish ${PERISCAN_MINIO_PUBLISHED_PORT}"
     fi
   fi
 
   local existing_console=""
-  if existing_console="$(lab_compose_running_host_port "$compose_file" minio 9001)"; then
+  if [[ "$new_community_store" == "1" ]]; then
+    export PERISCAN_MINIO_CONSOLE_PUBLISHED_PORT=""
+  elif existing_console="$(lab_compose_running_host_port "$compose_file" minio 9001)"; then
     export PERISCAN_MINIO_CONSOLE_PUBLISHED_PORT="$existing_console"
   else
     export PERISCAN_MINIO_CONSOLE_PUBLISHED_PORT
@@ -256,4 +336,9 @@ lab_select_deps_publish_ports() {
 
   export REDIS_URL="redis://127.0.0.1:${PERISCAN_REDIS_PUBLISHED_PORT}"
   export DATABASE_URL="postgresql://periscan:periscan@127.0.0.1:${PERISCAN_POSTGRES_PUBLISHED_PORT}/periscan"
+  export PERISCAN_EVIDENCE_S3_ENDPOINT="${PERISCAN_EVIDENCE_S3_ENDPOINT:-http://127.0.0.1:${PERISCAN_MINIO_PUBLISHED_PORT}}"
+  export PERISCAN_EVIDENCE_S3_BUCKET="${PERISCAN_EVIDENCE_S3_BUCKET:-periscan-evidence}"
+  export PERISCAN_EVIDENCE_S3_ACCESS_KEY_ID="${PERISCAN_EVIDENCE_S3_ACCESS_KEY_ID:-periscan}"
+  export PERISCAN_EVIDENCE_S3_SECRET_ACCESS_KEY="${PERISCAN_EVIDENCE_S3_SECRET_ACCESS_KEY:-periscan123}"
+  export PERISCAN_EVIDENCE_S3_REGION="${PERISCAN_EVIDENCE_S3_REGION:-us-east-1}"
 }

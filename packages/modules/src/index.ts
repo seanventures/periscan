@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { promisify } from "node:util";
 import { execFile as execFileCallback, spawn } from "node:child_process";
+import { createReadStream } from "node:fs";
 import { connect as netConnect } from "node:net";
 import { connect as tlsConnect, type PeerCertificate } from "node:tls";
 import {
@@ -16,8 +17,10 @@ import {
   mkdtemp,
   readdir,
   readFile,
-  rm
+  rm,
+  stat
 } from "node:fs/promises";
+import { pipeline } from "node:stream/promises";
 import path from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
@@ -123,6 +126,7 @@ type DockerNamedVolumeMount = {
 
 type HardenedDockerRunInput = {
   commandArgs: string[];
+  entrypoint?: string;
   envArgs?: string[];
   imageRef: string;
   interactive?: boolean;
@@ -136,6 +140,7 @@ type HardenedDockerRunInput = {
 
 export function buildHardenedDockerRunArgs({
   commandArgs,
+  entrypoint,
   envArgs = [],
   imageRef,
   interactive = false,
@@ -169,6 +174,7 @@ export function buildHardenedDockerRunArgs({
     user,
     "--env",
     "HOME=/tmp",
+    ...(entrypoint ? ["--entrypoint", entrypoint] : []),
     ...volumes.flatMap((volume) => [
       "--volume",
       `${volume.source}:${volume.target}${volume.readonly ? ":ro" : ""}`
@@ -2575,66 +2581,92 @@ async function runGitleaksCli(
           );
         }
 
-        // Pipe host-read file bytes into gitleaks --pipe. Bind-mounting the
-        // repo fails on Docker Desktop when the path is outside File Sharing
-        // (e.g. /Volumes/DataSSD1, /var/folders). Stdout report avoids /out
-        // permission and tmpfs-disappears-on-exit issues.
-        const entries = await readdir(repositoryPath, { withFileTypes: true });
-        const chunks: string[] = [];
-        for (const entry of entries) {
-          if (!entry.isFile() || entry.name.startsWith(".")) {
-            continue;
-          }
-          chunks.push(
-            await readFile(path.join(repositoryPath, entry.name), "utf8")
+        // Docker Desktop may not share this host path. Stream a bounded
+        // working-tree archive into a private container tmpfs so Gitleaks can
+        // scan nested files and retain their paths. An oversized or unreadable
+        // repository is inconclusive rather than a false clean result.
+        const archivePath = path.join(tempDir, "repository.tar");
+        await execFile("tar", [
+          "--exclude=.git",
+          "-cf",
+          archivePath,
+          "-C",
+          repositoryPath,
+          "."
+        ]);
+        const archiveSize = (await stat(archivePath)).size;
+        if (archiveSize > 192 * 1024 * 1024) {
+          throw new Error(
+            "Gitleaks Docker staging exceeds the 192 MiB Community scan limit."
           );
         }
         const dockerArgs = buildHardenedDockerRunArgs({
           commandArgs: [
-            "detect",
-            "--pipe",
-            "--no-banner",
-            "--log-level",
-            "error",
-            "--report-format",
-            "json",
-            "--report-path",
-            "-",
-            "--exit-code",
-            "0"
+            "-c",
+            "mkdir /tmp/repo && tar -xf - -C /tmp/repo && exec gitleaks detect --source /tmp/repo --no-git --no-banner --log-level error --report-format json --report-path - --exit-code 0"
           ],
+          entrypoint: "/bin/sh",
           imageRef: runtime.imageRef,
           interactive: true,
           network: "none"
         });
         const stdout = await new Promise<string>((resolve, reject) => {
           const child = spawn(runtime.command as string, dockerArgs);
-          let out = "";
+          const output: Buffer[] = [];
+          let outputBytes = 0;
           let err = "";
           child.stdout.on("data", (chunk) => {
-            out += String(chunk);
+            const bytes = Buffer.from(chunk);
+            outputBytes += bytes.length;
+            if (outputBytes > TOOL_EXEC_MAX_BUFFER_BYTES) {
+              child.kill();
+              reject(
+                new Error("Gitleaks Docker report exceeds the output limit.")
+              );
+            } else {
+              output.push(bytes);
+            }
           });
           child.stderr.on("data", (chunk) => {
-            err += String(chunk);
+            err = (err + String(chunk)).slice(-8192);
           });
           child.on("error", reject);
           child.on("close", (code) => {
-            if (code !== 0 && !out.includes("[")) {
+            if (code !== 0) {
               reject(new Error(err || `gitleaks docker exited ${code}`));
               return;
             }
-            resolve(out);
+            resolve(Buffer.concat(output).toString("utf8"));
           });
-          child.stdin.write(chunks.join("\n"));
-          child.stdin.end();
+          void pipeline(createReadStream(archivePath), child.stdin).catch(
+            (error) => {
+              child.kill();
+              reject(error);
+            }
+          );
         });
-        const jsonStart = stdout.indexOf("[");
-        const jsonEnd = stdout.lastIndexOf("]");
-        const raw =
-          jsonStart >= 0 && jsonEnd >= jsonStart
-            ? stdout.slice(jsonStart, jsonEnd + 1)
-            : "[]";
-        return z.array(GitleaksFindingSchema).parse(JSON.parse(raw));
+        const findings = z
+          .array(GitleaksFindingSchema)
+          .parse(JSON.parse(stdout));
+        const containerRoot = "/tmp/repo/";
+        return findings.map((finding) => {
+          if (!finding.File.startsWith(containerRoot)) {
+            throw new Error(
+              "Gitleaks returned a file outside the staged repository."
+            );
+          }
+          const relativePath = finding.File.slice(containerRoot.length);
+          if (
+            !relativePath ||
+            relativePath.split("/").includes("..") ||
+            path.isAbsolute(relativePath)
+          ) {
+            throw new Error(
+              "Gitleaks returned an invalid repository file path."
+            );
+          }
+          return { ...finding, File: path.join(repositoryPath, relativePath) };
+        });
       } else {
         throw new Error(
           `Unsupported Gitleaks runtime: ${runtime.runtime}. Expected binary or docker.`

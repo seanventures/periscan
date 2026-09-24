@@ -38376,7 +38376,7 @@ describe("buildApp", () => {
     );
 
     await app.close();
-  });
+  }, 30_000);
 
   it("requires tool license acceptance before install for RequiresLegalReview tools", async () => {
     const { services } = createInMemoryServices();

@@ -1,11 +1,10 @@
 # Community local overlay — api + web + worker against periscan-deps.
 #
 # Strangers / GitHub clone: do NOT `docker compose up` at the repo root.
-# Root compose.yaml is the goldeneye production stack (private tailnet
-# registry + Traefik). This overlay is the local Community path.
+# This overlay is the local Community path.
 #
 #   docker compose \
-#     -f infra/docker-compose/docker-compose.yml \
+#     -f infra/docker-compose/docker-compose.community-deps.yml \
 #     -f infra/docker-compose/docker-compose.community.yml \
 #     up -d --build --wait
 #
@@ -13,7 +12,7 @@
 #
 # Worker is scan-executor `runtime` (Gitleaks/Nuclei/Trivy/OSV, no GPL).
 # Faster host-toolchain path (no image build): `pnpm lab:dev` after
-#   docker compose -f infra/docker-compose/docker-compose.yml up -d --wait
+#   docker compose -f infra/docker-compose/docker-compose.community-deps.yml up -d --wait
 #
 # PERISCAN_DEV_MODE=true is local-only. Production forbids it:
 # PERISCAN_DEPLOYMENT_ENVIRONMENT=production fails closed when the flag is true.
@@ -56,6 +55,19 @@ services:
       postgres:
         condition: service_healthy
 
+  s3-init:
+    image: periscan-api:community-local
+    build:
+      context: ../..
+      dockerfile: apps/api/Dockerfile
+    restart: "no"
+    environment:
+      <<: *community-app-env
+    command: ["pnpm", "--filter", "@periscan/evidence", "exec", "tsx", "src/ensure-local-bucket.ts"]
+    depends_on:
+      minio:
+        condition: service_healthy
+
   api:
     image: periscan-api:community-local
     build:
@@ -75,6 +87,8 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
+      s3-init:
+        condition: service_completed_successfully
       migrate:
         condition: service_completed_successfully
     healthcheck:
@@ -103,6 +117,8 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
+      s3-init:
+        condition: service_completed_successfully
       migrate:
         condition: service_completed_successfully
 

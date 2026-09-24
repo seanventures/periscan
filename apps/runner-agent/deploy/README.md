@@ -4,7 +4,7 @@ Customer-managed examples for the **TypeScript runner-agent** — labeled **Agen
 
 **Community InternalRunner OSS (`nmap`, `syft`, `subfinder`, …) runs on this Node agent, not Go `apps/runner`.** See the [package README](../README.md). Community edition is not a LICENSE flip.
 
-> **Supported Customer Runner (P10-2 / P10-3):** Production LTS is Go `apps/runner` (`ghcr.io/seanheiney/periscan-runner`). This Agent (in-network) image (`ghcr.io/seanheiney/periscan-runner-agent`) is **optional** for sites that need AgentLocal modules — not a second enterprise SKU or “the” LTS runner. Prefer `apps/runner/deploy/` for baseline private-network enrollment.
+> **Supported Customer Runner (P10-2 / P10-3):** Production LTS is Go `apps/runner` (`ghcr.io/seanventures/periscan-runner`). This Agent (in-network) image (`ghcr.io/seanventures/periscan-runner-agent`) is **optional** for sites that need AgentLocal modules — not a second enterprise SKU or “the” LTS runner. Prefer `apps/runner/deploy/` for baseline private-network enrollment.
 
 ## Product honesty (P10)
 

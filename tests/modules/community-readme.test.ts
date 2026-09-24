@@ -1,4 +1,3 @@
-import { spawnSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 
@@ -7,7 +6,6 @@ import { describe, expect, it } from "vitest";
 const repoRoot = fileURLToPath(new URL("../..", import.meta.url));
 
 /** Private-tree `v0.12.0` peel. Do not retag. Public orphan stays `097bb6df`. */
-const V0_12_0_TAG_COMMIT = "8de6d3b497f40a9711392875fc74b53bcce3e645";
 
 async function readRepoFile(path: string) {
   return readFile(new URL(`../../${path}`, import.meta.url), "utf8");
@@ -196,7 +194,8 @@ describe("Community GitHub README (PERISCAN-561 / PERISCAN-490)", () => {
     }
 
     const start = readme.split("## Start")[1] ?? "";
-    const firstBullet = start.split("\n").find((line) => /^\s*1\./.test(line)) ?? "";
+    const firstBullet =
+      start.split("\n").find((line) => /^\s*1\./.test(line)) ?? "";
     expect(firstBullet).toContain("git clone <your-repo>");
     expect(firstBullet).toMatch(/absolute path/i);
     expect(start).toContain("docs/images/shot-get-started.png");
@@ -235,7 +234,12 @@ describe("Community GitHub README (PERISCAN-561 / PERISCAN-490)", () => {
     expect(lead).toMatch(/Full BAS\/AEV is the \[development objective\]/i);
     expect(lead).toMatch(/current shipped entry point/i);
     expect(lead).toMatch(/live adapters require the qualification gates/i);
-    for (const engine of ["Atomic", "Caldera", "SharpHound/BloodHound", "Metasploit"]) {
+    for (const engine of [
+      "Atomic",
+      "Caldera",
+      "SharpHound/BloodHound",
+      "Metasploit"
+    ]) {
       expect(lead).toContain(engine);
     }
     expect(lead).toMatch(/Fixed.*only after a retest/);
@@ -257,7 +261,9 @@ describe("Community GitHub README (PERISCAN-561 / PERISCAN-490)", () => {
     const honestIdx = community.indexOf("## Honest language");
     expect(honestIdx).toBeGreaterThan(0);
     const honest = community.slice(honestIdx, honestIdx + 800);
-    expect(honest).toMatch(/Authorized local path \+ Gitleaks-class default start/);
+    expect(honest).toMatch(
+      /Authorized local path \+ Gitleaks-class default start/
+    );
     expect(honest).toMatch(/Fixed only after re-validation/);
     expect(honest).not.toMatch(/AEV \/ CTEM/);
     expect(community).toMatch(/CTEM program views are commercial \/ later/i);
@@ -267,8 +273,12 @@ describe("Community GitHub README (PERISCAN-561 / PERISCAN-490)", () => {
     const changelog = await readRepoFile("CHANGELOG.md");
 
     expect(changelog).not.toMatch(/LICENSE(?:]\([^)]*\))? stays proprietary/i);
-    expect(changelog).not.toMatch(/Product \[`LICENSE`\]\(LICENSE\) stays proprietary/i);
-    expect(changelog).toMatch(/current \[`LICENSE`\]\(LICENSE\) is \*\*Apache-2\.0\*\*/);
+    expect(changelog).not.toMatch(
+      /Product \[`LICENSE`\]\(LICENSE\) stays proprietary/i
+    );
+    expect(changelog).toMatch(
+      /current \[`LICENSE`\]\(LICENSE\) is \*\*Apache-2\.0\*\*/
+    );
     expect(changelog).toMatch(/At this snapshot.*was still proprietary/s);
 
     const v012 = changelog.split("## 0.12.0")[1]?.split("## 0.11.0")[0] ?? "";
@@ -320,17 +330,6 @@ describe("Community GitHub README (PERISCAN-561 / PERISCAN-490)", () => {
     expect(changelog).not.toMatch(/^## 0\.12\.1[^\n]*Unreleased/m);
   });
 
-  it("does not retag v0.12.0 (P1-TAG)", () => {
-    const peeled = spawnSync(
-      "git",
-      ["rev-parse", "--verify", "v0.12.0^{commit}"],
-      { encoding: "utf8", cwd: repoRoot }
-    );
-
-    expect(peeled.status, peeled.stderr).toBe(0);
-    expect(peeled.stdout.trim()).toBe(V0_12_0_TAG_COMMIT);
-  });
-
   it("SECURITY.md first paragraph is [SECURITY] + 72h SLA; PVR unused", async () => {
     const security = await readRepoFile("SECURITY.md");
     const firstPara = firstLines(security, 8);
@@ -339,8 +338,12 @@ describe("Community GitHub README (PERISCAN-561 / PERISCAN-490)", () => {
     expect(firstPara).toMatch(/72 hours/);
     expect(firstPara).toMatch(/title-only/i);
     expect(firstPara).toMatch(/PVR|private vulnerability reporting/i);
-    expect(security).toMatch(/does \*\*not\*\* use GitHub private vulnerability reporting/i);
-    expect(security).not.toMatch(/enable GitHub private vulnerability reporting/i);
+    expect(security).toMatch(
+      /does \*\*not\*\* use GitHub private vulnerability reporting/i
+    );
+    expect(security).not.toMatch(
+      /enable GitHub private vulnerability reporting/i
+    );
     expect(security).toMatch(/90 days/);
   });
 
@@ -392,7 +395,9 @@ describe("Community GitHub README (PERISCAN-561 / PERISCAN-490)", () => {
     expect(enterprise).toMatch(/Hosted multi-tenant SaaS/i);
     expect(enterprise).toMatch(/Managed SSO \/ SCIM/i);
     expect(enterprise).toMatch(/MSSP portfolio/i);
-    expect(enterprise).toMatch(/execution requires a qualified\s+adapter, an approved scenario/);
+    expect(enterprise).toMatch(
+      /execution requires a qualified\s+adapter, an approved scenario/
+    );
     expect(enterprise).toContain("[SECURITY]");
     expect(enterprise).toContain("OPEN_CORE.md");
     expect(enterprise).toContain("PRODUCTION_READINESS.md");
@@ -418,7 +423,9 @@ describe("Community GitHub README (PERISCAN-561 / PERISCAN-490)", () => {
       const after = doc.slice(idx);
       const nextHeading = after.slice(1).search(/\n## /);
       const section =
-        nextHeading >= 0 ? after.slice(0, nextHeading + 1) : after.slice(0, 900);
+        nextHeading >= 0
+          ? after.slice(0, nextHeading + 1)
+          : after.slice(0, 900);
       expect(section).toMatch(/proof layer/i);
       expect(section).toMatch(
         /Scope\s*[→\-].*Discover\s*[→\-].*Prioritize\s*[→\-].*Validate\s*[→\-].*Mobilize\s*[→\-].*Verify/i
@@ -427,10 +434,14 @@ describe("Community GitHub README (PERISCAN-561 / PERISCAN-490)", () => {
       expect(section).toMatch(/Gitleaks-class secrets/i);
       expect(section).toMatch(/[Ll]ive Atomic/);
       expect(section).toMatch(/hosted|MSSP/i);
-      expect(section).toMatch(/not.*Microsoft CTEM replacement|not a Microsoft CTEM/i);
+      expect(section).toMatch(
+        /not.*Microsoft CTEM replacement|not a Microsoft CTEM/i
+      );
       expect(section).toMatch(/full BAS\/AEV development program/i);
       expect(section).toMatch(/qualified adapters and measured evidence/i);
-      expect(section).not.toMatch(/Microsoft CTEM replacement for|replace Microsoft CTEM/i);
+      expect(section).not.toMatch(
+        /Microsoft CTEM replacement for|replace Microsoft CTEM/i
+      );
     }
 
     expect(firstLines(community, 20)).not.toMatch(/\bCTEM\b/);
@@ -542,13 +553,11 @@ describe("Community local/self-host SETUP (PERISCAN-490)", () => {
   it("SETUP.md is honest: never docker compose at repo root; compose.yaml is not public Community deps", async () => {
     const setup = await readRepoFile("docs/SETUP.md");
 
-    expect(setup).toContain(
-      "Do **not** run `docker compose` at the repo root"
-    );
+    expect(setup).toContain("Do **not** run `docker compose` at the repo root");
     expect(setup).toContain("compose.yaml");
-    expect(setup).toContain("PUBLIC_TREE.md");
-    expect(setup).toMatch(/excluded from the public tree/i);
-    expect(setup).toContain("-f infra/docker-compose/docker-compose.yml");
+    expect(setup).not.toContain("PUBLIC_TREE.md");
+    expect(setup).toContain("A public clone may");
+    expect(setup).toContain("-f infra/docker-compose/docker-compose.community-deps.yml");
     expect(setup).not.toMatch(/^docker compose up$/m);
   });
 

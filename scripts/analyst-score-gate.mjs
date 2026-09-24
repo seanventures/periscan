@@ -4,6 +4,15 @@ import { fileURLToPath } from "node:url";
 
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const scorecardPath = resolve(root, "docs/qa/analyst-scorecard.json");
+if (!existsSync(scorecardPath)) {
+  if (existsSync(resolve(root, "compose.yaml"))) {
+    throw new Error("Internal analyst scorecard is missing from the private tree.");
+  }
+  console.log(
+    "Analyst scorecard is excluded from this public tree; analyst:score:check skipped (no analyst score qualified)."
+  );
+  process.exit(0);
+}
 const scorecard = JSON.parse(readFileSync(scorecardPath, "utf8"));
 
 const errors = [];

@@ -19,6 +19,7 @@ export default defineConfig({
   fullyParallel: false,
   reporter: [["list"]],
   testDir: "./tests/e2e",
+  testMatch: "**/*.spec.ts",
   timeout: 90_000,
   use: {
     baseURL: webOrigin,
