@@ -72,19 +72,6 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
-      minio:
-        image: minio/minio:latest
-        env:
-          MINIO_ROOT_USER: periscan
-          MINIO_ROOT_PASSWORD: periscan123
-        ports:
-          - 9000:9000
-          - 9001:9001
-        options: >-
-          --health-cmd "curl -fsS http://127.0.0.1:9000/minio/health/live || exit 1"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
 
     env:
       DATABASE_URL: postgresql://periscan:periscan@127.0.0.1:5432/periscan
@@ -102,6 +89,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Start ephemeral S3 test store
+        run: bash scripts/start-ci-s3.sh
 
       - name: Setup Node
         uses: actions/setup-node@v4
