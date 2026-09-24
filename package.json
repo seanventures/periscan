@@ -62,7 +62,7 @@
     "test:security": "vitest run tests/security",
     "verify:api": "pnpm --filter @periscan/api typecheck && pnpm --filter @periscan/api test",
     "verify": "bash ./scripts/verify.sh",
-    "test": "pnpm -r --if-present test",
+    "test": "pnpm -r --workspace-concurrency=2 --if-present test",
     "tools:check": "tsx scripts/oss-toolchain.ts check",
     "tools:list": "tsx scripts/oss-toolchain.ts list",
     "tools:pull": "tsx scripts/oss-toolchain.ts pull",

@@ -1399,7 +1399,10 @@ describe("module registry", () => {
       const repositoryPath = await mkdtemp(
         path.join(tmpdir(), "periscan-gitleaks-docker-test-")
       );
-      const syntheticMarker = randomUUID().replaceAll("-", "") + "12345678";
+      // Use a synthetic token with a deterministic Gitleaks rule shape.
+      // Generic high-entropy detection is probabilistic for random hex.
+      const syntheticMarker =
+        "ghp_" + randomUUID().replaceAll("-", "") + "abcd";
       const nestedPath = path.join(repositoryPath, "src", "config.txt");
 
       try {

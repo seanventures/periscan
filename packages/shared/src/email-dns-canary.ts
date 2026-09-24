@@ -253,8 +253,12 @@ export function classifyCanaryMarker(
 
 function mintUniqueCanaryMarker(): string {
   mintedMarkerSeq += 1;
-  const rand = Math.random().toString(36).slice(2, 10);
-  return `periscan-email-${mintedMarkerSeq}-${rand}-${Date.now().toString(36)}`;
+  // Keep generated characters outside the forbidden-label alphabet. Base36
+  // can occasionally mint "ssn" or another denied substring by chance.
+  const rand = Math.floor(Math.random() * 0x1_0000_0000)
+    .toString(16)
+    .padStart(8, "0");
+  return `periscan-email-${mintedMarkerSeq}-${rand}-${Date.now()}`;
 }
 
 function hasForbiddenAttachments(attachments: unknown): boolean {

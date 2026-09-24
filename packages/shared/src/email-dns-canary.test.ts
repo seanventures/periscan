@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   CANARY_MARKER_PATTERN,
@@ -102,6 +102,24 @@ describe("email delivery canary contracts (PERISCAN-590/591)", () => {
     expect(first.marker).toMatch(CANARY_MARKER_PATTERN);
     expect(second.marker).toMatch(CANARY_MARKER_PATTERN);
     expect(first.marker).not.toBe(second.marker);
+  });
+
+  it("never mints a forbidden label from random characters", () => {
+    const random = vi.spyOn(Math, "random").mockReturnValue(
+      Number.parseInt("ssn00000", 36) / 36 ** 8
+    );
+    try {
+      const result = compileEmailDeliveryCanary({
+        domain: "customer.example",
+        recipient: "a@customer.example"
+      });
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(classifyCanaryMarker(result.marker).ok).toBe(true);
+      }
+    } finally {
+      random.mockRestore();
+    }
   });
 
   it("measures only with emit + routing evidence", () => {

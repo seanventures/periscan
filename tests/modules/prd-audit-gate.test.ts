@@ -6,7 +6,7 @@ import {
 } from "../../scripts/prd-audit-gate.js";
 
 describe("PRD audit gate", () => {
-  it("allows full-product completion only when source and requirement ledgers are clean", async () => {
+  it("keeps full-product completion gated while phase coverage is partial", async () => {
     const report = await buildPrdAuditReport(
       new URL("../..", import.meta.url).pathname
     );
@@ -14,20 +14,22 @@ describe("PRD audit gate", () => {
     expect(report.protocolPresent).toBe(true);
     expect(report.completionReportMode).toBe("FullProductCompletion");
     expect(report.completionReportScoped).toBe(false);
-    expect(report.canClaimFullProductComplete).toBe(true);
+    expect(report.canClaimFullProductComplete).toBe(false);
     expect(report.sourceCoverage.total).toBeGreaterThan(20);
     expect(report.sourceCoverage.unresolved).toHaveLength(0);
     expect(report.sourceCoverage.byStatus.EvidenceMapped).toBeGreaterThan(30);
     expect(report.sourceCoverage.unresolved.map((row) => row.id)).not.toContain(
       "SRC-14-RUNNER"
     );
-    expect(report.requirementLedger.unresolved).toHaveLength(0);
+    expect(report.requirementLedger.unresolved.map((row) => row.id)).toContain(
+      "PRD-PHASE-005"
+    );
     expect(
       report.requirementLedger.unresolved.map((row) => row.id)
     ).not.toContain("PRD-RUNNER-003");
 
     const formatted = formatPrdAuditReport(report);
-    expect(formatted).toContain("Can claim full product complete: yes");
+    expect(formatted).toContain("Can claim full product complete: no");
     expect(formatted).toContain(
       "Completion report mode: FullProductCompletion"
     );
@@ -35,7 +37,7 @@ describe("PRD audit gate", () => {
       "Source sections pending atomization/audit:\n- none"
     );
     expect(formatted).toContain(
-      "Requirement atoms blocking full completion claims:\n- none"
+      "Requirement atoms blocking full completion claims:\n- PRD-PHASE-005: Partial"
     );
   });
 
@@ -51,6 +53,6 @@ describe("PRD audit gate", () => {
     expect(
       report.requirementLedger.unresolved.map((row) => row.id)
     ).not.toContain("PRD-RUNNER-003");
-    expect(report.canClaimFullProductComplete).toBe(true);
+    expect(report.canClaimFullProductComplete).toBe(false);
   });
 });

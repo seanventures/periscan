@@ -78,4 +78,22 @@ describe("module certification harness", () => {
     expect(markdown).toContain("## Module Detail");
     expect(markdown).toContain("gitleaks.repo_secrets");
   });
+
+  it("keeps the committed report independent of host runtime availability", async () => {
+    const report = await buildCertificationReport();
+    const differentHost = structuredClone(report);
+    const module = differentHost.modules.find((item) =>
+      item.checks.some((check) => check.id === "runtime")
+    );
+    expect(module).toBeDefined();
+    const runtimeCheck = module!.checks.find((check) => check.id === "runtime")!;
+    runtimeCheck.severity = runtimeCheck.severity === "pass" ? "warn" : "pass";
+    runtimeCheck.message = "Different host tool path and availability";
+    module!.status = "NotCertified";
+    differentHost.summary.certified = 0;
+
+    expect(renderCertificationReport(differentHost)).toBe(
+      renderCertificationReport(report)
+    );
+  });
 });

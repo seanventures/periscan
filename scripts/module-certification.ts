@@ -508,7 +508,26 @@ function escapeMarkdown(value: string) {
 }
 
 export function renderCertificationReport(report: CertificationReport): string {
-  const statusRows = report.modules.map((module) => {
+  // This file is committed and checked on different machines. Runtime probes
+  // remain in the in-memory report and pnpm tools:check; only stable manifest,
+  // license, and safety checks belong in the committed certification artifact.
+  const staticModules = report.modules.map((module) => {
+    const checks = module.checks.filter((check) => check.id !== "runtime");
+    const status = checks.some((check) => check.severity === "fail")
+      ? "NotCertified"
+      : checks.some((check) => check.severity === "warn")
+        ? "CertifiedWithWarnings"
+        : "Certified";
+    return { ...module, checks, status };
+  });
+  const certified = staticModules.filter((module) => module.status === "Certified").length;
+  const certifiedWithWarnings = staticModules.filter(
+    (module) => module.status === "CertifiedWithWarnings"
+  ).length;
+  const failingModuleIds = staticModules
+    .filter((module) => module.status === "NotCertified")
+    .map((module) => module.moduleId);
+  const statusRows = staticModules.map((module) => {
     const warnings = module.checks.filter((c) => c.severity === "warn").length;
     const failures = module.checks.filter((c) => c.severity === "fail").length;
     return [
@@ -523,7 +542,7 @@ export function renderCertificationReport(report: CertificationReport): string {
     ].map(escapeMarkdown);
   });
 
-  const detailSections = report.modules
+  const detailSections = staticModules
     .map((module) => {
       const checkLines = module.checks
         .map((check) => {
@@ -548,19 +567,20 @@ Generated at: ${report.generatedAt}
 
 ## Summary
 
-- Modules certified: ${report.summary.total}
-- Certified: ${report.summary.certified}
-- Certified with warnings: ${report.summary.certifiedWithWarnings}
-- Not certified (hard failures): ${report.summary.notCertified}
+- Modules certified: ${staticModules.length}
+- Certified: ${certified}
+- Certified with warnings: ${certifiedWithWarnings}
+- Not certified (hard failures): ${failingModuleIds.length}
 ${
-  report.summary.failingModuleIds.length > 0
-    ? `- Failing modules: ${report.summary.failingModuleIds.join(", ")}`
+  failingModuleIds.length > 0
+    ? `- Failing modules: ${failingModuleIds.join(", ")}`
     : "- Failing modules: none"
 }
 
-Runtime readiness reflects this environment only. A module that reports a tool
-as unavailable surfaces an honest \`ToolUnavailable\` / \`RequiresConfiguration\`
-state at runtime; it is not a fabricated result.
+This committed report covers stable certification metadata. Run
+\`pnpm tools:check\` to probe runtime availability in the current environment.
+Unavailable tools surface an honest \`ToolUnavailable\` /
+\`RequiresConfiguration\` state at runtime.
 
 ## Module Status
 
